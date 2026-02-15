@@ -117,8 +117,8 @@ Syncro successfully implements a dual-role reverse auction marketplace. The syst
 
 ## 6. Links
 
-- [Project Repository](https://github.com/cepdnaclk/e22-co2060-Syncro){:target="_blank"}
-- [Project Page](https://cepdnaclk.github.io/e22-co2060-Syncro){:target="_blank"}
+- <a href="https://github.com/cepdnaclk/e22-co2060-Syncro" target="_blank">Project Repository</a>
+- <a href="https://cepdnaclk.github.io/e22-co2060-Syncro" target="_blank">Project Page</a>
 
 ---
 
