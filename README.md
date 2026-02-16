@@ -2,8 +2,8 @@
 
 **Course:** CO2060 – Second Year Project  
 **University:** (University of Peradeniya)  
-**Team:** CodeBuds
-**Team Members** K.H.D.M.Bimsara, R.G.S.T.Weerasekara, M.M.T.Cooray, A.Gunathilaka  
+**Team:** CodeBuds  
+**Team Members:** K.H.D.M.Bimsara, R.G.S.T.Weerasekara, M.M.T.Cooray, A.Gunathilaka  
 **Project Type:** Full Stack Web Application  
 
 ---
