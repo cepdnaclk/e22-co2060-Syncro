@@ -32,6 +32,7 @@
         }
     ],
     "tags": ["Web", "Software Systems", "CO2060"],
-    "image": "images/cover_page.jpg",
-    "thumbnail": "images/thumbnail.jpg"
+    "image": "../images/cover_page.png",
+    "thumbnail": "../images/thumbnail.png"
+
 }
