@@ -64,3 +64,6 @@ Real-Time:
 
 ## 5. Repository Structure
 
+- code: Contains the source code for the FastAPI backend and React/Next.js frontend.
+- database: Holds the PostgreSQL schema designs, ER diagrams, and initialization scripts.
+- docs: Stores project documentation, including the proposal and design specifications.
