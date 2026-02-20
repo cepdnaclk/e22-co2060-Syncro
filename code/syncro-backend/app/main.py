@@ -1,8 +1,8 @@
 import socketio
 from fastapi import FastAPI
-from app.api import listings, auth  # Import your API routers
-from app.database import engine # Import the database engine and Base for table creation
-from app.models import models  # Import the models so SQLAlchemy knows which tables to create
+from api import listings, auth  # Import your API routers
+from database import engine # Import the database engine and Base for table creation
+from models import models  # Import the models so SQLAlchemy knows which tables to create
 
 models.Base.metadata.create_all(bind=engine)
 
