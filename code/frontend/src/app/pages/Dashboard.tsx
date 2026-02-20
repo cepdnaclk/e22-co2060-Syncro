@@ -1,9 +1,9 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { 
-  ShoppingCart, 
-  DollarSign, 
-  Package, 
+import {
+  ShoppingCart,
+  DollarSign,
+  Package,
   TrendingUp,
   Clock,
   CheckCircle,
@@ -19,6 +19,39 @@ import { Link } from 'react-router';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { SellerOnboarding } from '../components/SellerOnboarding';
 import { buyerOrders, sellerOrders, buyerActivities, revenueData, orderData } from '../services/mockData';
+import type { Activity, Order } from '../services/mockData';
+
+// ────────────────────────── Types ──────────────────────────
+
+interface BuyerDashboardProps {
+  orderData: { month: string; orders: number }[];
+  hasSellerProfile: boolean;
+  onStartSelling: () => void;
+  userFirstName: string;
+}
+
+interface SellerDashboardProps {
+  revenueData: { month: string; revenue: number }[];
+  orderData: { month: string; orders: number }[];
+  businessName: string;
+}
+
+// ────────────────────────── Animation helpers ──────────────
+const fadeInUp = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.4 },
+};
+
+// ────────────────────────── Status badge variant helper ────
+
+function statusVariant(status: Order['status']): 'success' | 'info' | 'warning' {
+  if (status === 'completed') return 'success';
+  if (status === 'in-progress') return 'info';
+  return 'warning';
+}
+
+// ────────────────────────── Main export ────────────────────
 
 export function Dashboard() {
   const { role, businessProfile, hasSellerProfile, showOnboarding, setShowOnboarding, userProfile } = useApp();
@@ -26,8 +59,8 @@ export function Dashboard() {
   if (role === 'buyer') {
     return (
       <>
-        <BuyerDashboard 
-          orderData={orderData} 
+        <BuyerDashboard
+          orderData={orderData}
           hasSellerProfile={hasSellerProfile}
           onStartSelling={() => setShowOnboarding(true)}
           userFirstName={userProfile.firstName}
@@ -39,10 +72,18 @@ export function Dashboard() {
     );
   }
 
-  return <SellerDashboard revenueData={revenueData} orderData={orderData} businessName={businessProfile?.name || 'Your Business'} />;
+  return (
+    <SellerDashboard
+      revenueData={revenueData}
+      orderData={orderData}
+      businessName={businessProfile?.name || 'Your Business'}
+    />
+  );
 }
 
-function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirstName }: any) {
+// ────────────────────────── Buyer Dashboard ────────────────
+
+function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirstName }: BuyerDashboardProps) {
   const stats = [
     { label: 'Active Orders', value: '8', icon: ShoppingCart, color: 'text-blue-500' },
     { label: 'Completed', value: '24', icon: CheckCircle, color: 'text-green-500' },
@@ -50,20 +91,11 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
     { label: 'Messages', value: '5', icon: MessageSquare, color: 'text-purple-500' },
   ];
 
-  const recentOrders = buyerOrders;
-
-  // Get time-based greeting
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good Morning';
     if (hour < 18) return 'Good Afternoon';
     return 'Good Evening';
-  };
-
-  const fadeInUp = {
-    initial: { opacity: 0, y: 20 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.4 },
   };
 
   return (
@@ -73,7 +105,7 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
         <p className="text-muted-foreground">Here's what's happening with your orders.</p>
       </div>
 
-      {/* Become a Seller CTA - Only show if no seller profile */}
+      {/* Become a Seller CTA */}
       {!hasSellerProfile && (
         <motion.div {...fadeInUp}>
           <Card className="bg-gradient-to-br from-primary/10 via-accent/10 to-primary/5 border-primary/20 overflow-hidden relative">
@@ -137,9 +169,9 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                   <XAxis dataKey="month" stroke="var(--muted-foreground)" />
                   <YAxis stroke="var(--muted-foreground)" />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'var(--card)', 
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'var(--card)',
                       border: '1px solid var(--border)',
                       borderRadius: '8px',
                     }}
@@ -158,12 +190,11 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {buyerActivities.map((activity, index) => (
+                {buyerActivities.map((activity: Activity, index: number) => (
                   <div key={index} className="flex items-start gap-3 pb-3 border-b border-border last:border-0">
-                    <div className={`w-2 h-2 rounded-full mt-2 ${
-                      activity.type === 'success' ? 'bg-green-500' : 
-                      activity.type === 'info' ? 'bg-blue-500' : 'bg-muted-foreground'
-                    }`} />
+                    <div className={`w-2 h-2 rounded-full mt-2 ${activity.type === 'success' ? 'bg-green-500' :
+                        activity.type === 'info' ? 'bg-blue-500' : 'bg-muted-foreground'
+                      }`} />
                     <div className="flex-1">
                       <p className="text-sm">{activity.text}</p>
                       <p className="text-xs text-muted-foreground mt-1">{activity.time}</p>
@@ -200,16 +231,13 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
                   </tr>
                 </thead>
                 <tbody>
-                  {recentOrders.map((order) => (
+                  {buyerOrders.map((order) => (
                     <tr key={order.id} className="border-b border-border last:border-0 hover:bg-muted/50">
                       <td className="py-3 px-4 text-sm font-medium">{order.id}</td>
                       <td className="py-3 px-4 text-sm">{order.service}</td>
                       <td className="py-3 px-4 text-sm text-muted-foreground">{order.seller}</td>
                       <td className="py-3 px-4">
-                        <Badge variant={
-                          order.status === 'completed' ? 'success' :
-                          order.status === 'in-progress' ? 'info' : 'warning'
-                        }>
+                        <Badge variant={statusVariant(order.status)}>
                           {order.status}
                         </Badge>
                       </td>
@@ -226,21 +254,15 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
   );
 }
 
-function SellerDashboard({ revenueData, orderData, businessName }: any) {
+// ────────────────────────── Seller Dashboard ───────────────
+
+function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboardProps) {
   const stats = [
     { label: 'Total Earnings', value: '$12,450', icon: DollarSign, color: 'text-green-500' },
     { label: 'Active Listings', value: '12', icon: Package, color: 'text-blue-500' },
     { label: 'Orders Received', value: '34', icon: ShoppingCart, color: 'text-purple-500' },
     { label: 'Growth', value: '+23%', icon: TrendingUp, color: 'text-teal-500' },
   ];
-
-  const recentOrders = sellerOrders;
-
-  const fadeInUp = {
-    initial: { opacity: 0, y: 20 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.4 },
-  };
 
   return (
     <div className="space-y-8">
@@ -313,9 +335,9 @@ function SellerDashboard({ revenueData, orderData, businessName }: any) {
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                   <XAxis dataKey="month" stroke="var(--muted-foreground)" />
                   <YAxis stroke="var(--muted-foreground)" />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'var(--card)', 
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'var(--card)',
                       border: '1px solid var(--border)',
                       borderRadius: '8px',
                     }}
@@ -338,9 +360,9 @@ function SellerDashboard({ revenueData, orderData, businessName }: any) {
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                   <XAxis dataKey="month" stroke="var(--muted-foreground)" />
                   <YAxis stroke="var(--muted-foreground)" />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'var(--card)', 
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'var(--card)',
                       border: '1px solid var(--border)',
                       borderRadius: '8px',
                     }}
@@ -377,16 +399,13 @@ function SellerDashboard({ revenueData, orderData, businessName }: any) {
                   </tr>
                 </thead>
                 <tbody>
-                  {recentOrders.map((order) => (
+                  {sellerOrders.map((order) => (
                     <tr key={order.id} className="border-b border-border last:border-0 hover:bg-muted/50">
                       <td className="py-3 px-4 text-sm font-medium">{order.id}</td>
                       <td className="py-3 px-4 text-sm">{order.service}</td>
                       <td className="py-3 px-4 text-sm text-muted-foreground">{order.buyer}</td>
                       <td className="py-3 px-4">
-                        <Badge variant={
-                          order.status === 'completed' ? 'success' :
-                          order.status === 'in-progress' ? 'info' : 'warning'
-                        }>
+                        <Badge variant={statusVariant(order.status)}>
                           {order.status}
                         </Badge>
                       </td>

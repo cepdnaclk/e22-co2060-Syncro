@@ -1,16 +1,39 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router';
-import { Search, Bell, Moon, Sun, User, LogOut, Settings, ChevronDown } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router';
+import { Search, Bell, Moon, Sun, LogOut, Settings, ChevronDown } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { motion, AnimatePresence } from 'motion/react';
 
 export function TopNav() {
+  const navigate = useNavigate();
   const { role, setRole, theme, setTheme, businessProfile, hasSellerProfile, userProfile } = useApp();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
 
+  const profileRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setShowProfileMenu(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setShowNotifications(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const toggleTheme = () => {
     setTheme(theme === 'light' ? 'dark' : 'light');
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('syncro_auth');
+    navigate('/login');
   };
 
   const notifications = [
@@ -66,21 +89,19 @@ export function TopNav() {
             <div className="flex items-center bg-muted rounded-lg p-1">
               <button
                 onClick={() => setRole('buyer')}
-                className={`px-4 py-1.5 rounded-md text-sm transition-all ${
-                  role === 'buyer'
+                className={`px-4 py-1.5 rounded-md text-sm transition-all ${role === 'buyer'
                     ? 'bg-primary text-primary-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
-                }`}
+                  }`}
               >
                 Buyer
               </button>
               <button
                 onClick={() => setRole('seller')}
-                className={`px-4 py-1.5 rounded-md text-sm transition-all ${
-                  role === 'seller'
+                className={`px-4 py-1.5 rounded-md text-sm transition-all ${role === 'seller'
                     ? 'bg-primary text-primary-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
-                }`}
+                  }`}
               >
                 Seller
               </button>
@@ -88,9 +109,12 @@ export function TopNav() {
           )}
 
           {/* Notifications */}
-          <div className="relative">
+          <div className="relative" ref={notifRef}>
             <button
-              onClick={() => setShowNotifications(!showNotifications)}
+              onClick={() => {
+                setShowNotifications(!showNotifications);
+                setShowProfileMenu(false);
+              }}
               className="relative p-2 hover:bg-accent rounded-lg transition-colors"
             >
               <Bell className="w-5 h-5" />
@@ -114,9 +138,8 @@ export function TopNav() {
                     {notifications.map((notif) => (
                       <div
                         key={notif.id}
-                        className={`p-4 border-b border-border hover:bg-accent/50 cursor-pointer ${
-                          notif.unread ? 'bg-primary/5' : ''
-                        }`}
+                        className={`p-4 border-b border-border hover:bg-accent/50 cursor-pointer ${notif.unread ? 'bg-primary/5' : ''
+                          }`}
                       >
                         <p className="text-sm">{notif.text}</p>
                         <p className="text-xs text-muted-foreground mt-1">{notif.time}</p>
@@ -137,13 +160,16 @@ export function TopNav() {
           </button>
 
           {/* Profile Dropdown */}
-          <div className="relative">
+          <div className="relative" ref={profileRef}>
             <button
-              onClick={() => setShowProfileMenu(!showProfileMenu)}
+              onClick={() => {
+                setShowProfileMenu(!showProfileMenu);
+                setShowNotifications(false);
+              }}
               className="flex items-center gap-2 p-2 hover:bg-accent rounded-lg transition-colors"
             >
-              <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                <User className="w-4 h-4 text-primary" />
+              <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center">
+                <span className="text-white text-sm font-semibold">{userInitials}</span>
               </div>
               <ChevronDown className="w-4 h-4" />
             </button>
@@ -158,18 +184,19 @@ export function TopNav() {
                 >
                   <Link
                     to="/settings"
+                    onClick={() => setShowProfileMenu(false)}
                     className="flex items-center gap-3 px-4 py-3 hover:bg-accent transition-colors"
                   >
                     <Settings className="w-4 h-4" />
                     <span className="text-sm">Settings</span>
                   </Link>
-                  <Link
-                    to="/login"
-                    className="flex items-center gap-3 px-4 py-3 hover:bg-accent transition-colors border-t border-border"
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-accent transition-colors border-t border-border text-left"
                   >
                     <LogOut className="w-4 h-4" />
                     <span className="text-sm">Logout</span>
-                  </Link>
+                  </button>
                 </motion.div>
               )}
             </AnimatePresence>

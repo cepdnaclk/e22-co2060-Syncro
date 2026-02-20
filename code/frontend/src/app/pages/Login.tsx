@@ -17,7 +17,8 @@ export function Login() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock login - navigate to dashboard
+    // Mock login — set auth flag, then navigate to dashboard
+    localStorage.setItem('syncro_auth', 'true');
     navigate('/dashboard');
   };
 

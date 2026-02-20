@@ -9,8 +9,8 @@ import {
   Settings,
   Package,
   TrendingUp,
-  Star,
   ExternalLink,
+  Star,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
@@ -19,41 +19,61 @@ export function Sidebar() {
   const location = useLocation();
 
   const buyerNavItems = [
-    { section: 'Overview', items: [
-      { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-    ]},
-    { section: 'Marketplace', items: [
-      { name: 'Discover Services', icon: Search, path: '/discover' },
-    ]},
-    { section: 'Transactions', items: [
-      { name: 'My Orders', icon: ShoppingCart, path: '/orders' },
-      { name: 'Payments / Wallet', icon: Wallet, path: '/payments' },
-    ]},
-    { section: 'Communication', items: [
-      { name: 'Messages', icon: MessageSquare, path: '/messages' },
-    ]},
-    { section: 'Account', items: [
-      { name: 'Settings', icon: Settings, path: '/settings' },
-    ]},
+    {
+      section: 'Overview', items: [
+        { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+      ]
+    },
+    {
+      section: 'Marketplace', items: [
+        { name: 'Discover Services', icon: Search, path: '/discover' },
+      ]
+    },
+    {
+      section: 'Transactions', items: [
+        { name: 'My Orders', icon: ShoppingCart, path: '/orders' },
+        { name: 'Payments / Wallet', icon: Wallet, path: '/payments' },
+      ]
+    },
+    {
+      section: 'Communication', items: [
+        { name: 'Messages', icon: MessageSquare, path: '/messages' },
+      ]
+    },
+    {
+      section: 'Account', items: [
+        { name: 'Settings', icon: Settings, path: '/settings' },
+      ]
+    },
   ];
 
   const sellerNavItems = [
-    { section: 'Overview', items: [
-      { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-    ]},
-    { section: 'Business', items: [
-      { name: 'My Listings', icon: Package, path: '/listings' },
-    ]},
-    { section: 'Transactions', items: [
-      { name: 'Orders Received', icon: ShoppingCart, path: '/orders-received' },
-      { name: 'Earnings', icon: TrendingUp, path: '/earnings' },
-    ]},
-    { section: 'Communication', items: [
-      { name: 'Messages', icon: MessageSquare, path: '/messages' },
-    ]},
-    { section: 'Account', items: [
-      { name: 'Settings', icon: Settings, path: '/settings' },
-    ]},
+    {
+      section: 'Overview', items: [
+        { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+      ]
+    },
+    {
+      section: 'Business', items: [
+        { name: 'My Listings', icon: Package, path: '/listings' },
+      ]
+    },
+    {
+      section: 'Transactions', items: [
+        { name: 'Orders Received', icon: ShoppingCart, path: '/orders-received' },
+        { name: 'Earnings', icon: TrendingUp, path: '/earnings' },
+      ]
+    },
+    {
+      section: 'Communication', items: [
+        { name: 'Messages', icon: MessageSquare, path: '/messages' },
+      ]
+    },
+    {
+      section: 'Account', items: [
+        { name: 'Settings', icon: Settings, path: '/settings' },
+      ]
+    },
   ];
 
   const navItems = role === 'buyer' ? buyerNavItems : sellerNavItems;
@@ -78,8 +98,9 @@ export function Sidebar() {
                 </div>
               </div>
             </div>
-            <Link 
-              to="/settings" 
+            {/* Fixed: now links to the seller preview page, not settings */}
+            <Link
+              to="/seller/preview"
               className="flex items-center gap-2 text-xs text-primary hover:text-primary/80 transition-colors"
             >
               <ExternalLink className="w-3 h-3" />
@@ -101,11 +122,10 @@ export function Sidebar() {
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all ${
-                      isActive
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all ${isActive
                         ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-sm'
                         : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                    }`}
+                      }`}
                   >
                     <Icon className="w-5 h-5" />
                     <span className="text-sm">{item.name}</span>

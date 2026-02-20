@@ -16,9 +16,23 @@ export function Register() {
     password: '',
     confirmPassword: '',
   });
+  const [error, setError] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match. Please try again.');
+      setFormData({ ...formData, confirmPassword: '' });
+      return;
+    }
+
     // Mock registration - navigate to dashboard
     navigate('/dashboard');
   };
@@ -84,9 +98,18 @@ export function Register() {
               label="Confirm Password"
               placeholder="••••••••"
               value={formData.confirmPassword}
-              onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, confirmPassword: e.target.value });
+                if (error) setError('');
+              }}
               required
             />
+
+            {error && (
+              <div className="px-4 py-3 bg-destructive/10 border border-destructive/30 rounded-lg text-sm text-destructive">
+                {error}
+              </div>
+            )}
 
             <div className="text-sm">
               <label className="flex items-start gap-2">

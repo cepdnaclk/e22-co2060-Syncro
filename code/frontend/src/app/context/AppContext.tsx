@@ -36,6 +36,7 @@ interface UserProfile {
   lastName: string;
   email: string;
   phone?: string;
+  bio?: string;
 }
 
 interface AppContextType {
@@ -59,6 +60,7 @@ const DEFAULT_USER_PROFILE: UserProfile = {
   lastName: 'Rivera',
   email: 'alex.rivera@example.com',
   phone: '+1 (555) 123-4567',
+  bio: 'Passionate about connecting buyers and sellers on Syncro.',
 };
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -111,7 +113,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   });
 
   const [showOnboarding, setShowOnboarding] = useState(false);
-  
+
   const hasSellerProfile = businessProfile !== null;
 
   // Persist theme changes to localStorage
@@ -163,11 +165,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AppContext.Provider value={{ 
-      role, 
-      setRole, 
-      theme, 
-      setTheme, 
+    <AppContext.Provider value={{
+      role,
+      setRole,
+      theme,
+      setTheme,
       businessProfile,
       setBusinessProfile,
       hasSellerProfile,

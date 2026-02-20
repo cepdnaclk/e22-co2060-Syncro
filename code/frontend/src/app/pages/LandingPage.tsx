@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router';
 import { motion } from 'motion/react';
-import { 
-  ArrowRight, 
-  Search, 
-  MessageSquare, 
-  CheckCircle, 
-  Shield, 
-  Zap, 
+import {
+  ArrowRight,
+  Search,
+  MessageSquare,
+  CheckCircle,
+  Shield,
+  Zap,
   TrendingUp,
   Users,
   Star,
@@ -20,34 +20,52 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { useApp } from '../context/AppContext';
 
+// Defined outside the component to avoid stale-closure in useEffect
+const heroSlides = [
+  {
+    title: 'Promote Your Business',
+    subtitle: 'Reach thousands of potential customers looking for your services',
+    cta: 'Start Selling',
+  },
+  {
+    title: 'Promote Your Requirements',
+    subtitle: 'Find the perfect service provider for your needs',
+    cta: 'Find Services',
+  },
+  {
+    title: 'Secure Payment & Order Tracking',
+    subtitle: 'Complete transactions with confidence and track every step',
+    cta: 'Get Started',
+  },
+];
+
 export function LandingPage() {
   const { theme, setTheme } = useApp();
   const [currentSlide, setCurrentSlide] = useState(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const heroSlides = [
-    {
-      title: 'Promote Your Business',
-      subtitle: 'Reach thousands of potential customers looking for your services',
-      cta: 'Start Selling',
-    },
-    {
-      title: 'Promote Your Requirements',
-      subtitle: 'Find the perfect service provider for your needs',
-      cta: 'Find Services',
-    },
-    {
-      title: 'Secure Payment & Order Tracking',
-      subtitle: 'Complete transactions with confidence and track every step',
-      cta: 'Get Started',
-    },
-  ];
-
-  useEffect(() => {
-    const timer = setInterval(() => {
+  const resetInterval = () => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
     }, 5000);
-    return () => clearInterval(timer);
+  };
+
+  useEffect(() => {
+    resetInterval();
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const goToSlide = (index: number) => {
+    setCurrentSlide(index);
+    resetInterval();
+  };
+
+  const prevSlide = () => goToSlide((currentSlide - 1 + heroSlides.length) % heroSlides.length);
+  const nextSlide = () => goToSlide((currentSlide + 1) % heroSlides.length);
 
   const fadeInUp = {
     initial: { opacity: 0, y: 20 },
@@ -101,14 +119,13 @@ export function LandingPage() {
               <motion.div
                 key={index}
                 initial={{ opacity: 0 }}
-                animate={{ 
+                animate={{
                   opacity: currentSlide === index ? 1 : 0,
                   x: currentSlide === index ? 0 : currentSlide > index ? -100 : 100,
                 }}
                 transition={{ duration: 0.5 }}
-                className={`absolute inset-0 flex flex-col items-center justify-center text-center ${
-                  currentSlide === index ? 'pointer-events-auto' : 'pointer-events-none'
-                }`}
+                className={`absolute inset-0 flex flex-col items-center justify-center text-center ${currentSlide === index ? 'pointer-events-auto' : 'pointer-events-none'
+                  }`}
               >
                 <h1 className="text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                   {slide.title}
@@ -123,8 +140,9 @@ export function LandingPage() {
                     </Button>
                   </Link>
                   <Link to="/register">
+                    {/* Fixed: uses slide.cta text instead of hardcoded string */}
                     <Button size="lg" variant="outline">
-                      Promote My Business <ArrowRight className="ml-2 w-5 h-5" />
+                      {slide.cta} <ArrowRight className="ml-2 w-5 h-5" />
                     </Button>
                   </Link>
                 </div>
@@ -135,7 +153,7 @@ export function LandingPage() {
           {/* Carousel Controls */}
           <div className="flex justify-center items-center gap-4 mt-8">
             <button
-              onClick={() => setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length)}
+              onClick={prevSlide}
               className="p-2 hover:bg-accent rounded-lg transition-colors"
             >
               <ChevronLeft className="w-5 h-5" />
@@ -144,15 +162,14 @@ export function LandingPage() {
               {heroSlides.map((_, index) => (
                 <button
                   key={index}
-                  onClick={() => setCurrentSlide(index)}
-                  className={`w-2 h-2 rounded-full transition-all ${
-                    currentSlide === index ? 'bg-primary w-8' : 'bg-muted'
-                  }`}
+                  onClick={() => goToSlide(index)}
+                  className={`w-2 h-2 rounded-full transition-all ${currentSlide === index ? 'bg-primary w-8' : 'bg-muted'
+                    }`}
                 />
               ))}
             </div>
             <button
-              onClick={() => setCurrentSlide((prev) => (prev + 1) % heroSlides.length)}
+              onClick={nextSlide}
               className="p-2 hover:bg-accent rounded-lg transition-colors"
             >
               <ChevronRight className="w-5 h-5" />

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useLocation } from 'react-router';
 import { motion } from 'motion/react';
 import { CreditCard, Lock, CheckCircle } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
@@ -7,29 +7,40 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
 
+interface LocationState {
+  service?: string;
+  packageName?: string;
+  price?: number;
+}
+
+const PLATFORM_FEE_PCT = 0.05;
+
 export function Payment() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const state = (location.state as LocationState) ?? {};
+
+  // Use order data passed via router state when available; fallback to sensible defaults
+  const serviceName = state.service ?? 'Professional Logo Design';
+  const packageName = state.packageName ?? 'Standard';
+  const price = state.price ?? 750;
+  const platformFee = parseFloat((price * PLATFORM_FEE_PCT).toFixed(2));
+  const total = parseFloat((price + platformFee).toFixed(2));
+
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [processing, setProcessing] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const orderDetails = {
-    service: 'Professional Logo Design',
-    package: 'Standard',
-    price: 750,
-    platformFee: 37.5,
-    total: 787.5,
-  };
-
-  const handlePayment = (e: React.FormEvent) => {
+  const handlePayment = (e: React.FormEvent | React.MouseEvent) => {
+    // Works for both FormEvent (card) and MouseEvent (PayPal button)
     e.preventDefault();
     setProcessing(true);
-    
+
     // Simulate payment processing
     setTimeout(() => {
       setProcessing(false);
       setSuccess(true);
-      
+
       setTimeout(() => {
         navigate('/payment/success');
       }, 1500);
@@ -77,11 +88,10 @@ export function Payment() {
                 <div className="grid md:grid-cols-2 gap-4">
                   <button
                     onClick={() => setPaymentMethod('card')}
-                    className={`p-4 border-2 rounded-lg transition-all ${
-                      paymentMethod === 'card'
+                    className={`p-4 border-2 rounded-lg transition-all ${paymentMethod === 'card'
                         ? 'border-primary bg-primary/5'
                         : 'border-border hover:border-primary/50'
-                    }`}
+                      }`}
                   >
                     <CreditCard className="w-6 h-6 mb-2" />
                     <div className="font-semibold">Credit/Debit Card</div>
@@ -89,15 +99,14 @@ export function Payment() {
                   </button>
                   <button
                     onClick={() => setPaymentMethod('paypal')}
-                    className={`p-4 border-2 rounded-lg transition-all ${
-                      paymentMethod === 'paypal'
+                    className={`p-4 border-2 rounded-lg transition-all ${paymentMethod === 'paypal'
                         ? 'border-primary bg-primary/5'
                         : 'border-border hover:border-primary/50'
-                    }`}
+                      }`}
                   >
                     <div className="w-6 h-6 mb-2 font-bold text-primary">P</div>
                     <div className="font-semibold">PayPal</div>
-                    <div className="text-sm text-muted-foreground">Fast & secure</div>
+                    <div className="text-sm text-muted-foreground">Fast &amp; secure</div>
                   </button>
                 </div>
 
@@ -139,20 +148,25 @@ export function Payment() {
                       </div>
                     </div>
 
-                    <Button 
-                      type="submit" 
-                      className="w-full" 
+                    <Button
+                      type="submit"
+                      className="w-full"
                       disabled={processing}
                     >
-                      {processing ? 'Processing...' : `Pay $${orderDetails.total}`}
+                      {processing ? 'Processing...' : `Pay $${total}`}
                     </Button>
                   </form>
                 )}
 
+                {/* PayPal Flow — Fixed: uses onClick with MouseEvent, no form needed */}
                 {paymentMethod === 'paypal' && (
                   <div className="text-center py-8">
-                    <Button onClick={handlePayment} className="w-full max-w-md" disabled={processing}>
-                      {processing ? 'Processing...' : 'Continue with PayPal'}
+                    <Button
+                      onClick={handlePayment}
+                      className="w-full max-w-md"
+                      disabled={processing}
+                    >
+                      {processing ? 'Processing...' : `Continue with PayPal — $${total}`}
                     </Button>
                   </div>
                 )}
@@ -174,24 +188,24 @@ export function Payment() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <h4 className="font-semibold mb-1">{orderDetails.service}</h4>
-                  <Badge variant="info">{orderDetails.package} Package</Badge>
+                  <h4 className="font-semibold mb-1">{serviceName}</h4>
+                  <Badge variant="info">{packageName} Package</Badge>
                 </div>
 
                 <div className="space-y-3 py-4 border-y border-border">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Service Price</span>
-                    <span className="font-semibold">${orderDetails.price}</span>
+                    <span className="font-semibold">${price}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Platform Fee (5%)</span>
-                    <span className="font-semibold">${orderDetails.platformFee}</span>
+                    <span className="font-semibold">${platformFee}</span>
                   </div>
                 </div>
 
                 <div className="flex justify-between">
                   <span className="font-semibold">Total</span>
-                  <span className="text-2xl font-bold text-primary">${orderDetails.total}</span>
+                  <span className="text-2xl font-bold text-primary">${total}</span>
                 </div>
 
                 <div className="bg-accent/50 p-3 rounded-lg text-sm">

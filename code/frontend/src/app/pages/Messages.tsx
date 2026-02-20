@@ -6,9 +6,40 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { mockMessages } from '../services/mockData';
 
+// Static per-conversation mock messages — keyed by conversation id
+const conversationMessages: Record<number, { id: number; sender: string; text: string; timestamp: string }[]> = {
+  1: [
+    { id: 1, sender: 'them', text: "Hi! Thanks for your order. I'll start working on your logo design right away.", timestamp: '10:30 AM' },
+    { id: 2, sender: 'me', text: "Great! I'm excited to see what you come up with. Here are some reference images.", timestamp: '10:32 AM' },
+    { id: 3, sender: 'them', text: "Perfect! I'll review these and create some initial concepts. Should have something for you by tomorrow.", timestamp: '10:35 AM' },
+    { id: 4, sender: 'me', text: "Sounds good. Looking forward to it!", timestamp: '10:36 AM' },
+    { id: 5, sender: 'them', text: "Thanks! I'll send you the final files soon", timestamp: '2 min ago' },
+  ],
+  2: [
+    { id: 1, sender: 'them', text: "The project is looking great! We're on schedule.", timestamp: 'Yesterday' },
+    { id: 2, sender: 'me', text: "Wonderful, really happy with the progress.", timestamp: 'Yesterday' },
+    { id: 3, sender: 'them', text: "The project is looking great!", timestamp: '1 hour ago' },
+  ],
+  3: [
+    { id: 1, sender: 'them', text: "I've completed the keyword research and the report is ready.", timestamp: '3 hours ago' },
+    { id: 2, sender: 'me', text: "Excellent, please send it over.", timestamp: '2 hours ago' },
+  ],
+  4: [
+    { id: 1, sender: 'them', text: "When do you need the content?", timestamp: '1 day ago' },
+    { id: 2, sender: 'me', text: "By end of the week would be great.", timestamp: '1 day ago' },
+  ],
+  5: [
+    { id: 1, sender: 'them', text: "Can we schedule a call to go over the requirements?", timestamp: '2 days ago' },
+    { id: 2, sender: 'me', text: "Sure, I'm free Thursday afternoon.", timestamp: '2 days ago' },
+  ],
+};
+
 export function Messages() {
-  const [selectedChat, setSelectedChat] = useState(0);
+  const [selectedChatId, setSelectedChatId] = useState<number>(1);
   const [messageInput, setMessageInput] = useState('');
+  const [localMessages, setLocalMessages] = useState<Record<number, { id: number; sender: string; text: string; timestamp: string }[]>>(
+    conversationMessages
+  );
 
   const conversations = mockMessages.map(msg => ({
     id: msg.id,
@@ -20,20 +51,26 @@ export function Messages() {
     avatar: msg.avatar,
   }));
 
-  const messages = [
-    { id: 1, sender: 'them', text: 'Hi! Thanks for your order. I\'ll start working on your logo design right away.', timestamp: '10:30 AM' },
-    { id: 2, sender: 'me', text: 'Great! I\'m excited to see what you come up with. Here are some reference images.', timestamp: '10:32 AM' },
-    { id: 3, sender: 'them', text: 'Perfect! I\'ll review these and create some initial concepts. Should have something for you by tomorrow.', timestamp: '10:35 AM' },
-    { id: 4, sender: 'me', text: 'Sounds good. Looking forward to it!', timestamp: '10:36 AM' },
-    { id: 5, sender: 'them', text: 'Thanks! I\'ll send you the final files soon', timestamp: '2 min ago' },
-  ];
+  const activeConversation = conversations.find(c => c.id === selectedChatId)!;
+  const messages = localMessages[selectedChatId] ?? [];
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (messageInput.trim()) {
-      // Handle message sending
-      setMessageInput('');
-    }
+    const text = messageInput.trim();
+    if (!text) return;
+
+    const newMessage = {
+      id: (localMessages[selectedChatId]?.length ?? 0) + 1,
+      sender: 'me',
+      text,
+      timestamp: 'Just now',
+    };
+
+    setLocalMessages(prev => ({
+      ...prev,
+      [selectedChatId]: [...(prev[selectedChatId] ?? []), newMessage],
+    }));
+    setMessageInput('');
   };
 
   return (
@@ -57,14 +94,13 @@ export function Messages() {
             </div>
           </div>
           <div className="flex-1 overflow-y-auto">
-            {conversations.map((conv, index) => (
+            {conversations.map((conv) => (
               <motion.button
                 key={conv.id}
-                onClick={() => setSelectedChat(index)}
+                onClick={() => setSelectedChatId(conv.id)}
                 whileHover={{ backgroundColor: 'rgba(85, 185, 195, 0.1)' }}
-                className={`w-full p-4 border-b border-border text-left transition-colors ${
-                  selectedChat === index ? 'bg-accent' : ''
-                }`}
+                className={`w-full p-4 border-b border-border text-left transition-colors ${selectedChatId === conv.id ? 'bg-accent' : ''
+                  }`}
               >
                 <div className="flex items-start gap-3">
                   <div className="relative">
@@ -103,17 +139,17 @@ export function Messages() {
               <div className="relative">
                 <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center">
                   <span className="text-white font-semibold">
-                    {conversations[selectedChat].name.split(' ').map(n => n[0]).join('')}
+                    {activeConversation.name.split(' ').map(n => n[0]).join('')}
                   </span>
                 </div>
-                {conversations[selectedChat].online && (
+                {activeConversation.online && (
                   <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-card rounded-full"></div>
                 )}
               </div>
               <div>
-                <h3 className="font-semibold">{conversations[selectedChat].name}</h3>
+                <h3 className="font-semibold">{activeConversation.name}</h3>
                 <p className="text-xs text-muted-foreground">
-                  {conversations[selectedChat].online ? 'Online' : 'Offline'}
+                  {activeConversation.online ? 'Online' : 'Offline'}
                 </p>
               </div>
             </div>
@@ -131,13 +167,12 @@ export function Messages() {
                 animate={{ opacity: 1, y: 0 }}
                 className={`flex ${message.sender === 'me' ? 'justify-end' : 'justify-start'}`}
               >
-                <div className={`max-w-[70%] ${message.sender === 'me' ? 'order-2' : 'order-1'}`}>
+                <div className={`max-w-[70%]`}>
                   <div
-                    className={`p-4 rounded-2xl ${
-                      message.sender === 'me'
+                    className={`p-4 rounded-2xl ${message.sender === 'me'
                         ? 'bg-primary text-primary-foreground'
                         : 'bg-muted'
-                    }`}
+                      }`}
                   >
                     <p className="text-sm">{message.text}</p>
                   </div>

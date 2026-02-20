@@ -1,33 +1,35 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { User, Bell, Shield, CreditCard, Moon, Sun } from 'lucide-react';
+import { User, Bell, Shield, Moon, Sun, Monitor } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { Badge } from '../components/ui/Badge';
 import { useApp } from '../context/AppContext';
-import { SellerProfileSettings } from '../components/SellerProfileSettings';
+
+type Tab = 'profile' | 'notifications' | 'appearance' | 'privacy';
+
+const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
+  { id: 'profile', label: 'Profile', icon: User },
+  { id: 'notifications', label: 'Notifications', icon: Bell },
+  { id: 'appearance', label: 'Appearance', icon: Moon },
+  { id: 'privacy', label: 'Privacy & Security', icon: Shield },
+];
 
 export function Settings() {
-  const { theme, setTheme } = useApp();
-  const [activeTab, setActiveTab] = useState('profile');
-
-  const tabs = [
-    { id: 'profile', label: 'Profile', icon: User },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'security', label: 'Security', icon: Shield },
-    { id: 'payments', label: 'Payments', icon: CreditCard },
-  ];
+  const { theme, setTheme, userProfile } = useApp();
+  const [activeTab, setActiveTab] = useState<Tab>('profile');
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
       <div>
         <h1 className="text-3xl font-bold mb-2">Settings</h1>
-        <p className="text-muted-foreground">Manage your account preferences</p>
+        <p className="text-muted-foreground">Manage your account and preferences</p>
       </div>
 
-      <div className="grid lg:grid-cols-12 gap-6">
-        {/* Sidebar */}
-        <Card className="lg:col-span-3">
+      <div className="grid lg:grid-cols-4 gap-6">
+        {/* Tab List */}
+        <Card className="lg:col-span-1 h-fit">
           <CardContent className="p-4">
             <nav className="space-y-1">
               {tabs.map((tab) => {
@@ -36,14 +38,13 @@ export function Settings() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                      activeTab === tab.id
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-left ${activeTab === tab.id
                         ? 'bg-primary text-primary-foreground'
-                        : 'hover:bg-accent'
-                    }`}
+                        : 'hover:bg-accent text-foreground'
+                      }`}
                   >
-                    <Icon className="w-5 h-5" />
-                    <span>{tab.label}</span>
+                    <Icon className="w-4 h-4" />
+                    <span className="text-sm font-medium">{tab.label}</span>
                   </button>
                 );
               })}
@@ -51,255 +52,189 @@ export function Settings() {
           </CardContent>
         </Card>
 
-        {/* Content */}
-        <div className="lg:col-span-9">
-          {activeTab === 'profile' && <ProfileSettings />}
-          {activeTab === 'notifications' && <NotificationSettings />}
-          {activeTab === 'security' && <SecuritySettings />}
-          {activeTab === 'payments' && <PaymentSettings />}
+        {/* Tab Content */}
+        <div className="lg:col-span-3 space-y-6">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            {/* ── Profile ─────────────────────────────── */}
+            {activeTab === 'profile' && (
+              <Card>
+                <CardHeader>
+                  <h2 className="text-xl font-semibold">Profile Information</h2>
+                  <p className="text-sm text-muted-foreground">Update your personal details</p>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Avatar */}
+                  <div className="flex items-center gap-6">
+                    <div className="w-20 h-20 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center">
+                      <span className="text-white font-bold text-2xl">
+                        {userProfile.firstName[0]}{userProfile.lastName[0]}
+                      </span>
+                    </div>
+                    <div>
+                      <Button variant="outline" size="sm">Change Photo</Button>
+                      <p className="text-xs text-muted-foreground mt-1">JPG, GIF or PNG. Max size 2MB.</p>
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <Input
+                      label="First Name"
+                      defaultValue={userProfile.firstName}
+                    />
+                    <Input
+                      label="Last Name"
+                      defaultValue={userProfile.lastName}
+                    />
+                  </div>
+                  <Input
+                    type="email"
+                    label="Email"
+                    defaultValue={userProfile.email}
+                  />
+                  <Input
+                    type="tel"
+                    label="Phone Number"
+                    placeholder="+1 (555) 000-0000"
+                  />
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Bio</label>
+                    <textarea
+                      rows={3}
+                      defaultValue={userProfile.bio}
+                      className="w-full px-4 py-3 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                      placeholder="Tell us about yourself..."
+                    />
+                  </div>
+
+                  <Button>Save Profile</Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ── Notifications ────────────────────────── */}
+            {activeTab === 'notifications' && (
+              <Card>
+                <CardHeader>
+                  <h2 className="text-xl font-semibold">Notification Preferences</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Choose what you want to be notified about
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {[
+                      { label: 'Order Updates', desc: 'New orders, status changes, completions', defaultChecked: true },
+                      { label: 'Messages', desc: 'New messages from buyers or sellers', defaultChecked: true },
+                      { label: 'Payment Alerts', desc: 'Confirmations, refunds, and withdrawals', defaultChecked: true },
+                      { label: 'Promotional Emails', desc: 'Tips, product updates, and offers', defaultChecked: false },
+                      { label: 'Review Reminders', desc: 'Reminders to leave reviews for completed orders', defaultChecked: true },
+                    ].map((item) => (
+                      <div
+                        key={item.label}
+                        className="flex items-center justify-between p-4 bg-muted/50 rounded-lg"
+                      >
+                        <div>
+                          <div className="font-medium">{item.label}</div>
+                          <div className="text-sm text-muted-foreground">{item.desc}</div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          defaultChecked={item.defaultChecked}
+                          className="w-5 h-5 rounded accent-primary"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <Button className="mt-6">Save Preferences</Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ── Appearance ───────────────────────────── */}
+            {activeTab === 'appearance' && (
+              <Card>
+                <CardHeader>
+                  <h2 className="text-xl font-semibold">Appearance</h2>
+                  <p className="text-sm text-muted-foreground">Personalise how Syncro looks for you</p>
+                </CardHeader>
+                <CardContent>
+                  <h3 className="font-medium mb-4">Theme</h3>
+                  <div className="grid grid-cols-3 gap-4">
+                    {[
+                      { value: 'light', icon: Sun, label: 'Light' },
+                      { value: 'dark', icon: Moon, label: 'Dark' },
+                      { value: 'system', icon: Monitor, label: 'System' },
+                    ].map((option) => {
+                      const Icon = option.icon;
+                      const isActive = theme === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          onClick={() => setTheme(option.value as 'light' | 'dark')}
+                          className={`p-6 border-2 rounded-xl flex flex-col items-center gap-3 transition-all ${isActive
+                              ? 'border-primary bg-primary/5'
+                              : 'border-border hover:border-primary/50'
+                            }`}
+                        >
+                          <Icon className="w-8 h-8" />
+                          <span className="text-sm font-medium">{option.label}</span>
+                          {isActive && (
+                            <Badge variant="default" className="text-xs">Active</Badge>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ── Privacy & Security ───────────────────── */}
+            {activeTab === 'privacy' && (
+              <Card>
+                <CardHeader>
+                  <h2 className="text-xl font-semibold">Privacy &amp; Security</h2>
+                  <p className="text-sm text-muted-foreground">Keep your account safe</p>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div>
+                    <h3 className="font-medium mb-4">Change Password</h3>
+                    <div className="space-y-4">
+                      <Input type="password" label="Current Password" placeholder="••••••••" />
+                      <Input type="password" label="New Password" placeholder="••••••••" />
+                      <Input type="password" label="Confirm New Password" placeholder="••••••••" />
+                    </div>
+                    <Button className="mt-4">Update Password</Button>
+                  </div>
+
+                  <div className="pt-6 border-t border-border">
+                    <h3 className="font-medium mb-2">Two-Factor Authentication</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Add an extra layer of security to your account
+                    </p>
+                    <Button variant="outline">Enable 2FA</Button>
+                  </div>
+
+                  <div className="pt-6 border-t border-border">
+                    <h3 className="font-medium text-destructive mb-2">Danger Zone</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Once you delete your account, there is no going back.
+                    </p>
+                    <Button variant="ghost" className="text-destructive hover:bg-destructive/10">
+                      Delete Account
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </motion.div>
         </div>
       </div>
     </div>
-  );
-}
-
-function ProfileSettings() {
-  const { role, userProfile, setUserProfile } = useApp();
-  
-  // Buyer profile data - initialize from context
-  const [buyerFormData, setBuyerFormData] = useState({
-    firstName: userProfile.firstName,
-    lastName: userProfile.lastName,
-    email: userProfile.email,
-    phone: userProfile.phone || '',
-  });
-
-  const handleSaveBuyerProfile = () => {
-    setUserProfile({
-      firstName: buyerFormData.firstName,
-      lastName: buyerFormData.lastName,
-      email: buyerFormData.email,
-      phone: buyerFormData.phone,
-    });
-  };
-
-  if (role === 'buyer') {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
-        <Card>
-          <CardHeader>
-            <h2 className="text-xl font-semibold">Profile Information</h2>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Profile Photo */}
-            <div className="flex items-center gap-6">
-              <div className="w-24 h-24 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-3xl">
-                  {buyerFormData.firstName[0] + buyerFormData.lastName[0]}
-                </span>
-              </div>
-              <div>
-                <Button variant="outline" size="sm" className="mb-2">Change Photo</Button>
-                <p className="text-sm text-muted-foreground">JPG, PNG or GIF. Max size 5MB</p>
-              </div>
-            </div>
-
-            {/* Personal Information */}
-            <div className="grid md:grid-cols-2 gap-6">
-              <Input
-                label="First Name"
-                value={buyerFormData.firstName}
-                onChange={(e) => setBuyerFormData({ ...buyerFormData, firstName: e.target.value })}
-              />
-              <Input
-                label="Last Name"
-                value={buyerFormData.lastName}
-                onChange={(e) => setBuyerFormData({ ...buyerFormData, lastName: e.target.value })}
-              />
-              <Input
-                label="Email"
-                type="email"
-                value={buyerFormData.email}
-                onChange={(e) => setBuyerFormData({ ...buyerFormData, email: e.target.value })}
-              />
-              <Input
-                label="Phone"
-                value={buyerFormData.phone}
-                onChange={(e) => setBuyerFormData({ ...buyerFormData, phone: e.target.value })}
-                placeholder="+1 (555) 000-0000"
-              />
-            </div>
-
-            <div className="flex gap-3">
-              <Button onClick={handleSaveBuyerProfile}>Save Changes</Button>
-              <Button variant="outline">Cancel</Button>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-    );
-  }
-
-  // Seller Business Profile - Use comprehensive component
-  return <SellerProfileSettings />;
-}
-
-function NotificationSettings() {
-  const { theme, setTheme } = useApp();
-  const [notifications, setNotifications] = useState({
-    orderUpdates: true,
-    newMessages: true,
-    paymentConfirmations: true,
-    marketingEmails: false,
-    weeklyDigest: true,
-  });
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
-    >
-      <Card>
-        <CardHeader>
-          <h2 className="text-xl font-semibold">Appearance</h2>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="font-semibold mb-1">Theme</h4>
-              <p className="text-sm text-muted-foreground">Choose your preferred theme</p>
-            </div>
-            <div className="flex items-center gap-2 bg-muted rounded-lg p-1">
-              <button
-                onClick={() => setTheme('light')}
-                className={`p-2 rounded-md transition-all ${
-                  theme === 'light' ? 'bg-card shadow-sm' : ''
-                }`}
-              >
-                <Sun className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => setTheme('dark')}
-                className={`p-2 rounded-md transition-all ${
-                  theme === 'dark' ? 'bg-card shadow-sm' : ''
-                }`}
-              >
-                <Moon className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <h2 className="text-xl font-semibold">Email Notifications</h2>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {Object.entries(notifications).map(([key, value]) => (
-            <div key={key} className="flex items-center justify-between py-3 border-b border-border last:border-0">
-              <div>
-                <h4 className="font-semibold capitalize">
-                  {key.replace(/([A-Z])/g, ' $1').trim()}
-                </h4>
-                <p className="text-sm text-muted-foreground">
-                  Receive notifications about {key.replace(/([A-Z])/g, ' $1').toLowerCase()}
-                </p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={value}
-                  onChange={(e) => setNotifications({ ...notifications, [key]: e.target.checked })}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-              </label>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
-}
-
-function SecuritySettings() {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
-    >
-      <Card>
-        <CardHeader>
-          <h2 className="text-xl font-semibold">Change Password</h2>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <Input label="Current Password" type="password" />
-          <Input label="New Password" type="password" />
-          <Input label="Confirm New Password" type="password" />
-          <Button>Update Password</Button>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <h2 className="text-xl font-semibold">Two-Factor Authentication</h2>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground mb-4">
-            Add an extra layer of security to your account
-          </p>
-          <Button variant="outline">Enable 2FA</Button>
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
-}
-
-function PaymentSettings() {
-  const savedCards = [
-    { id: 1, brand: 'Visa', last4: '4242', expiry: '12/25', isDefault: true },
-    { id: 2, brand: 'Mastercard', last4: '5555', expiry: '08/26', isDefault: false },
-  ];
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
-    >
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Payment Methods</h2>
-            <Button variant="outline" size="sm">Add New Card</Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {savedCards.map((card) => (
-            <div key={card.id} className="flex items-center justify-between p-4 border border-border rounded-lg">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-8 bg-gradient-to-br from-primary to-accent rounded flex items-center justify-center">
-                  <span className="text-white text-xs font-bold">{card.brand}</span>
-                </div>
-                <div>
-                  <div className="font-semibold">•••• {card.last4}</div>
-                  <div className="text-sm text-muted-foreground">Expires {card.expiry}</div>
-                </div>
-                {card.isDefault && (
-                  <span className="px-2 py-1 bg-primary/10 text-primary text-xs rounded">Default</span>
-                )}
-              </div>
-              <Button variant="ghost" size="sm">Remove</Button>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-    </motion.div>
   );
 }
