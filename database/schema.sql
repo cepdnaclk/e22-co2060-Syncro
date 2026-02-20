@@ -1,0 +1,2 @@
+-- Syncro (Phase 1) initial schema placeholder
+-- Planned tables: users, rfp, bids, categories
