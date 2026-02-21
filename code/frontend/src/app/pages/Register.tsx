@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { Moon, Sun } from 'lucide-react';
+import { Moon, Sun, Loader2 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
@@ -9,16 +9,18 @@ import { useApp } from '../context/AppContext';
 
 export function Register() {
   const navigate = useNavigate();
-  const { theme, setTheme } = useApp();
+  const { theme, setTheme, register } = useApp();
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
     confirmPassword: '',
   });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -26,15 +28,21 @@ export function Register() {
       setError('Password must be at least 6 characters long.');
       return;
     }
-
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match. Please try again.');
       setFormData({ ...formData, confirmPassword: '' });
       return;
     }
 
-    // Mock registration - navigate to dashboard
-    navigate('/dashboard');
+    setLoading(true);
+    try {
+      await register(formData.email, formData.password, formData.firstName, formData.lastName);
+      navigate('/dashboard');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -66,14 +74,24 @@ export function Register() {
 
         <Card className="p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
-            <Input
-              type="text"
-              label="Full Name"
-              placeholder="John Doe"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                type="text"
+                label="First Name"
+                placeholder="John"
+                value={formData.firstName}
+                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                required
+              />
+              <Input
+                type="text"
+                label="Last Name"
+                placeholder="Doe"
+                value={formData.lastName}
+                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                required
+              />
+            </div>
 
             <Input
               type="email"
@@ -116,19 +134,19 @@ export function Register() {
                 <input type="checkbox" className="rounded border-border mt-1" required />
                 <span className="text-muted-foreground">
                   I agree to the{' '}
-                  <Link to="#" className="text-primary hover:underline">
-                    Terms of Service
-                  </Link>{' '}
-                  and{' '}
-                  <Link to="#" className="text-primary hover:underline">
-                    Privacy Policy
-                  </Link>
+                  <Link to="#" className="text-primary hover:underline">Terms of Service</Link>
+                  {' '}and{' '}
+                  <Link to="#" className="text-primary hover:underline">Privacy Policy</Link>
                 </span>
               </label>
             </div>
 
-            <Button type="submit" className="w-full">
-              Create Account
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? (
+                <span className="flex items-center gap-2 justify-center">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Creating account...
+                </span>
+              ) : 'Create Account'}
             </Button>
           </form>
 

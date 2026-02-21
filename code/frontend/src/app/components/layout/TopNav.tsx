@@ -6,7 +6,8 @@ import { motion, AnimatePresence } from 'motion/react';
 
 export function TopNav() {
   const navigate = useNavigate();
-  const { role, setRole, theme, setTheme, businessProfile, hasSellerProfile, userProfile } = useApp();
+  const { role, theme, setTheme, businessProfile, hasSellerProfile, userProfile, authUser, logout, toggleRole } = useApp();
+  const [roleToggling, setRoleToggling] = React.useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
 
@@ -32,8 +33,20 @@ export function TopNav() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('syncro_auth');
+    logout();
     navigate('/login');
+  };
+
+  const handleToggleRole = async (newRole: 'buyer' | 'seller') => {
+    if (newRole === role || roleToggling) return;
+    setRoleToggling(true);
+    try {
+      await toggleRole();
+    } catch (e) {
+      console.error('Role toggle failed', e);
+    } finally {
+      setRoleToggling(false);
+    }
   };
 
   const notifications = [
@@ -45,7 +58,8 @@ export function TopNav() {
   const unreadCount = notifications.filter(n => n.unread).length;
 
   // Get user initials
-  const userInitials = `${userProfile.firstName[0]}${userProfile.lastName[0]}`;
+  const firstInitial = authUser?.firstName?.[0] || userProfile.firstName?.[0] || '?';
+  const userInitials = firstInitial.toUpperCase();
 
   return (
     <header className="sticky top-0 z-40 bg-card border-b border-border backdrop-blur-sm bg-card/95">
@@ -88,20 +102,22 @@ export function TopNav() {
           {hasSellerProfile && (
             <div className="flex items-center bg-muted rounded-lg p-1">
               <button
-                onClick={() => setRole('buyer')}
+                onClick={() => handleToggleRole('buyer')}
+                disabled={roleToggling}
                 className={`px-4 py-1.5 rounded-md text-sm transition-all ${role === 'buyer'
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                  }`}
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+                  } ${roleToggling ? 'opacity-60 cursor-not-allowed' : ''}`}
               >
                 Buyer
               </button>
               <button
-                onClick={() => setRole('seller')}
+                onClick={() => handleToggleRole('seller')}
+                disabled={roleToggling}
                 className={`px-4 py-1.5 rounded-md text-sm transition-all ${role === 'seller'
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                  }`}
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+                  } ${roleToggling ? 'opacity-60 cursor-not-allowed' : ''}`}
               >
                 Seller
               </button>
@@ -168,7 +184,7 @@ export function TopNav() {
               }}
               className="flex items-center gap-2 p-2 hover:bg-accent rounded-lg transition-colors"
             >
-              <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center" title={authUser?.firstName || userProfile.firstName}>
                 <span className="text-white text-sm font-semibold">{userInitials}</span>
               </div>
               <ChevronDown className="w-4 h-4" />

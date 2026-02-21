@@ -1,14 +1,12 @@
 import React from 'react';
 import { Navigate } from 'react-router';
+import { useApp } from '../context/AppContext';
 
 /**
- * A simple auth guard that checks if the user is "logged in".
- * Currently uses localStorage to persist a mock auth flag set on Login/Register.
- * Replace the `isAuthenticated` logic with real JWT/session checking once the
- * backend is integrated.
+ * Auth guard — uses real isAuthenticated from AppContext (JWT-based).
  */
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-    const isAuthenticated = localStorage.getItem('syncro_auth') === 'true';
+    const { isAuthenticated } = useApp();
 
     if (!isAuthenticated) {
         return <Navigate to="/login" replace />;

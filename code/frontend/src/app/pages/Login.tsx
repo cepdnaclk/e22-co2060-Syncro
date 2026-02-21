@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { Moon, Sun } from 'lucide-react';
+import { Moon, Sun, Loader2 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
@@ -9,17 +9,23 @@ import { useApp } from '../context/AppContext';
 
 export function Login() {
   const navigate = useNavigate();
-  const { theme, setTheme } = useApp();
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
+  const { theme, setTheme, login } = useApp();
+  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock login — set auth flag, then navigate to dashboard
-    localStorage.setItem('syncro_auth', 'true');
-    navigate('/dashboard');
+    setError('');
+    setLoading(true);
+    try {
+      await login(formData.email, formData.password);
+      navigate('/dashboard');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -69,6 +75,12 @@ export function Login() {
               required
             />
 
+            {error && (
+              <div className="px-4 py-3 bg-destructive/10 border border-destructive/30 rounded-lg text-sm text-destructive">
+                {error}
+              </div>
+            )}
+
             <div className="flex items-center justify-between text-sm">
               <label className="flex items-center gap-2">
                 <input type="checkbox" className="rounded border-border" />
@@ -79,8 +91,12 @@ export function Login() {
               </Link>
             </div>
 
-            <Button type="submit" className="w-full">
-              Sign In
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? (
+                <span className="flex items-center gap-2 justify-center">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Signing in...
+                </span>
+              ) : 'Sign In'}
             </Button>
           </form>
 

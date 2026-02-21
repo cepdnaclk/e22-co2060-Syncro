@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { authApi } from '../services/api';
 
 type UserRole = 'buyer' | 'seller';
 
@@ -39,6 +40,15 @@ interface UserProfile {
   bio?: string;
 }
 
+// Authenticated user info from JWT response
+interface AuthUser {
+  userId: number;
+  email: string;
+  firstName: string;
+  role: string;
+  token: string;
+}
+
 interface AppContextType {
   role: UserRole;
   setRole: (role: UserRole) => void;
@@ -51,72 +61,137 @@ interface AppContextType {
   setShowOnboarding: (show: boolean) => void;
   userProfile: UserProfile;
   setUserProfile: (profile: UserProfile) => void;
+  // Real auth state
+  authUser: AuthUser | null;
+  isAuthenticated: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
+  logout: () => void;
+  toggleRole: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const DEFAULT_USER_PROFILE: UserProfile = {
-  firstName: 'Alex',
-  lastName: 'Rivera',
-  email: 'alex.rivera@example.com',
-  phone: '+1 (555) 123-4567',
-  bio: 'Passionate about connecting buyers and sellers on Syncro.',
+  firstName: '',
+  lastName: '',
+  email: '',
 };
 
+// Load auth user from localStorage on startup
+function loadAuthUser(): AuthUser | null {
+  try {
+    const stored = localStorage.getItem('syncro_auth_user');
+    if (stored) return JSON.parse(stored);
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  // Role with localStorage persistence
+  const [authUser, setAuthUserState] = useState<AuthUser | null>(loadAuthUser);
+
   const [role, setRoleState] = useState<UserRole>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('syncro_role');
-      if (stored === 'buyer' || stored === 'seller') {
-        return stored;
-      }
-    }
-    return 'buyer';
+    const stored = localStorage.getItem('syncro_role');
+    return (stored === 'buyer' || stored === 'seller') ? stored : 'buyer';
   });
 
   const [theme, setTheme] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('theme') || 'light';
-    }
-    return 'light';
+    return localStorage.getItem('theme') || 'light';
   });
 
-  // User profile with localStorage persistence
   const [userProfile, setUserProfileState] = useState<UserProfile>(() => {
-    if (typeof window !== 'undefined') {
+    try {
       const stored = localStorage.getItem('syncro_userProfile');
-      if (stored) {
-        try {
-          return JSON.parse(stored);
-        } catch (e) {
-          console.error('Failed to parse user profile from localStorage:', e);
-        }
-      }
-    }
+      if (stored) return JSON.parse(stored);
+    } catch { /* ignore */ }
     return DEFAULT_USER_PROFILE;
   });
 
-  // Business profile with localStorage persistence
   const [businessProfile, setBusinessProfileState] = useState<BusinessProfile | null>(() => {
-    if (typeof window !== 'undefined') {
+    try {
       const stored = localStorage.getItem('syncro_businessProfile');
-      if (stored) {
-        try {
-          return JSON.parse(stored);
-        } catch (e) {
-          console.error('Failed to parse business profile from localStorage:', e);
-        }
-      }
-    }
+      if (stored) return JSON.parse(stored);
+    } catch { /* ignore */ }
     return null;
   });
 
   const [showOnboarding, setShowOnboarding] = useState(false);
-
   const hasSellerProfile = businessProfile !== null;
+  const isAuthenticated = authUser !== null;
 
-  // Persist theme changes to localStorage
+  // Sync auth user to localStorage
+  const setAuthUser = (user: AuthUser | null) => {
+    setAuthUserState(user);
+    if (user) {
+      localStorage.setItem('syncro_auth_user', JSON.stringify(user));
+      localStorage.setItem('syncro_token', user.token);
+      localStorage.setItem('syncro_auth', 'true'); // keep ProtectedRoute compat
+    } else {
+      localStorage.removeItem('syncro_auth_user');
+      localStorage.removeItem('syncro_token');
+      localStorage.removeItem('syncro_auth');
+    }
+  };
+
+  // Real login — calls backend
+  const login = async (email: string, password: string) => {
+    const data = await authApi.login({ email, password });
+    const user: AuthUser = {
+      userId: data.user_id,
+      email,
+      firstName: data.first_name,
+      role: data.role,
+      token: data.access_token,
+    };
+    setAuthUser(user);
+    const newRole = data.role === 'seller' ? 'seller' : 'buyer';
+    setRoleState(newRole);
+    localStorage.setItem('syncro_role', newRole);
+    // Seed the user profile from backend response
+    setUserProfileState(prev => ({ ...prev, firstName: data.first_name, email }));
+  };
+
+  // Real register — calls backend
+  const register = async (email: string, password: string, firstName: string, lastName: string) => {
+    const data = await authApi.register({ email, password, first_name: firstName, last_name: lastName });
+    const user: AuthUser = {
+      userId: data.user_id,
+      email,
+      firstName: data.first_name,
+      role: data.role,
+      token: data.access_token,
+    };
+    setAuthUser(user);
+    localStorage.setItem('syncro_role', 'buyer');
+    setRoleState('buyer');
+    setUserProfileState({ firstName, lastName, email });
+  };
+
+  // Logout — clear all auth state
+  const logout = () => {
+    setAuthUser(null);
+    setRoleState('buyer');
+    setBusinessProfileState(null);
+    localStorage.removeItem('syncro_role');
+    localStorage.removeItem('syncro_businessProfile');
+    localStorage.removeItem('syncro_userProfile');
+  };
+
+  // Toggle role — calls backend and updates token
+  const toggleRole = async () => {
+    if (!authUser) return;
+    const data = await authApi.toggleRole();
+    const newRole = data.active_role === 'seller' ? 'seller' : 'buyer';
+    setRoleState(newRole);
+    localStorage.setItem('syncro_role', newRole);
+    // Update stored token with the new one
+    const updatedUser: AuthUser = { ...authUser, role: newRole, token: data.access_token };
+    setAuthUser(updatedUser);
+  };
+
+  // Side effects
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove('light', 'dark');
@@ -124,59 +199,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  // Persist user profile changes to localStorage
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('syncro_userProfile', JSON.stringify(userProfile));
-    }
+    localStorage.setItem('syncro_userProfile', JSON.stringify(userProfile));
   }, [userProfile]);
 
-  // Persist business profile changes to localStorage
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      if (businessProfile) {
-        localStorage.setItem('syncro_businessProfile', JSON.stringify(businessProfile));
-      } else {
-        localStorage.removeItem('syncro_businessProfile');
-      }
+    if (businessProfile) {
+      localStorage.setItem('syncro_businessProfile', JSON.stringify(businessProfile));
+    } else {
+      localStorage.removeItem('syncro_businessProfile');
     }
   }, [businessProfile]);
 
-  // Persist role changes to localStorage
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('syncro_role', role);
-    }
+    localStorage.setItem('syncro_role', role);
   }, [role]);
-
-  // Wrapper function to update user profile
-  const setUserProfile = (profile: UserProfile) => {
-    setUserProfileState(profile);
-  };
-
-  // Wrapper function to update business profile
-  const setBusinessProfile = (profile: BusinessProfile) => {
-    setBusinessProfileState(profile);
-  };
-
-  // Wrapper function to update role
-  const setRole = (newRole: UserRole) => {
-    setRoleState(newRole);
-  };
 
   return (
     <AppContext.Provider value={{
       role,
-      setRole,
+      setRole: setRoleState,
       theme,
       setTheme,
       businessProfile,
-      setBusinessProfile,
+      setBusinessProfile: setBusinessProfileState,
       hasSellerProfile,
       showOnboarding,
       setShowOnboarding,
       userProfile,
-      setUserProfile,
+      setUserProfile: setUserProfileState,
+      authUser,
+      isAuthenticated,
+      login,
+      register,
+      logout,
+      toggleRole,
     }}>
       {children}
     </AppContext.Provider>
