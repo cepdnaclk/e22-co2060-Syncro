@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: syncro_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: syncro123
+      POSTGRES_DB: syncro_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./code/backend
+      dockerfile: Dockerfile
+    container_name: syncro_backend
+    environment:
+      DATABASE_URL: postgresql://postgres:syncro123@db:5432/syncro_db
+      SECRET_KEY: syncro_dev_secret_key_change_in_production
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
