@@ -60,11 +60,11 @@ export function Register() {
         className="w-full max-w-md"
       >
         <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">S</span>
+          <Link to="/" className="inline-flex items-center gap-4 mb-8">
+            <div className="w-20 h-20 bg-gradient-to-br from-primary to-accent rounded-2xl flex items-center justify-center shadow-xl">
+              <span className="text-white font-bold text-4xl">S</span>
             </div>
-            <span className="text-2xl font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            <span className="text-5xl font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               Syncro
             </span>
           </Link>

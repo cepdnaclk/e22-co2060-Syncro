@@ -193,7 +193,7 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
                 {buyerActivities.map((activity: Activity, index: number) => (
                   <div key={index} className="flex items-start gap-3 pb-3 border-b border-border last:border-0">
                     <div className={`w-2 h-2 rounded-full mt-2 ${activity.type === 'success' ? 'bg-green-500' :
-                        activity.type === 'info' ? 'bg-blue-500' : 'bg-muted-foreground'
+                      activity.type === 'info' ? 'bg-blue-500' : 'bg-muted-foreground'
                       }`} />
                     <div className="flex-1">
                       <p className="text-sm">{activity.text}</p>
