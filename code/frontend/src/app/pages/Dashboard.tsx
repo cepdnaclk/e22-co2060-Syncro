@@ -18,6 +18,7 @@ import { useApp } from '../context/AppContext';
 import { Link } from 'react-router';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { SellerOnboarding } from '../components/SellerOnboarding';
+import { SyncroChat } from '../components/SyncroChat';
 import { buyerOrders, sellerOrders, buyerActivities, revenueData, orderData } from '../services/mockData';
 import type { Activity, Order } from '../services/mockData';
 
@@ -109,26 +110,34 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
       {!hasSellerProfile && (
         <motion.div {...fadeInUp}>
           <Card className="bg-gradient-to-br from-primary/10 via-accent/10 to-primary/5 border-primary/20 overflow-hidden relative">
-            <CardContent className="p-8">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
-                      <Sparkles className="w-5 h-5 text-white" />
+            <CardContent className="p-10">
+              <div className="flex flex-col gap-8">
+                {/* Row 1: Start Selling */}
+                <div className="flex flex-col items-start gap-6 lg:flex-row lg:items-center lg:justify-between group">
+                  <div className="flex-1 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center shadow-lg shadow-primary/20 transform translate-y-3">
+                        <Sparkles className="w-5 h-5 text-white" />
+                      </div>
+                      <h3 className="text-2xl font-bold tracking-tight">Start Selling on Syncro</h3>
                     </div>
-                    <h3 className="text-2xl font-bold">Start Selling on Syncro</h3>
+                    <p className="text-muted-foreground text-sm leading-relaxed max-w-2xl">
+                      Create a business profile and offer your products and services. Reach buyers, manage orders, and grow your business with our powerful tools.
+                    </p>
                   </div>
-                  <p className="text-muted-foreground mb-6 max-w-xl">
-                    Create a business profile and offer your products and services. Reach buyers, manage orders, and grow your business.
-                  </p>
-                  <Button onClick={onStartSelling} size="lg">
-                    Create Business Profile
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
+                  <div className="flex-shrink-0">
+                    <Button onClick={onStartSelling} size="lg" className="min-w-[200px] shadow-sm">
+                      Create Business Profile
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="hidden lg:block opacity-20 absolute right-8 top-1/2 -translate-y-1/2">
-                  <Sparkles className="w-48 h-48 text-primary" />
-                </div>
+
+                {/* Subtle Divider */}
+                <div className="h-px bg-gradient-to-r from-transparent via-primary/10 to-transparent" />
+
+                {/* Row 2: Syncro Assistant */}
+                <SyncroChat />
               </div>
             </CardContent>
           </Card>
@@ -193,7 +202,7 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
                 {buyerActivities.map((activity: Activity, index: number) => (
                   <div key={index} className="flex items-start gap-3 pb-3 border-b border-border last:border-0">
                     <div className={`w-2 h-2 rounded-full mt-2 ${activity.type === 'success' ? 'bg-green-500' :
-                        activity.type === 'info' ? 'bg-blue-500' : 'bg-muted-foreground'
+                      activity.type === 'info' ? 'bg-blue-500' : 'bg-muted-foreground'
                       }`} />
                     <div className="flex-1">
                       <p className="text-sm">{activity.text}</p>
