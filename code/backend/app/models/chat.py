@@ -1,6 +1,6 @@
 # app/models/chat.py
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean
-from datetime import datetime
+from datetime import datetime, timezone
 from ..database import Base
 
 class Message(Base):
@@ -11,5 +11,5 @@ class Message(Base):
     receiver_id = Column(Integer, ForeignKey("users.id"))
     order_id = Column(Integer, ForeignKey("orders.id")) # Links chat to a specific transaction
     content = Column(Text, nullable=False)
-    timestamp = Column(DateTime, default=datetime.utcnow) 
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     is_read = Column(Boolean, default=False)

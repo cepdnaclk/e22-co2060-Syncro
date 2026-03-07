@@ -4,7 +4,7 @@ from typing import List
 from ..database import get_db
 from ..models.models import Review, Order, OrderStatus, User
 from ..schemas.schemas import ReviewCreate, ReviewResponse
-from ..api.auth import get_current_user_from_token
+from ..core.dependencies import get_current_user
 
 router = APIRouter(prefix="/reviews", tags=["Reviews"])
 
@@ -15,7 +15,7 @@ def get_user_reviews(user_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/order/{order_id}", response_model=ReviewResponse)
-def create_review(order_id: int, review_data: ReviewCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_from_token)):
+def create_review(order_id: int, review_data: ReviewCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     reviewer_id = current_user.id
     order = db.query(Order).filter(Order.id == order_id).first()
     

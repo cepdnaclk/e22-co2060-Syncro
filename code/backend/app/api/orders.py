@@ -4,7 +4,7 @@ from typing import List
 from ..database import get_db
 from ..models.models import Order, OrderStatus, User
 from ..schemas.schemas import OrderCreate, OrderResponse
-from ..api.auth import get_current_user_from_token
+from ..core.dependencies import get_current_user
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
 
@@ -14,7 +14,7 @@ def get_user_orders(user_id: int, db: Session = Depends(get_db)):
     return orders
 
 @router.post("/", response_model=OrderResponse)
-def create_order(order_data: OrderCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_from_token)):
+def create_order(order_data: OrderCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     new_order = Order(**order_data.dict(), buyer_id=current_user.id)
     db.add(new_order)
     db.commit()

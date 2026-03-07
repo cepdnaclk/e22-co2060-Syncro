@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { User, Bell, Shield, Moon, Sun, Monitor } from 'lucide-react';
+import { User, Bell, Shield, Moon, Sun, Monitor, AlertTriangle, X } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -17,8 +17,26 @@ const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
 ];
 
 export function Settings() {
-  const { theme, setTheme, userProfile } = useApp();
+  const { theme, setTheme, userProfile, deleteAccount } = useApp();
   const [activeTab, setActiveTab] = useState<Tab>('profile');
+
+  // Delete-account confirmation dialog state
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteAccount();
+      // After deletion, auth state is cleared — redirect to home / login
+      window.location.href = '/';
+    } catch (err: unknown) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete account. Please try again.');
+      setDeleting(false);
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -26,6 +44,63 @@ export function Settings() {
         <h1 className="text-3xl font-bold mb-2">Settings</h1>
         <p className="text-muted-foreground">Manage your account and preferences</p>
       </div>
+
+      {/* ── Delete Account Confirmation Overlay ────────────────── */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-card border border-border rounded-2xl shadow-xl p-8 max-w-sm w-full mx-4 space-y-4"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-destructive" />
+                </div>
+                <h2 className="text-lg font-semibold">Delete Account</h2>
+              </div>
+              <button
+                onClick={() => { setShowConfirm(false); setDeleteError(null); }}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to permanently delete your account? This action{' '}
+              <strong className="text-foreground">cannot be undone</strong> — all your data,
+              listings, and orders will be removed forever.
+            </p>
+
+            {deleteError && (
+              <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg">
+                {deleteError}
+              </p>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => { setShowConfirm(false); setDeleteError(null); }}
+                disabled={deleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="ghost"
+                className="flex-1 text-destructive hover:bg-destructive/10 border border-destructive/30"
+                onClick={handleDeleteAccount}
+                disabled={deleting}
+              >
+                {deleting ? 'Deleting…' : 'Yes, Delete'}
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       <div className="grid lg:grid-cols-4 gap-6">
         {/* Tab List */}
@@ -39,8 +114,8 @@ export function Settings() {
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-left ${activeTab === tab.id
-                        ? 'bg-primary text-primary-foreground'
-                        : 'hover:bg-accent text-foreground'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'hover:bg-accent text-foreground'
                       }`}
                   >
                     <Icon className="w-4 h-4" />
@@ -177,8 +252,8 @@ export function Settings() {
                           key={option.value}
                           onClick={() => setTheme(option.value as 'light' | 'dark')}
                           className={`p-6 border-2 rounded-xl flex flex-col items-center gap-3 transition-all ${isActive
-                              ? 'border-primary bg-primary/5'
-                              : 'border-border hover:border-primary/50'
+                            ? 'border-primary bg-primary/5'
+                            : 'border-border hover:border-primary/50'
                             }`}
                         >
                           <Icon className="w-8 h-8" />
@@ -223,9 +298,14 @@ export function Settings() {
                   <div className="pt-6 border-t border-border">
                     <h3 className="font-medium text-destructive mb-2">Danger Zone</h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Once you delete your account, there is no going back.
+                      Once you delete your account, there is no going back. All your data will be
+                      permanently removed.
                     </p>
-                    <Button variant="ghost" className="text-destructive hover:bg-destructive/10">
+                    <Button
+                      variant="ghost"
+                      className="text-destructive hover:bg-destructive/10 border border-destructive/30"
+                      onClick={() => setShowConfirm(true)}
+                    >
                       Delete Account
                     </Button>
                   </div>
@@ -238,3 +318,4 @@ export function Settings() {
     </div>
   );
 }
+

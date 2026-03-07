@@ -4,7 +4,7 @@ from typing import List
 from ..database import get_db
 from ..models.models import Profile, User
 from ..schemas.schemas import ProfileResponse, ProfileCreate, ProfileUpdate
-from ..api.auth import get_current_user_from_token
+from ..core.dependencies import get_current_user
 from ..utils.media import upload_image_to_cloudinary
 
 router = APIRouter(prefix="/profiles", tags=["Profiles"])
@@ -17,7 +17,7 @@ def get_profile(user_id: int, db: Session = Depends(get_db)):
     return profile
 
 @router.post("/", response_model=ProfileResponse)
-def create_profile(profile_data: ProfileCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_from_token)):
+def create_profile(profile_data: ProfileCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     user_id = current_user.id
     existing_profile = db.query(Profile).filter(Profile.user_id == user_id).first()
     if existing_profile:
@@ -30,7 +30,7 @@ def create_profile(profile_data: ProfileCreate, db: Session = Depends(get_db), c
     return new_profile
 
 @router.put("/me", response_model=ProfileResponse)
-def update_profile(profile_data: ProfileUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_from_token)):
+def update_profile(profile_data: ProfileUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     user_id = current_user.id
     profile = db.query(Profile).filter(Profile.user_id == user_id).first()
     
@@ -52,7 +52,7 @@ def update_profile(profile_data: ProfileUpdate, db: Session = Depends(get_db), c
 @router.post("/upload")
 async def upload_profile_image(
     image: UploadFile = File(...),
-    current_user: User = Depends(get_current_user_from_token)
+    current_user: User = Depends(get_current_user)
 ):
     try:
         url = upload_image_to_cloudinary(image.file)

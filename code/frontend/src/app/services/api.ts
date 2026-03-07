@@ -3,7 +3,11 @@
 
 const BASE_URL = 'http://localhost:8000';
 
-// Helper: get stored JWT token
+// Callback invoked on 401 — registered by AppContext to trigger logout
+let _onUnauthorized: (() => void) | null = null;
+export function setOnUnauthorized(cb: () => void) {
+    _onUnauthorized = cb;
+}
 function getToken(): string | null {
     return localStorage.getItem('syncro_token');
 }
@@ -21,6 +25,9 @@ function headers(auth = false): HeadersInit {
 // Helper: handle response errors
 async function handleResponse<T>(res: Response): Promise<T> {
     if (!res.ok) {
+        if (res.status === 401 && _onUnauthorized) {
+            _onUnauthorized();
+        }
         const err = await res.json().catch(() => ({ detail: 'Unknown error' }));
         throw new Error(err.detail || `Request failed: ${res.status}`);
     }
@@ -34,6 +41,7 @@ export interface AuthResponse {
     user_id: number;
     role: string;
     first_name: string;
+    last_name: string;
 }
 
 export interface Profile {
@@ -102,6 +110,14 @@ export const authApi = {
             headers: headers(true),
         });
         return handleResponse(res);
+    },
+
+    async deleteAccount(): Promise<{ message: string }> {
+        const res = await fetch(`${BASE_URL}/auth/me`, {
+            method: 'DELETE',
+            headers: headers(true),
+        });
+        return handleResponse<{ message: string }>(res);
     },
 };
 

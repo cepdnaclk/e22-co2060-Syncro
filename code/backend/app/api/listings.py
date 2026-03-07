@@ -6,7 +6,7 @@ from ..models.models import Listing, User
 from ..schemas.schemas import ListingResponse
 from ..database import get_db
 from sqlalchemy.orm import Session
-from ..api.auth import get_current_user_from_token
+from ..core.dependencies import get_current_user
 
 router = APIRouter()
 
@@ -19,7 +19,7 @@ async def create_listing_with_image(
     delivery_time: str = Form(None),
     image: UploadFile = File(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user_from_token)
+    current_user: User = Depends(get_current_user)
 ):
     image_url = None
     if image:

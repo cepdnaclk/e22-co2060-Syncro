@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authApi } from '../services/api';
+import { authApi, setOnUnauthorized } from '../services/api';
 
 type UserRole = 'buyer' | 'seller';
 
@@ -45,6 +45,7 @@ interface AuthUser {
   userId: number;
   email: string;
   firstName: string;
+  lastName: string;
   role: string;
   token: string;
 }
@@ -68,6 +69,7 @@ interface AppContextType {
   register: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
   logout: () => void;
   toggleRole: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -78,15 +80,36 @@ const DEFAULT_USER_PROFILE: UserProfile = {
   email: '',
 };
 
-// Load auth user from localStorage on startup
+// Decode a JWT payload without a library (base64url → JSON)
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(base64));
+  } catch {
+    return null;
+  }
+}
+
+// Load auth user from localStorage on startup — discard if token is expired
 function loadAuthUser(): AuthUser | null {
   try {
     const stored = localStorage.getItem('syncro_auth_user');
-    if (stored) return JSON.parse(stored);
+    if (!stored) return null;
+    const user: AuthUser = JSON.parse(stored);
+    // Validate expiry from JWT payload
+    const payload = decodeJwtPayload(user.token);
+    if (!payload || typeof payload.exp !== 'number') return null;
+    if (Date.now() / 1000 >= payload.exp) {
+      // Token expired — clear stale data
+      localStorage.removeItem('syncro_auth_user');
+      localStorage.removeItem('syncro_token');
+      localStorage.removeItem('syncro_auth');
+      return null;
+    }
+    return user;
   } catch {
-    // ignore
+    return null;
   }
-  return null;
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -142,6 +165,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       userId: data.user_id,
       email,
       firstName: data.first_name,
+      lastName: data.last_name,
       role: data.role,
       token: data.access_token,
     };
@@ -150,7 +174,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setRoleState(newRole);
     localStorage.setItem('syncro_role', newRole);
     // Seed the user profile from backend response
-    setUserProfileState(prev => ({ ...prev, firstName: data.first_name, email }));
+    setUserProfileState(prev => ({ ...prev, firstName: data.first_name, lastName: data.last_name, email }));
   };
 
   // Real register — calls backend
@@ -160,6 +184,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       userId: data.user_id,
       email,
       firstName: data.first_name,
+      lastName: data.last_name,
       role: data.role,
       token: data.access_token,
     };
@@ -190,6 +215,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const updatedUser: AuthUser = { ...authUser, role: newRole, token: data.access_token };
     setAuthUser(updatedUser);
   };
+
+  // Delete account — calls backend then clears all local state
+  const deleteAccount = async () => {
+    await authApi.deleteAccount();
+    setAuthUser(null);
+    setRoleState('buyer');
+    setBusinessProfileState(null);
+    setUserProfileState(DEFAULT_USER_PROFILE);
+    localStorage.removeItem('syncro_role');
+    localStorage.removeItem('syncro_businessProfile');
+    localStorage.removeItem('syncro_userProfile');
+  };
+
+  // Register logout as the global 401 handler so mid-session token expiry
+  // triggers a clean logout instead of showing cryptic error messages.
+  useEffect(() => {
+    setOnUnauthorized(logout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Side effects
   useEffect(() => {
@@ -234,6 +278,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       register,
       logout,
       toggleRole,
+      deleteAccount,
     }}>
       {children}
     </AppContext.Provider>

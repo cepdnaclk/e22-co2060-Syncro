@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, Text, DateTime, Enum, Boolean
 import enum
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import relationship
 from ..database import Base
 
@@ -74,7 +74,7 @@ class Order(Base):
     status = Column(Enum(OrderStatus), default=OrderStatus.PENDING)
     amount = Column(Float, nullable=False)
     has_review = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     buyer_id = Column(Integer, ForeignKey("users.id"))
     seller_id = Column(Integer, ForeignKey("users.id"))
@@ -90,7 +90,7 @@ class Review(Base):
     id = Column(Integer, primary_key=True, index=True)
     rating = Column(Float, nullable=False)
     comment = Column(Text, nullable=True)
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     order_id = Column(Integer, ForeignKey("orders.id"), unique=True)
     reviewer_id = Column(Integer, ForeignKey("users.id"))
@@ -105,7 +105,7 @@ class Bid(Base):
     id = Column(Integer, primary_key=True, index=True)
     amount = Column(Float, nullable=False)
     message = Column(Text, nullable=True)
-    timestamp = Column(DateTime, default=datetime.utcnow) 
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     request_id = Column(Integer) # For Phase 2 RFP logic 
     seller_id = Column(Integer, ForeignKey("users.id"))
     
