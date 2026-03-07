@@ -65,13 +65,12 @@ export function TopNav() {
     <header className="sticky top-0 z-40 bg-card border-b border-border backdrop-blur-sm bg-card/95">
       <div className="flex items-center justify-between px-6 h-16">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-lg">S</span>
-          </div>
-          <span className="text-xl font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Syncro
-          </span>
+        <Link to="/" className="flex items-center">
+          <img
+            src="/dark_nobg.png"
+            alt="Syncro Logo"
+            className="w-16 h-16 rounded-xl object-contain"
+          />
         </Link>
 
         {/* Search Bar */}
