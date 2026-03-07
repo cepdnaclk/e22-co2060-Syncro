@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { User, Bell, Shield, Moon, Sun, Monitor } from 'lucide-react';
+import { User, Bell, Shield, Moon, Sun, Monitor, Building2 } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
 import { useApp } from '../context/AppContext';
+import { SellerProfileSettings } from '../components/SellerProfileSettings';
+import { useSearchParams } from 'react-router';
 
-type Tab = 'profile' | 'notifications' | 'appearance' | 'privacy';
+type Tab = 'profile' | 'notifications' | 'appearance' | 'privacy' | 'business';
 
-const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
+const baseTabs: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: 'profile', label: 'Profile', icon: User },
   { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'appearance', label: 'Appearance', icon: Moon },
@@ -17,8 +19,28 @@ const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
 ];
 
 export function Settings() {
-  const { theme, setTheme, userProfile } = useApp();
-  const [activeTab, setActiveTab] = useState<Tab>('profile');
+  const { theme, setTheme, userProfile, role, hasSellerProfile } = useApp();
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    const param = searchParams.get('tab');
+    if (param === 'business') return 'business';
+    return 'profile';
+  });
+
+  // Keep tab in sync if URL param changes (e.g. from sidebar link)
+  useEffect(() => {
+    const param = searchParams.get('tab');
+    if (param === 'business' && role === 'seller' && hasSellerProfile) {
+      setActiveTab('business');
+    }
+  }, [searchParams, role, hasSellerProfile]);
+
+  const tabs = [
+    ...baseTabs,
+    ...(role === 'seller' && hasSellerProfile
+      ? [{ id: 'business' as Tab, label: 'Business Profile', icon: Building2 }]
+      : []),
+  ];
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -59,6 +81,9 @@ export function Settings() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
           >
+            {/* ── Business Profile ─────────────────────── */}
+            {activeTab === 'business' && <SellerProfileSettings />}
+
             {/* ── Profile ─────────────────────────────── */}
             {activeTab === 'profile' && (
               <Card>

@@ -11,6 +11,7 @@ import {
   TrendingUp,
   ExternalLink,
   Star,
+  Pencil,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
@@ -99,13 +100,22 @@ export function Sidebar() {
               </div>
             </div>
             {/* Fixed: now links to the seller preview page, not settings */}
-            <Link
-              to="/seller/preview"
-              className="flex items-center gap-2 text-xs text-primary hover:text-primary/80 transition-colors"
-            >
-              <ExternalLink className="w-3 h-3" />
-              View Public Profile
-            </Link>
+            <div className="flex flex-col gap-1.5">
+              <Link
+                to="/seller/preview"
+                className="flex items-center gap-2 text-xs text-primary hover:text-primary/80 transition-colors"
+              >
+                <ExternalLink className="w-3 h-3" />
+                View Public Profile
+              </Link>
+              <Link
+                to="/settings?tab=business"
+                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Pencil className="w-3 h-3" />
+                Edit Business Profile
+              </Link>
+            </div>
           </div>
         )}
 
