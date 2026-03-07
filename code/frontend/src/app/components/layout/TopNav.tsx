@@ -65,7 +65,7 @@ export function TopNav() {
     <header className="sticky top-0 z-40 bg-card border-b border-border backdrop-blur-sm bg-card/95">
       <div className="flex items-center justify-between px-6 h-16">
         {/* Logo */}
-        <Link to="/dashboard" className="flex items-center">
+        <Link to="/" className="flex items-center">
           <img
             src="/dark_nobg.png"
             alt="Syncro Logo"

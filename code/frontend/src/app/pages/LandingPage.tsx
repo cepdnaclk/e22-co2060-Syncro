@@ -40,7 +40,7 @@ const heroSlides = [
 ];
 
 export function LandingPage() {
-  const { theme, setTheme } = useApp();
+  const { theme, setTheme, isAuthenticated, role, hasSellerProfile } = useApp();
   const [currentSlide, setCurrentSlide] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -100,12 +100,33 @@ export function LandingPage() {
             >
               {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
             </button>
-            <Link to="/login">
-              <Button variant="ghost">Login</Button>
-            </Link>
-            <Link to="/register">
-              <Button>Sign Up</Button>
-            </Link>
+
+            {isAuthenticated ? (
+              /* ── Logged-in state: show dashboard shortcuts ── */
+              <div className="flex items-center gap-2">
+                <Link to="/dashboard">
+                  <Button>
+                    {role === 'seller' && hasSellerProfile ? 'Seller Dashboard' : 'My Dashboard'}
+                    <ArrowRight className="ml-2 w-4 h-4" />
+                  </Button>
+                </Link>
+                {role !== 'seller' && hasSellerProfile && (
+                  <Link to="/dashboard">
+                    <Button variant="ghost">Switch to Seller</Button>
+                  </Link>
+                )}
+              </div>
+            ) : (
+              /* ── Guest state: show Login / Sign Up ── */
+              <>
+                <Link to="/login">
+                  <Button variant="ghost">Login</Button>
+                </Link>
+                <Link to="/register">
+                  <Button>Sign Up</Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -143,11 +164,18 @@ export function LandingPage() {
 
           {/* Static blue action boxes — fixed across all slides, no animation */}
           <div className="flex flex-col sm:flex-row justify-center gap-4 mt-6 mb-4">
-            {[
-              { label: 'Post Your Need', icon: Search, to: '/register' },
-              { label: 'Start Bidding', icon: TrendingUp, to: '/register' },
-              { label: 'How it Works', icon: Shield, to: '/register' },
-            ].map((action, i) => (
+            {(isAuthenticated
+              ? [
+                  { label: 'My Dashboard', icon: Search, to: '/dashboard' },
+                  { label: 'Discover Services', icon: TrendingUp, to: '/discover' },
+                  { label: 'My Orders', icon: Shield, to: '/orders' },
+                ]
+              : [
+                  { label: 'Post Your Need', icon: Search, to: '/register' },
+                  { label: 'Start Bidding', icon: TrendingUp, to: '/register' },
+                  { label: 'How it Works', icon: Shield, to: '/register' },
+                ]
+            ).map((action, i) => (
               <Link key={i} to={action.to}>
                 <div className="inline-flex items-center justify-center gap-3 px-6 py-3 bg-[#3b82f6] hover:bg-[#2563eb] text-white font-bold rounded-xl shadow-md transition-colors cursor-pointer min-w-[180px]">
                   <action.icon className="w-5 h-5 flex-shrink-0" />
