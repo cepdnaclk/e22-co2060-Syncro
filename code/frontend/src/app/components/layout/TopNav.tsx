@@ -6,11 +6,9 @@ import { motion, AnimatePresence } from 'motion/react';
 
 export function TopNav() {
   const navigate = useNavigate();
-  const { role, theme, setTheme, businessProfile, userProfile, authUser, logout, toggleRole } = useApp();
-  // Show the toggle whenever the account is seller-capable (JWT role OR stored role is seller)
-  // This is decoupled from businessProfile so it stays visible even if the local onboarding
-  // object is not set (e.g. seller status granted via backend toggle).
-  const canToggleRole = role === 'seller' || authUser?.role === 'seller';
+  const { role, theme, setTheme, businessProfile, userProfile, authUser, logout, toggleRole, hasSellerAccount } = useApp();
+  // hasSellerAccount (from AppContext) stays true even when role = 'buyer',
+  // so the Buyer/Seller toggle persists after switching back to buyer.
   const [roleToggling, setRoleToggling] = React.useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -101,8 +99,8 @@ export function TopNav() {
             </div>
           )}
 
-          {/* Role Toggle - show whenever account is seller-capable */}
-          {canToggleRole && (
+          {/* Role Toggle - show whenever user has a seller account (persists in buyer mode) */}
+          {hasSellerAccount && (
             <div className="flex items-center bg-muted rounded-lg p-1">
               <button
                 onClick={() => handleToggleRole('buyer')}

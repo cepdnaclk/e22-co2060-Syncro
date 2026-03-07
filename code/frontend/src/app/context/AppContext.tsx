@@ -57,6 +57,7 @@ interface AppContextType {
   businessProfile: BusinessProfile | null;
   setBusinessProfile: (profile: BusinessProfile) => void;
   hasSellerProfile: boolean;
+  hasSellerAccount: boolean;
   showOnboarding: boolean;
   setShowOnboarding: (show: boolean) => void;
   userProfile: UserProfile;
@@ -119,6 +120,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const [showOnboarding, setShowOnboarding] = useState(false);
   const hasSellerProfile = businessProfile !== null;
+
+  // Persistent flag: stays true once the user has ever been a seller (even in buyer mode).
+  // Cleared only on logout so the role toggle remains visible when in buyer mode.
+  const [hasSellerAccount, setHasSellerAccountState] = useState(() => {
+    return localStorage.getItem('syncro_seller_account') === 'true';
+  });
+
+  const setHasSellerAccount = (val: boolean) => {
+    setHasSellerAccountState(val);
+    if (val) localStorage.setItem('syncro_seller_account', 'true');
+    else localStorage.removeItem('syncro_seller_account');
+  };
+
+  // Whenever businessProfile is set (onboarding complete), mark the account as seller-capable
+  useEffect(() => {
+    if (businessProfile) setHasSellerAccount(true);
+  }, [businessProfile]);
+
   const isAuthenticated = authUser !== null;
 
   // Sync auth user to localStorage
@@ -174,6 +193,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setAuthUser(null);
     setRoleState('buyer');
     setBusinessProfileState(null);
+    setHasSellerAccount(false);
     localStorage.removeItem('syncro_role');
     localStorage.removeItem('syncro_businessProfile');
     localStorage.removeItem('syncro_userProfile');
@@ -186,6 +206,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const newRole = data.active_role === 'seller' ? 'seller' : 'buyer';
     setRoleState(newRole);
     localStorage.setItem('syncro_role', newRole);
+    // Mark as seller-capable the first time they successfully switch to seller
+    if (newRole === 'seller') setHasSellerAccount(true);
     // Update stored token with the new one
     const updatedUser: AuthUser = { ...authUser, role: newRole, token: data.access_token };
     setAuthUser(updatedUser);
@@ -224,6 +246,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       businessProfile,
       setBusinessProfile: setBusinessProfileState,
       hasSellerProfile,
+      hasSellerAccount,
       showOnboarding,
       setShowOnboarding,
       userProfile,
