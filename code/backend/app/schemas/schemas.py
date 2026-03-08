@@ -23,18 +23,38 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     email: Optional[str] = None
 
-# --- Bids ---
+# --- Bids & Bid Requests ---
+class BidRequestBase(BaseModel):
+    description: str
+    category_id: Optional[int] = None
+
+class BidRequestCreate(BidRequestBase):
+    pass
+
+class BidRequestResponse(BidRequestBase):
+    id: int
+    user_id: int
+    status: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
 class BidBase(BaseModel):
-    bid_amount: float = Field(..., gt=0, description="Bid must be greater than 0")
-    message: Optional[str] = Field(None, max_length=500)
+    price: float = Field(..., gt=0)
+    quantity: int = Field(1, ge=1)
+    delivery_time: Optional[str] = None
+    message: Optional[str] = None
 
 class BidCreate(BidBase):
-    request_id: int
-    seller_id: int
+    bid_request_id: int
 
 class BidResponse(BidBase):
     id: int
-    timestamp: datetime
+    bid_request_id: int
+    seller_id: int
+    status: str
+    created_at: datetime
 
     class Config:
         from_attributes = True

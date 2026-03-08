@@ -69,6 +69,8 @@ interface AppContextType {
   register: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
   logout: () => void;
   toggleRole: () => Promise<void>;
+  isChatOpen: boolean;
+  setIsChatOpen: (open: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -137,6 +139,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (businessProfile) setHasSellerAccount(true);
   }, [businessProfile]);
+
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const isAuthenticated = authUser !== null;
 
@@ -257,6 +261,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       register,
       logout,
       toggleRole,
+      isChatOpen,
+      setIsChatOpen,
     }}>
       {children}
     </AppContext.Provider>

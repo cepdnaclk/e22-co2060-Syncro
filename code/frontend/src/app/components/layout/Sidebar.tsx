@@ -12,6 +12,7 @@ import {
   ExternalLink,
   Star,
   Pencil,
+  Gavel,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
@@ -39,6 +40,7 @@ export function Sidebar() {
     {
       section: 'Communication', items: [
         { name: 'Messages', icon: MessageSquare, path: '/messages' },
+        { name: 'Bids', icon: Gavel, path: '/bids' },
       ]
     },
     {
@@ -68,6 +70,7 @@ export function Sidebar() {
     {
       section: 'Communication', items: [
         { name: 'Messages', icon: MessageSquare, path: '/messages' },
+        { name: 'Bids', icon: Gavel, path: '/bids' },
       ]
     },
     {
@@ -133,8 +136,8 @@ export function Sidebar() {
                     key={item.path}
                     to={item.path}
                     className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all ${isActive
-                        ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-sm'
-                        : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                      ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-sm'
+                      : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                       }`}
                   >
                     <Icon className="w-5 h-5" />
