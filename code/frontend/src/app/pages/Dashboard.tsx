@@ -10,6 +10,7 @@ import {
   MessageSquare,
   ArrowRight,
   Sparkles,
+  Bot
 } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
@@ -81,15 +82,19 @@ export function Dashboard() {
   );
 }
 
+// ────────────────────────── Trigger import ────────────────
+import { MessageCircle } from 'lucide-react';
+
 // ────────────────────────── Buyer Dashboard ────────────────
 
 function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirstName }: BuyerDashboardProps) {
   const stats = [
-    { label: 'Active Orders', value: '8', icon: ShoppingCart, color: 'text-blue-500' },
-    { label: 'Completed', value: '24', icon: CheckCircle, color: 'text-green-500' },
-    { label: 'Pending Payment', value: '2', icon: Clock, color: 'text-yellow-500' },
-    { label: 'Messages', value: '5', icon: MessageSquare, color: 'text-purple-500' },
+    { label: 'Active Orders', value: '8', icon: ShoppingCart, iconColor: 'text-[#0057B8]', bgColor: 'bg-[#EBF3FC]' },
+    { label: 'Completed', value: '24', icon: CheckCircle, iconColor: 'text-[#00D084]', bgColor: 'bg-[#E6FAF0]' },
+    { label: 'Pending Payment', value: '2', icon: Clock, iconColor: 'text-[#F5A623]', bgColor: 'bg-[#FEF6E9]' },
+    { label: 'Messages', value: '5', icon: MessageSquare, iconColor: 'text-[#B620E0]', bgColor: 'bg-[#F8E9FB]' },
   ];
+
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -105,49 +110,77 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
         <p className="text-muted-foreground">Here's what's happening with your orders.</p>
       </div>
 
-      {/* Become a Seller CTA */}
-      {!hasSellerProfile && (
-        <motion.div {...fadeInUp}>
-          <Card className="bg-gradient-to-br from-primary/10 via-accent/10 to-primary/5 border-primary/20 overflow-hidden relative">
-            <CardContent className="p-8">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
-                      <Sparkles className="w-5 h-5 text-white" />
-                    </div>
-                    <h3 className="text-2xl font-bold">Start Selling on Syncro</h3>
+      {/* CTA Section (Start Selling & Syncro Assistant) */}
+      <motion.div {...fadeInUp}>
+        <div className="bg-[#F0F8FA] border border-[#DCEFF5] rounded-2xl p-6 md:p-8 flex flex-col gap-8 shadow-sm">
+
+          {/* Become a Seller CTA */}
+          {!hasSellerProfile && (
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-8 border-b border-[#DCEFF5]/60">
+              <div className="flex-1">
+                <div className="flex items-center gap-4 mb-2">
+                  <div className="w-12 h-12 bg-[#0089BA] flex items-center justify-center rounded-xl shadow-sm shrink-0">
+                    <Sparkles className="w-6 h-6 text-white" />
                   </div>
-                  <p className="text-muted-foreground mb-6 max-w-xl">
-                    Create a business profile and offer your products and services. Reach buyers, manage orders, and grow your business.
-                  </p>
-                  <Button onClick={onStartSelling} size="lg">
-                    Create Business Profile
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900">Start Selling on Syncro</h3>
+                  </div>
                 </div>
-                <div className="hidden lg:block opacity-20 absolute right-8 top-1/2 -translate-y-1/2">
-                  <Sparkles className="w-48 h-48 text-primary" />
+                <p className="text-gray-600 text-[15px] max-w-2xl leading-relaxed ml-16">
+                  Create a business profile and offer your products and services. Reach buyers, manage orders, and grow your business with our powerful tools.
+                </p>
+              </div>
+              <div className="shrink-0 ml-16 md:ml-0">
+                <Button
+                  onClick={onStartSelling}
+                  className="bg-[#0057B8] hover:bg-[#00479A] text-white px-6 py-6 font-semibold text-base rounded-lg shadow-sm w-full md:w-auto"
+                >
+                  Create Business Profile
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Ask Syncro Assistant CTA */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="flex-1">
+              <div className="flex items-center gap-4 mb-2">
+                <div className="w-12 h-12 bg-[#E1F2F7] flex items-center justify-center rounded-xl border border-[#C6E6F0] shrink-0">
+                  <Bot className="w-6 h-6 text-[#0089BA]" />
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <h3 className="text-2xl font-bold text-gray-900">Ask Syncro Assistant</h3>
+                  <Badge className="bg-[#E1F2F7] hover:bg-[#D5EAF1] text-[#0089BA] border-none text-[10px] uppercase font-bold px-2 py-0.5 tracking-wider">
+                    AI HELPER
+                  </Badge>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
+              <p className="text-gray-600 text-[15px] max-w-2xl leading-relaxed ml-16">
+                Need something done? Describe your needs here and Syncro Assistant will guide you to the best service.
+              </p>
+            </div>
+            <div className="shrink-0 ml-16 md:ml-0">
+              <SyncroChatTriggerButton />
+            </div>
+          </div>
+
+        </div>
+      </motion.div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, index) => (
           <motion.div key={stat.label} {...fadeInUp} transition={{ delay: index * 0.1 }}>
-            <Card hover>
+            <Card hover className="border border-border/60 shadow-sm rounded-xl overflow-hidden">
               <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">{stat.label}</p>
-                    <p className="text-3xl font-bold">{stat.value}</p>
+                <div className="flex items-start justify-between">
+                  <div className="flex flex-col h-full justify-between gap-4">
+                    <p className="text-[13px] text-gray-500">{stat.label}</p>
+                    <p className="text-[32px] font-bold text-gray-900 leading-none">{stat.value}</p>
                   </div>
-                  <div className={`p-3 rounded-xl bg-muted ${stat.color}`}>
-                    <stat.icon className="w-6 h-6" />
+                  <div className={`p-2.5 rounded-xl ${stat.bgColor} ${stat.iconColor} shrink-0`}>
+                    <stat.icon className="w-[22px] h-[22px]" strokeWidth={2.5} />
                   </div>
                 </div>
               </CardContent>
@@ -155,6 +188,7 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
           </motion.div>
         ))}
       </div>
+
 
       {/* Charts */}
       <div className="grid lg:grid-cols-2 gap-6">
@@ -251,6 +285,21 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
         </Card>
       </motion.div>
     </div>
+  );
+}
+
+// ────────────────────────── Trigger Button Helper ────────
+function SyncroChatTriggerButton() {
+  const { setIsChatOpen } = useApp();
+  return (
+    <Button
+      onClick={() => setIsChatOpen(true)}
+      className="bg-[#0091C2] hover:bg-[#007EA8] text-white px-6 py-6 font-semibold text-base rounded-lg shadow-sm w-full md:w-auto"
+    >
+      <MessageCircle className="w-5 h-5 mr-3" />
+      Describe Your Need
+      <ArrowRight className="w-4 h-4 ml-2" />
+    </Button>
   );
 }
 

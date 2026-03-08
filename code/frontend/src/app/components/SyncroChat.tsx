@@ -168,8 +168,7 @@ export function SyncroChat({
     showFloatingButton?: boolean;
     showInlineTrigger?: boolean;
 }) {
-    const { setIsChatOpen } = useApp();
-    const [isOpen, setIsOpen] = useState(false);
+    const { isChatOpen: isOpen, setIsChatOpen: setIsOpen } = useApp();
     const [messages, setMessages] = useState<Message[]>([
         {
             id: 'welcome',
@@ -268,14 +267,15 @@ export function SyncroChat({
                         <Button
                             onClick={() => setIsOpen(true)}
                             size="lg"
-                            className="bg-gradient-to-br from-primary to-accent hover:opacity-90 shadow-lg shadow-primary/20 px-8 py-6 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] border-none text-white font-bold min-w-[200px]"
+                            className="bg-[#0091C2] hover:bg-[#007EA8] shadow-md px-6 py-6 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] border-none text-white font-semibold min-w-[200px]"
                         >
-                            <MessageSquare className="w-5 h-5 mr-3 text-white" />
+                            <MessageCircle className="w-5 h-5 mr-3 text-white" />
                             Describe Your Need
-                            <ArrowRight className="w-5 h-5 ml-3 opacity-80 group-hover:translate-x-1 transition-transform" />
+                            <ArrowRight className="w-4 h-4 ml-2" />
                         </Button>
                     </div>
                 </div>
+
             )}
 
             {/* ── 2. Floating Trigger Button (Bottom-Right) ── */}
@@ -295,11 +295,11 @@ export function SyncroChat({
 
                         <button
                             onClick={() => setIsOpen(true)}
-                            className="relative w-14 h-14 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white shadow-xl hover:scale-105 active:scale-95 transition-all duration-200"
+                            className="relative w-[52px] h-[52px] rounded-full bg-[#0091C2] flex items-center justify-center text-white shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all duration-200"
                             aria-label="Open Syncro Assistant"
                         >
                             <MessageCircle className="w-6 h-6" />
-                            <div className="absolute top-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full" />
+                            <div className="absolute top-0 right-0 w-3.5 h-3.5 bg-[#00D084] border-2 border-white rounded-full transform translate-x-1 -translate-y-0.5" />
                         </button>
                     </motion.div>
                 )}
