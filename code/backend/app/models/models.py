@@ -14,6 +14,16 @@ class OrderStatus(str, enum.Enum):
     COMPLETED = "completed"
     CANCELLED = "cancelled"
 
+class BidRequestStatus(str, enum.Enum):
+    OPEN = "open"
+    CLOSED = "closed"
+    ACCEPTED = "accepted"
+
+class BidStatus(str, enum.Enum):
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
@@ -25,6 +35,7 @@ class User(Base):
 
     profile = relationship("Profile", back_populates="user", uselist=False, cascade="all, delete-orphan")
     listings = relationship("Listing", back_populates="owner", cascade="all, delete-orphan")
+    bid_requests = relationship("BidRequest", back_populates="user", cascade="all, delete-orphan")
     bids = relationship("Bid", back_populates="seller", cascade="all, delete-orphan")
     orders_as_buyer = relationship("Order", back_populates="buyer", foreign_keys="Order.buyer_id", cascade="all, delete-orphan")
     orders_as_seller = relationship("Order", back_populates="seller", foreign_keys="Order.seller_id", cascade="all, delete-orphan")
@@ -100,13 +111,29 @@ class Review(Base):
     reviewer = relationship("User", back_populates="reviews_given", foreign_keys=[reviewer_id])
     reviewee = relationship("User", back_populates="reviews_received", foreign_keys=[reviewee_id])
 
+class BidRequest(Base):
+    __tablename__ = "bid_requests"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
+    description = Column(Text, nullable=False)
+    status = Column(Enum(BidRequestStatus), default=BidRequestStatus.OPEN)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="bid_requests")
+    bids = relationship("Bid", back_populates="bid_request", cascade="all, delete-orphan")
+
 class Bid(Base):
     __tablename__ = "bids"
     id = Column(Integer, primary_key=True, index=True)
-    amount = Column(Float, nullable=False)
-    message = Column(Text, nullable=True)
-    timestamp = Column(DateTime, default=datetime.utcnow) 
-    request_id = Column(Integer) # For Phase 2 RFP logic 
+    bid_request_id = Column(Integer, ForeignKey("bid_requests.id"))
     seller_id = Column(Integer, ForeignKey("users.id"))
-    
+    price = Column(Float, nullable=False)
+    quantity = Column(Integer, default=1)
+    delivery_time = Column(String, nullable=True) # e.g. "3 days"
+    message = Column(Text, nullable=True)
+    status = Column(Enum(BidStatus), default=BidStatus.PENDING)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
     seller = relationship("User", back_populates="bids")
+    bid_request = relationship("BidRequest", back_populates="bids")
