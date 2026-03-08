@@ -15,6 +15,8 @@ import { Messages } from './pages/Messages';
 import { Settings } from './pages/Settings';
 import { NotFound } from './pages/NotFound';
 import { PublicSellerProfile } from './pages/PublicSellerProfile';
+import { Bids } from './pages/Bids';
+import { BidDetail } from './pages/BidDetail';
 
 export const router = createBrowserRouter([
   {
@@ -51,6 +53,8 @@ export const router = createBrowserRouter([
       { path: 'listings', element: <Dashboard /> },
       { path: 'orders-received', element: <Dashboard /> },
       { path: 'earnings', element: <Dashboard /> },
+      { path: 'bids', element: <Bids /> },
+      { path: 'bids/:id', element: <BidDetail /> },
       { path: 'seller/:id', element: <PublicSellerProfile /> },
       { path: 'seller/preview', element: <PublicSellerProfile /> },
     ],

@@ -2,10 +2,11 @@ import React from 'react';
 import { Outlet } from 'react-router';
 import { TopNav } from './TopNav';
 import { Sidebar } from './Sidebar';
+import { SyncroChat } from '../SyncroChat';
 
 export function AppLayout() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative">
       <TopNav />
       <div className="flex">
         <Sidebar />
@@ -13,6 +14,7 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
+      <SyncroChat showFloatingButton={true} />
     </div>
   );
 }

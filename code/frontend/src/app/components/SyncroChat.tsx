@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MessageCircle, X, Send, Bot, Sparkles, ArrowRight } from 'lucide-react';
+import { MessageCircle, X, Send, Bot, Sparkles, ArrowRight, Gavel } from 'lucide-react';
 import { Button } from './ui/Button';
+import { useApp } from '../context/AppContext';
 
 // ──────────────────────────────────────────────────────────────
 // Types
@@ -12,6 +13,7 @@ interface Message {
     role: 'user' | 'bot';
     text: string;
     timestamp: Date;
+    isBidWorthy?: boolean;
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -56,16 +58,23 @@ const RESPONSES: Array<{ keywords: string[]; reply: string }> = [
     },
 ];
 
-function getBotReply(input: string): string {
+const BID_TRIGGERS = [
+    'i need', 'looking for', 'custom', 'branded', 'bulk', 'wholesale', 'personalized', 'order', 'request'
+];
+
+function getBotReply(input: string): { text: string; isBidWorthy: boolean } {
     const lower = input.toLowerCase();
+    const isWorthy = BID_TRIGGERS.some(t => lower.includes(t)) && lower.length > 20;
+
     for (const { keywords, reply } of RESPONSES) {
         if (keywords.some((kw) => lower.includes(kw))) {
-            return reply;
+            return { text: reply, isBidWorthy: isWorthy };
         }
     }
-    return (
-        "I'd love to help! Could you describe in a bit more detail what service or product you're looking for? For example: \"I need a cake for my wedding\" or \"Looking for a math tutor for my child.\"\n\nYou can also explore our **Discovery** page to browse all available categories."
-    );
+    return {
+        text: "I'd love to help! Could you describe in a bit more detail what service or product you're looking for? For example: \"I need a cake for my wedding\" or \"Looking for a math tutor for my child.\"\n\nYou can also explore our **Discovery** page to browse all available categories.",
+        isBidWorthy: isWorthy
+    };
 }
 
 function formatTime(date: Date): string {
@@ -125,6 +134,23 @@ function ChatMessage({ message }: { message: Message }) {
                             .replace(/\n•/g, '<br/>•'),
                     }}
                 />
+                {!isUser && message.isBidWorthy && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mt-2 w-full"
+                    >
+                        <Button
+                            variant="primary"
+                            size="sm"
+                            className="w-full bg-white text-primary border border-primary/20 hover:bg-primary/5 shadow-sm"
+                            onClick={() => window.location.href = '/bids'}
+                        >
+                            <Gavel className="w-3.5 h-3.5 mr-2" />
+                            Create Formal Bid Request
+                        </Button>
+                    </motion.div>
+                )}
                 <span className="text-[10px] text-muted-foreground px-1">{formatTime(message.timestamp)}</span>
             </div>
         </motion.div>
@@ -135,8 +161,14 @@ function ChatMessage({ message }: { message: Message }) {
 // Main SyncroChat Component
 // ──────────────────────────────────────────────────────────────
 
-export function SyncroChat() {
-    const [isOpen, setIsOpen] = useState(false);
+export function SyncroChat({
+    showFloatingButton = true,
+    showInlineTrigger = false
+}: {
+    showFloatingButton?: boolean;
+    showInlineTrigger?: boolean;
+}) {
+    const { isChatOpen: isOpen, setIsChatOpen: setIsOpen } = useApp();
     const [messages, setMessages] = useState<Message[]>([
         {
             id: 'welcome',
@@ -182,10 +214,12 @@ export function SyncroChat() {
         const delay = 700 + Math.random() * 500;
         await new Promise((res) => setTimeout(res, delay));
 
+        const replyData = getBotReply(text);
         const botMsg: Message = {
             id: `bot-${Date.now()}`,
             role: 'bot',
-            text: getBotReply(text),
+            text: replyData.text,
+            isBidWorthy: replyData.isBidWorthy,
             timestamp: new Date(),
         };
 
@@ -203,42 +237,44 @@ export function SyncroChat() {
     return (
         <>
             {/* ── 1. Integrated Assistant Section (for Card Row) ── */}
-            <div className="flex flex-col items-start gap-6 w-full lg:flex-row lg:items-center lg:justify-between group">
-                <div className="flex-1 space-y-3">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shadow-sm transform translate-y-3">
-                            <Bot className="w-5 h-5 text-primary" />
-                        </div>
-                        <div className="flex flex-col">
-                            <div className="flex items-center gap-2">
-                                <h3 className="text-2xl font-bold tracking-tight">Ask Syncro Assistant</h3>
-                                <span className="bg-primary/10 text-primary text-[10px] font-bold px-2 py-0.5 rounded-full border border-primary/20 animate-pulse uppercase tracking-wider">
-                                    AI Helper
-                                </span>
+            {showInlineTrigger && (
+                <div className="flex flex-col items-start gap-6 w-full lg:flex-row lg:items-center lg:justify-between group">
+                    <div className="flex-1 space-y-3">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shadow-sm transform translate-y-3">
+                                <Bot className="w-5 h-5 text-primary" />
+                            </div>
+                            <div className="flex flex-col">
+                                <div className="flex items-center gap-2">
+                                    <h3 className="text-2xl font-bold tracking-tight">Ask Syncro Assistant</h3>
+                                    <span className="bg-primary/10 text-primary text-[10px] font-bold px-2 py-0.5 rounded-full border border-primary/20 animate-pulse uppercase tracking-wider">
+                                        AI Helper
+                                    </span>
+                                </div>
                             </div>
                         </div>
+                        <p className="text-muted-foreground text-sm leading-relaxed max-w-2xl">
+                            Need something done? Describe your needs here and Syncro Assistant will guide you to the best service.
+                        </p>
                     </div>
-                    <p className="text-muted-foreground text-sm leading-relaxed max-w-2xl">
-                        Need something done? Describe your needs here and Syncro Assistant will guide you to the best service.
-                    </p>
-                </div>
 
-                <div className="flex-shrink-0">
-                    <Button
-                        onClick={() => setIsOpen(true)}
-                        size="lg"
-                        className="bg-gradient-to-br from-primary to-accent hover:opacity-90 shadow-lg shadow-primary/20 px-8 py-6 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] border-none text-white font-bold min-w-[200px]"
-                    >
-                        <MessageCircle className="w-5 h-5 mr-3 text-white" />
-                        Describe Your Need
-                        <ArrowRight className="w-5 h-5 ml-3 opacity-80 group-hover:translate-x-1 transition-transform" />
-                    </Button>
+                    <div className="flex-shrink-0">
+                        <Button
+                            onClick={() => setIsOpen(true)}
+                            size="lg"
+                            className="bg-gradient-to-br from-primary to-accent hover:opacity-90 shadow-lg shadow-primary/20 px-8 py-6 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] border-none text-white font-bold min-w-[200px]"
+                        >
+                            <MessageCircle className="w-5 h-5 mr-3 text-white" />
+                            Describe Your Need
+                            <ArrowRight className="w-5 h-5 ml-3 opacity-80 group-hover:translate-x-1 transition-transform" />
+                        </Button>
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* ── 2. Floating Trigger Button (Bottom-Right) ── */}
             <AnimatePresence>
-                {!isOpen && (
+                {showFloatingButton && !isOpen && (
                     <motion.div
                         initial={{ opacity: 0, scale: 0.5 }}
                         animate={{ opacity: 1, scale: 1 }}

@@ -137,7 +137,7 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
                 <div className="h-px bg-gradient-to-r from-transparent via-primary/10 to-transparent" />
 
                 {/* Row 2: Syncro Assistant */}
-                <SyncroChat />
+                <SyncroChat showInlineTrigger={true} showFloatingButton={false} hideModal={true} />
               </div>
             </CardContent>
           </Card>
