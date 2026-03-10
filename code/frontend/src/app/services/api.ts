@@ -103,6 +103,14 @@ export const authApi = {
         });
         return handleResponse(res);
     },
+
+    async deleteAccount(): Promise<{ message: string }> {
+        const res = await fetch(`${BASE_URL}/auth/me`, {
+            method: 'DELETE',
+            headers: headers(true),
+        });
+        return handleResponse(res);
+    },
 };
 
 // ---------- Listings ----------

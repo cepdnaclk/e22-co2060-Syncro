@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { User, Bell, Shield, Moon, Sun, Monitor, Building2 } from 'lucide-react';
+import { User, Bell, Shield, Moon, Sun, Monitor, Building2, AlertTriangle } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
 import { useApp } from '../context/AppContext';
 import { SellerProfileSettings } from '../components/SellerProfileSettings';
-import { useSearchParams } from 'react-router';
+import { useSearchParams, useNavigate } from 'react-router';
+import { authApi } from '../services/api';
 
 type Tab = 'profile' | 'notifications' | 'appearance' | 'privacy' | 'business';
 
@@ -19,7 +20,24 @@ const baseTabs: { id: Tab; label: string; icon: React.ElementType }[] = [
 ];
 
 export function Settings() {
-  const { theme, setTheme, userProfile, role, hasSellerProfile } = useApp();
+  const { theme, setTheme, userProfile, role, hasSellerProfile, logout } = useApp();
+  const navigate = useNavigate();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const handleDeleteAccount = async () => {
+    setDeleteLoading(true);
+    setDeleteError(null);
+    try {
+      await authApi.deleteAccount();
+      logout();
+      navigate('/register');
+    } catch (err: any) {
+      setDeleteError(err.message || 'Failed to delete account. Please try again.');
+      setDeleteLoading(false);
+    }
+  };
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<Tab>(() => {
     const param = searchParams.get('tab');
@@ -61,8 +79,8 @@ export function Settings() {
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-left ${activeTab === tab.id
-                        ? 'bg-primary text-primary-foreground'
-                        : 'hover:bg-accent text-foreground'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'hover:bg-accent text-foreground'
                       }`}
                   >
                     <Icon className="w-4 h-4" />
@@ -202,8 +220,8 @@ export function Settings() {
                           key={option.value}
                           onClick={() => setTheme(option.value as 'light' | 'dark')}
                           className={`p-6 border-2 rounded-xl flex flex-col items-center gap-3 transition-all ${isActive
-                              ? 'border-primary bg-primary/5'
-                              : 'border-border hover:border-primary/50'
+                            ? 'border-primary bg-primary/5'
+                            : 'border-border hover:border-primary/50'
                             }`}
                         >
                           <Icon className="w-8 h-8" />
@@ -248,11 +266,48 @@ export function Settings() {
                   <div className="pt-6 border-t border-border">
                     <h3 className="font-medium text-destructive mb-2">Danger Zone</h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Once you delete your account, there is no going back.
+                      Once you delete your account, there is no going back. All your data will be permanently removed.
                     </p>
-                    <Button variant="ghost" className="text-destructive hover:bg-destructive/10">
-                      Delete Account
-                    </Button>
+                    {!showDeleteConfirm ? (
+                      <Button
+                        variant="ghost"
+                        className="text-destructive hover:bg-destructive/10"
+                        onClick={() => { setShowDeleteConfirm(true); setDeleteError(null); }}
+                      >
+                        Delete Account
+                      </Button>
+                    ) : (
+                      <div className="p-4 border border-destructive/40 rounded-lg bg-destructive/5 space-y-3">
+                        <div className="flex items-center gap-2 text-destructive font-medium">
+                          <AlertTriangle className="w-4 h-4" />
+                          Are you absolutely sure?
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          This action cannot be undone. Your account and all associated data will be permanently deleted.
+                        </p>
+                        {deleteError && (
+                          <p className="text-sm text-destructive">{deleteError}</p>
+                        )}
+                        <div className="flex gap-3">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => { setShowDeleteConfirm(false); setDeleteError(null); }}
+                            disabled={deleteLoading}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            onClick={handleDeleteAccount}
+                            disabled={deleteLoading}
+                          >
+                            {deleteLoading ? 'Deleting...' : 'Yes, delete my account'}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
