@@ -35,6 +35,7 @@ Syncro bridges this discovery gap.
 - Seller storefront creation
 - Direct order placement
 - Real-time messaging (WebSockets)
+- Intelligent RFP assistance (AI-guided input)
 
 ### Phase 2 – Reverse Auction
 - Smart RFP posting system
