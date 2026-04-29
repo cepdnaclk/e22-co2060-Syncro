@@ -34,38 +34,36 @@ code/backend/
 This application relies on a Docker networking architecture defined in the root folder. 
 
 1. **Pre-requisites**: Ensure Docker Desktop is installed and running on your system.
-2. **Environment File**: Verify that your `code/backend/.env` file contains your correct `DATABASE_URL`, `SECRET_KEY`, and `CLOUDINARY` credentials.
+2. **Environment File**: Verify that your `code/backend/.env` file contains your correct `DATABASE_URL`, `SECRET_KEY`, `CLOUDINARY` credentials, and your `GROQ_API_KEY`.
 
-### Running with Docker (Recommended)
+### Option 1: Hybrid Setup (Recommended for Active Development)
+This is the safest way to develop locally. It runs the database in Docker, but runs the Python code on your host machine so you get instant live-reloading without port conflicts.
 
-To start the backend server along with the PostgreSQL database and frontend, simply run the following from the root directory (`d:\Computer Engineering\Semester 3\Software Systems Design Project CO2060\e22-co2060-Syncro`):
+1. **Start ONLY the Database**:
+   From the root folder (`SYNCRO-2YP`), start the Postgres database in the background:
+   ```bash
+   docker-compose up -d db
+   ```
 
+2. **Start the FastAPI Backend**:
+   Navigate into the backend folder, activate your virtual environment, and run the server:
+   ```bash
+   cd code/backend
+   python -m venv venv
+   # Activate it (Windows: venv\Scripts\activate | Mac/Linux: source venv/bin/activate)
+   pip install -r requirements.txt
+   python -m uvicorn app.main:app --reload
+   ```
+   *The API will be available at `http://localhost:8000`.*
+
+### Option 2: Full Docker Setup (Hands-off)
+If you just want the backend running in the background and do not need live-reloading, run the entire stack via Docker.
+
+From the root directory (`SYNCRO-2YP`), run:
 ```bash
 docker-compose up -d --build backend db
 ```
-
-The FastAPI application will be securely bound and available locally at:
-**`http://localhost:8000`**
-
-### Running the Python Environment Locally (Without Docker)
-
-If you need to run the pure Python engine directly on your host machine for deep script execution or debugging:
-
-1. Create a virtual environment:
-   ```bash
-   python -m venv venv
-   ```
-2. Activate the virtual environment:
-   * Windows: `venv\Scripts\activate`
-   * Unix/MacOS: `source venv/bin/activate`
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. Start the Uvicorn server:
-   ```bash
-   uvicorn app.main:app --reload
-   ```
+*(⚠️ **Important**: Do not run this at the same time as local `uvicorn`, or you will experience port 8000 conflicts!)*
 
 ## Automatic Documentation
 
