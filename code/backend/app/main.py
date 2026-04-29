@@ -1,7 +1,7 @@
 import socketio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .api import listings, auth, profiles, orders, reviews, bids  # Import your API routers
+from .api import listings, auth, profiles, orders, reviews, bids, chat  # Import your API routers
 from .database import engine # Import the database engine and Base for table creation
 from .models import models  # Import the models so SQLAlchemy knows which tables to create
 
@@ -24,6 +24,7 @@ app.include_router(profiles.router)
 app.include_router(orders.router)
 app.include_router(reviews.router)
 app.include_router(bids.router)
+app.include_router(chat.router)
 
 
 # 1. Create the Socket.IO server with CORS allowed for your React frontend
