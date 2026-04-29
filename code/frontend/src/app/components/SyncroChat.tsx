@@ -1,8 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MessageCircle, X, Send, Bot, Sparkles, ArrowRight, Gavel, MessageSquare } from 'lucide-react';
+import { useNavigate } from 'react-router';
+import { MessageCircle, X, Send, Bot, Sparkles, ArrowRight, Gavel } from 'lucide-react';
 import { Button } from './ui/Button';
 import { useApp } from '../context/AppContext';
+
+const API_BASE = 'http://localhost:8000';
 
 // ──────────────────────────────────────────────────────────────
 // Types
@@ -17,64 +20,20 @@ interface Message {
 }
 
 // ──────────────────────────────────────────────────────────────
-// Mock bot response engine
+// Real AI API call
 // ──────────────────────────────────────────────────────────────
 
-const RESPONSES: Array<{ keywords: string[]; reply: string }> = [
-    {
-        keywords: ['cake', 'bakery', 'bake', 'pastry', 'dessert', 'cupcake', 'wedding cake'],
-        reply:
-            "🎂 Sounds delicious! We have talented local bakers who can craft custom cakes for any occasion. Head over to **Discovery** and search \"bakery\" or \"cake\" to browse options near you.",
-    },
-    {
-        keywords: ['tutor', 'tutoring', 'teach', 'lesson', 'class', 'study', 'math', 'science', 'english', 'education'],
-        reply:
-            "📚 Great choice! Syncro connects you with verified local tutors across all subjects and grade levels. Try searching in **Discovery** for your subject (e.g. \"Math tutor\") and filter by availability or rating.",
-    },
-    {
-        keywords: ['tailor', 'tailoring', 'sewing', 'stitch', 'alteration', 'dress', 'clothing', 'fashion', 'hem'],
-        reply:
-            "🧵 We've got skilled tailors on Syncro who handle everything from alterations to custom outfits. Search \"tailor\" in **Discovery** to see profiles, sample work, and pricing.",
-    },
-    {
-        keywords: ['clean', 'cleaning', 'maid', 'housekeeping', 'laundry', 'wash', 'sweep'],
-        reply:
-            "🧹 Looking for a clean space? Browse trusted cleaning professionals in the **Discovery** section. You can filter by service type (home cleaning, office, laundry), location, and availability.",
-    },
-    {
-        keywords: ['photo', 'photographer', 'photography', 'shoot', 'portrait', 'event photo', 'wedding photo'],
-        reply:
-            "📸 Capture perfect moments with our talented local photographers! Search \"photographer\" in **Discovery** to view portfolios, packages, and book a session.",
-    },
-    {
-        keywords: ['price', 'cost', 'how much', 'rate', 'cheap', 'affordable', 'expensive'],
-        reply:
-            "💰 Prices vary by provider and service type. Each seller sets their own rates — you can compare them side by side on the service listing pages in **Discovery**.",
-    },
-    {
-        keywords: ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening'],
-        reply:
-            "👋 Hello! I'm **Syncro Assistant**. Tell me what service you're looking for — whether it's a tutor, baker, tailor, cleaner, or anything else — and I'll point you in the right direction!",
-    },
-];
-
-const BID_TRIGGERS = [
-    'i need', 'looking for', 'custom', 'branded', 'bulk', 'wholesale', 'personalized', 'order', 'request'
-];
-
-function getBotReply(input: string): { text: string; isBidWorthy: boolean } {
-    const lower = input.toLowerCase();
-    const isWorthy = BID_TRIGGERS.some(t => lower.includes(t)) && lower.length > 20;
-
-    for (const { keywords, reply } of RESPONSES) {
-        if (keywords.some((kw) => lower.includes(kw))) {
-            return { text: reply, isBidWorthy: isWorthy };
-        }
-    }
-    return {
-        text: "I'd love to help! Could you describe in a bit more detail what service or product you're looking for? For example: \"I need a cake for my wedding\" or \"Looking for a math tutor for my child.\"\n\nYou can also explore our **Discovery** page to browse all available categories.",
-        isBidWorthy: isWorthy
-    };
+async function callAI(
+    conversation: { role: string; content: string }[],
+    token: string
+): Promise<{ status: string; message: string; bid_request_id?: number; order?: Record<string, string> }> {
+    const res = await fetch(`${API_BASE}/chat/rfp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ conversation }),
+    });
+    if (!res.ok) throw new Error(`Server error: ${res.status}`);
+    return res.json();
 }
 
 function formatTime(date: Date): string {
@@ -168,7 +127,11 @@ export function SyncroChat({
     showFloatingButton?: boolean;
     showInlineTrigger?: boolean;
 }) {
-    const { isChatOpen: isOpen, setIsChatOpen: setIsOpen } = useApp();
+    const { isChatOpen: isOpen, setIsChatOpen: setIsOpen, authUser } = useApp();
+    const navigate = useNavigate();
+    // conversation history sent to the AI (excludes the welcome message)
+    const [aiHistory, setAiHistory] = useState<{ role: string; content: string }[]>([]);
+    const [isDone, setIsDone] = useState(false);
     const [messages, setMessages] = useState<Message[]>([
         {
             id: 'welcome',
@@ -198,7 +161,16 @@ export function SyncroChat({
 
     const sendMessage = useCallback(async () => {
         const text = inputValue.trim();
-        if (!text || isTyping) return;
+        if (!text || isTyping || isDone) return;
+
+        if (!authUser?.token) {
+            setMessages((prev) => [...prev, {
+                id: `err-${Date.now()}`, role: 'bot',
+                text: '⚠️ You must be logged in to use the AI assistant.',
+                timestamp: new Date(),
+            }]);
+            return;
+        }
 
         const userMsg: Message = {
             id: `user-${Date.now()}`,
@@ -206,26 +178,48 @@ export function SyncroChat({
             text,
             timestamp: new Date(),
         };
-
         setMessages((prev) => [...prev, userMsg]);
         setInputValue('');
         setIsTyping(true);
 
-        const delay = 700 + Math.random() * 500;
-        await new Promise((res) => setTimeout(res, delay));
+        // Build updated history (skip the initial welcome message)
+        const updatedHistory = [...aiHistory, { role: 'user', content: text }];
+        setAiHistory(updatedHistory);
 
-        const replyData = getBotReply(text);
-        const botMsg: Message = {
-            id: `bot-${Date.now()}`,
-            role: 'bot',
-            text: replyData.text,
-            isBidWorthy: replyData.isBidWorthy,
-            timestamp: new Date(),
-        };
+        try {
+            const result = await callAI(updatedHistory, authUser.token);
 
-        setIsTyping(false);
-        setMessages((prev) => [...prev, botMsg]);
-    }, [inputValue, isTyping]);
+            const botMsg: Message = {
+                id: `bot-${Date.now()}`,
+                role: 'bot',
+                text: result.message,
+                isBidWorthy: false,
+                timestamp: new Date(),
+            };
+            setMessages((prev) => [...prev, botMsg]);
+            setAiHistory((prev) => [...prev, { role: 'assistant', content: result.message }]);
+
+            if (result.status === 'complete' && result.bid_request_id) {
+                setIsDone(true);
+                setTimeout(() => {
+                    setIsOpen(false);
+                    navigate(`/bids/${result.bid_request_id}`);
+                }, 2000);
+            }
+        } catch (error: any) {
+            let errorMsg = '⚠️ Could not reach the AI server. Make sure the SSH tunnel is running.';
+            if (error instanceof Error && error.message.includes('401')) {
+                errorMsg = '⚠️ Your session has expired or is invalid. Please log out and log back in.';
+            }
+            setMessages((prev) => [...prev, {
+                id: `err-${Date.now()}`, role: 'bot',
+                text: errorMsg,
+                timestamp: new Date(),
+            }]);
+        } finally {
+            setIsTyping(false);
+        }
+    }, [inputValue, isTyping, isDone, aiHistory, authUser, navigate, setIsOpen]);
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -235,8 +229,7 @@ export function SyncroChat({
     };
 
     const handleCreateBidRequest = () => {
-        // In a real app, this would open the Bid Request modal or page with data pre-filled
-        window.location.href = '/bids';
+        navigate('/bids');
     };
 
     return (
@@ -373,7 +366,8 @@ export function SyncroChat({
                                         value={inputValue}
                                         onChange={(e) => setInputValue(e.target.value)}
                                         onKeyDown={handleKeyDown}
-                                        placeholder="Describe your need..."
+                                        placeholder={isDone ? '✅ Request sent! Redirecting to your bids...' : 'Describe your need...'}
+                                        disabled={isDone}
                                         className="flex-1 bg-transparent resize-none text-sm py-1.5 focus:outline-none disabled:opacity-50"
                                         style={{ maxHeight: '120px' }}
                                         onInput={(e) => {
@@ -384,7 +378,7 @@ export function SyncroChat({
                                     />
                                     <button
                                         onClick={sendMessage}
-                                        disabled={!inputValue.trim() || isTyping}
+                                        disabled={!inputValue.trim() || isTyping || isDone}
                                         className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center hover:opacity-90 disabled:opacity-30 transition-all font-medium"
                                     >
                                         <Send className="w-4 h-4" />
