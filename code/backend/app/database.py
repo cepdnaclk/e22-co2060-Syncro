@@ -2,9 +2,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 
-load_dotenv()
+load_dotenv(find_dotenv(), override=True)
 DEFAULT_DATABASE_URL = "postgresql://postgres:password@localhost/syncro_db"
 
 # Ensure this matches your .env file, mapping fallback if .env is missing or empty
