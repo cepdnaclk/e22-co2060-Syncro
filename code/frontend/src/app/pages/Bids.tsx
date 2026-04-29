@@ -12,43 +12,23 @@ import { Link } from 'react-router';
 // Mock Data
 // ──────────────────────────────────────────────────────────────
 
-const MOCK_REQUESTS = [
-    {
-        id: 'req_1',
-        description: 'Need 100 custom branded T-shirts for a corporate tech event in Colombo.',
-        category: 'Clothing & Fashion',
-        status: 'open',
-        bidsCount: 3,
-        createdAt: '2024-03-05T10:00:00Z',
-    },
-    {
-        id: 'req_2',
-        description: 'Looking for a wedding cake vendor for 200 guests. Pastel theme preferred.',
-        category: 'Bakery',
-        status: 'accepted',
-        bidsCount: 5,
-        createdAt: '2024-03-01T15:30:00Z',
-    },
-];
+const MOCK_REQUESTS: {
+    id: string;
+    description: string;
+    category: string;
+    status: string;
+    bidsCount: number;
+    createdAt: string;
+}[] = [];
 
-const MOCK_AVAILABLE_JOBS = [
-    {
-        id: 'job_1',
-        description: 'Require a professional event photographer for a 2-day workshop.',
-        category: 'Photography',
-        budget: '$200 - $500',
-        timeLeft: '2 days',
-        bidsCount: 8,
-    },
-    {
-        id: 'job_2',
-        description: 'Bulk order for 50 floral centerpieces for a gala dinner.',
-        category: 'Floral Design',
-        budget: 'Negotiable',
-        timeLeft: '16 hours',
-        bidsCount: 4,
-    },
-];
+const MOCK_AVAILABLE_JOBS: {
+    id: string;
+    description: string;
+    category: string;
+    budget: string;
+    timeLeft: string;
+    bidsCount: number;
+}[] = [];
 
 const fadeInUp = {
     initial: { opacity: 0, y: 20 },
@@ -99,82 +79,114 @@ export function Bids() {
 
                 <TabsContent value="requests" className="space-y-4">
                     {role === 'buyer' ? (
-                        MOCK_REQUESTS.map((req, index) => (
-                            <motion.div key={req.id} {...fadeInUp} transition={{ delay: index * 0.1 }}>
-                                <Link to={`/bids/${req.id}`}>
-                                    <Card hover className="overflow-hidden group border-border/50">
+                        MOCK_REQUESTS.length === 0 ? (
+                            <Card className="border-dashed border-2 bg-muted/20">
+                                <CardContent className="flex flex-col items-center justify-center py-20 text-center">
+                                    <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                                        <Gavel className="w-8 h-8 text-muted-foreground" />
+                                    </div>
+                                    <h3 className="text-xl font-semibold mb-2">No Requests Yet</h3>
+                                    <p className="text-muted-foreground max-w-xs mb-6">
+                                        Create your first request and let sellers compete with their best offers.
+                                    </p>
+                                    <Button onClick={() => setIsChatOpen(true)}>
+                                        <Plus className="w-4 h-4 mr-2" />
+                                        Create Request
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            MOCK_REQUESTS.map((req, index) => (
+                                <motion.div key={req.id} {...fadeInUp} transition={{ delay: index * 0.1 }}>
+                                    <Link to={`/bids/${req.id}`}>
+                                        <Card hover className="overflow-hidden group border-border/50">
+                                            <CardContent className="p-6">
+                                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                                    <div className="flex-1 space-y-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <Badge variant="info" className="bg-primary/5 text-primary border-primary/20 capitalize">
+                                                                {req.category}
+                                                            </Badge>
+                                                            <Badge className={req.status === 'open' ? 'bg-green-500/10 text-green-600 border-none' : 'bg-blue-500/10 text-blue-600 border-none'}>
+                                                                {req.status.toUpperCase()}
+                                                            </Badge>
+                                                        </div>
+                                                        <h3 className="text-lg font-semibold line-clamp-2 group-hover:text-primary transition-colors">
+                                                            {req.description}
+                                                        </h3>
+                                                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Clock className="w-4 h-4" />
+                                                                {new Date(req.createdAt).toLocaleDateString()}
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Gavel className="w-4 h-4" />
+                                                                {req.bidsCount} bids received
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-4">
+                                                        <Button variant="ghost" size="sm" className="hidden md:flex">
+                                                            View Details
+                                                            <ChevronRight className="w-4 h-4 ml-1" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    </Link>
+                                </motion.div>
+                            ))
+                        )
+                    ) : (
+                        MOCK_AVAILABLE_JOBS.length === 0 ? (
+                            <Card className="border-dashed border-2 bg-muted/20">
+                                <CardContent className="flex flex-col items-center justify-center py-20 text-center">
+                                    <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                                        <Gavel className="w-8 h-8 text-muted-foreground" />
+                                    </div>
+                                    <h3 className="text-xl font-semibold mb-2">No Jobs Available</h3>
+                                    <p className="text-muted-foreground max-w-xs">
+                                        New buyer requests will appear here. Check back soon!
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            MOCK_AVAILABLE_JOBS.map((job, index) => (
+                                <motion.div key={job.id} {...fadeInUp} transition={{ delay: index * 0.1 }}>
+                                    <Card hover className="overflow-hidden border-border/50">
                                         <CardContent className="p-6">
                                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                                                 <div className="flex-1 space-y-3">
                                                     <div className="flex items-center gap-2">
-                                                        <Badge variant="info" className="bg-primary/5 text-primary border-primary/20 capitalize">
-                                                            {req.category}
+                                                        <Badge variant="info" className="bg-primary/5 text-primary border-primary/20">
+                                                            {job.category}
                                                         </Badge>
-                                                        <Badge className={req.status === 'open' ? 'bg-green-500/10 text-green-600 border-none' : 'bg-blue-500/10 text-blue-600 border-none'}>
-                                                            {req.status.toUpperCase()}
+                                                        <Badge variant="secondary" className="bg-orange-500/10 text-orange-600 border-none">
+                                                            NEW JOB
                                                         </Badge>
                                                     </div>
-                                                    <h3 className="text-lg font-semibold line-clamp-2 group-hover:text-primary transition-colors">
-                                                        {req.description}
-                                                    </h3>
-                                                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                                    <h3 className="text-lg font-semibold">{job.description}</h3>
+                                                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <DollarSign className="w-4 h-4" />
+                                                            Budget: {job.budget}
+                                                        </div>
                                                         <div className="flex items-center gap-1.5">
                                                             <Clock className="w-4 h-4" />
-                                                            {new Date(req.createdAt).toLocaleDateString()}
-                                                        </div>
-                                                        <div className="flex items-center gap-1.5">
-                                                            <Gavel className="w-4 h-4" />
-                                                            {req.bidsCount} bids received
+                                                            Ends in: {job.timeLeft}
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-4">
-                                                    <Button variant="ghost" size="sm" className="hidden md:flex">
-                                                        View Details
-                                                        <ChevronRight className="w-4 h-4 ml-1" />
-                                                    </Button>
-                                                </div>
+                                                <Button className="shrink-0" onClick={() => window.location.href = `/bids/${job.id}`}>
+                                                    Submit Proposal
+                                                </Button>
                                             </div>
                                         </CardContent>
                                     </Card>
-                                </Link>
-                            </motion.div>
-                        ))
-                    ) : (
-                        MOCK_AVAILABLE_JOBS.map((job, index) => (
-                            <motion.div key={job.id} {...fadeInUp} transition={{ delay: index * 0.1 }}>
-                                <Card hover className="overflow-hidden border-border/50">
-                                    <CardContent className="p-6">
-                                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                                            <div className="flex-1 space-y-3">
-                                                <div className="flex items-center gap-2">
-                                                    <Badge variant="info" className="bg-primary/5 text-primary border-primary/20">
-                                                        {job.category}
-                                                    </Badge>
-                                                    <Badge variant="secondary" className="bg-orange-500/10 text-orange-600 border-none">
-                                                        NEW JOB
-                                                    </Badge>
-                                                </div>
-                                                <h3 className="text-lg font-semibold">{job.description}</h3>
-                                                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                                                    <div className="flex items-center gap-1.5">
-                                                        <DollarSign className="w-4 h-4" />
-                                                        Budget: {job.budget}
-                                                    </div>
-                                                    <div className="flex items-center gap-1.5">
-                                                        <Clock className="w-4 h-4" />
-                                                        Ends in: {job.timeLeft}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <Button className="shrink-0" onClick={() => window.location.href = `/bids/${job.id}`}>
-                                                Submit Proposal
-                                            </Button>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </motion.div>
-                        ))
+                                </motion.div>
+                            ))
+                        )
                     )}
                 </TabsContent>
 

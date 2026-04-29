@@ -17,37 +17,25 @@ import { Link, useParams } from 'react-router';
 // Mock Data
 // ──────────────────────────────────────────────────────────────
 
-const MOCK_REQUEST = {
-    id: 'req_1',
-    description: 'Need 100 custom branded T-shirts for a corporate tech event in Colombo. Looking for high-quality cotton, black color, with white logo printing on the front. Delivery needed within 2 weeks.',
-    category: 'Clothing & Fashion',
-    status: 'open',
-    createdAt: '2024-03-05T10:00:00Z',
-    userName: 'John Doe',
-};
+const MOCK_REQUEST: {
+    id: string;
+    description: string;
+    category: string;
+    status: string;
+    createdAt: string;
+    userName: string;
+} | null = null;
 
-const MOCK_BIDS = [
-    {
-        id: 'bid_1',
-        sellerName: 'City Print Solutions',
-        rating: 4.8,
-        price: 1200,
-        quantity: 100,
-        deliveryTime: '10 days',
-        message: 'We specialize in corporate branding. Our cotton is premium 200GSM. Can deliver to Colombo for free.',
-        status: 'pending',
-    },
-    {
-        id: 'bid_2',
-        sellerName: 'Fashion Hub',
-        rating: 4.5,
-        price: 1050,
-        quantity: 100,
-        deliveryTime: '14 days',
-        message: 'Best price guaranteed for bulk orders. 100% organic cotton available.',
-        status: 'pending',
-    },
-];
+const MOCK_BIDS: {
+    id: string;
+    sellerName: string;
+    rating: number;
+    price: number;
+    quantity: number;
+    deliveryTime: string;
+    message: string;
+    status: string;
+}[] = [];
 
 const fadeInUp = {
     initial: { opacity: 0, y: 20 },
@@ -71,6 +59,32 @@ export function BidDetail() {
         setAcceptedBidId(bidId);
         // In a real app, call API
     };
+
+    // Show empty state when no real data is available
+    if (!MOCK_REQUEST) {
+        return (
+            <div className="max-w-6xl mx-auto space-y-8">
+                <Link
+                    to="/bids"
+                    className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+                >
+                    <ChevronLeft className="w-4 h-4 mr-1" />
+                    Back to Bids
+                </Link>
+                <Card className="border-dashed border-2 bg-muted/20">
+                    <CardContent className="flex flex-col items-center justify-center py-24 text-center">
+                        <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                            <Gavel className="w-8 h-8 text-muted-foreground" />
+                        </div>
+                        <h3 className="text-xl font-semibold mb-2">Request Not Found</h3>
+                        <p className="text-muted-foreground max-w-xs">
+                            This bid request doesn't exist or has been removed.
+                        </p>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-6xl mx-auto space-y-8">
@@ -142,73 +156,87 @@ export function BidDetail() {
                     {role === 'buyer' && (
                         <div className="space-y-6">
                             <h2 className="text-2xl font-bold">Received Bids</h2>
-                            {MOCK_BIDS.map((bid, index) => (
-                                <motion.div
-                                    key={bid.id}
-                                    {...fadeInUp}
-                                    transition={{ delay: index * 0.1 }}
-                                >
-                                    <Card className={`overflow-hidden transition-all ${acceptedBidId === bid.id ? 'ring-2 ring-green-500 bg-green-50/50' : 'hover:shadow-md'}`}>
-                                        <CardContent className="p-6">
-                                            <div className="flex flex-col md:flex-row gap-6">
-                                                <div className="flex-1 space-y-4">
-                                                    <div className="flex items-center justify-between">
-                                                        <div>
-                                                            <h3 className="font-bold text-lg">{bid.sellerName}</h3>
-                                                            <div className="flex items-center gap-1 mt-1">
-                                                                <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
-                                                                <span className="text-sm font-medium">{bid.rating}</span>
-                                                                <span className="text-xs text-muted-foreground ml-1">Rating</span>
+                            {MOCK_BIDS.length === 0 ? (
+                                <Card className="border-dashed border-2 bg-muted/20">
+                                    <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                                        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                                            <Gavel className="w-6 h-6 text-muted-foreground" />
+                                        </div>
+                                        <h3 className="font-semibold mb-1">No Bids Yet</h3>
+                                        <p className="text-sm text-muted-foreground max-w-xs">
+                                            Sellers haven't submitted proposals for this request yet.
+                                        </p>
+                                    </CardContent>
+                                </Card>
+                            ) : (
+                                MOCK_BIDS.map((bid, index) => (
+                                    <motion.div
+                                        key={bid.id}
+                                        {...fadeInUp}
+                                        transition={{ delay: index * 0.1 }}
+                                    >
+                                        <Card className={`overflow-hidden transition-all ${acceptedBidId === bid.id ? 'ring-2 ring-green-500 bg-green-50/50' : 'hover:shadow-md'}`}>
+                                            <CardContent className="p-6">
+                                                <div className="flex flex-col md:flex-row gap-6">
+                                                    <div className="flex-1 space-y-4">
+                                                        <div className="flex items-center justify-between">
+                                                            <div>
+                                                                <h3 className="font-bold text-lg">{bid.sellerName}</h3>
+                                                                <div className="flex items-center gap-1 mt-1">
+                                                                    <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+                                                                    <span className="text-sm font-medium">{bid.rating}</span>
+                                                                    <span className="text-xs text-muted-foreground ml-1">Rating</span>
+                                                                </div>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <p className="text-2xl font-bold text-primary">Rs. {bid.price.toLocaleString()}</p>
+                                                                <p className="text-sm text-muted-foreground">for {bid.quantity} units</p>
                                                             </div>
                                                         </div>
-                                                        <div className="text-right">
-                                                            <p className="text-2xl font-bold text-primary">Rs. {bid.price.toLocaleString()}</p>
-                                                            <p className="text-sm text-muted-foreground">for {bid.quantity} units</p>
+
+                                                        <div className="bg-muted/50 rounded-xl p-4">
+                                                            <p className="text-sm italic text-muted-foreground">"{bid.message}"</p>
+                                                        </div>
+
+                                                        <div className="flex items-center gap-6 text-sm">
+                                                            <div className="flex items-center gap-2 font-medium">
+                                                                <Clock className="w-4 h-4 text-primary" />
+                                                                {bid.deliveryTime} delivery
+                                                            </div>
+                                                            <div className="flex items-center gap-2 font-medium">
+                                                                <ShieldCheck className="w-4 h-4 text-green-600" />
+                                                                Verified Seller
+                                                            </div>
                                                         </div>
                                                     </div>
 
-                                                    <div className="bg-muted/50 rounded-xl p-4">
-                                                        <p className="text-sm italic text-muted-foreground">"{bid.message}"</p>
-                                                    </div>
-
-                                                    <div className="flex items-center gap-6 text-sm">
-                                                        <div className="flex items-center gap-2 font-medium">
-                                                            <Clock className="w-4 h-4 text-primary" />
-                                                            {bid.deliveryTime} delivery
-                                                        </div>
-                                                        <div className="flex items-center gap-2 font-medium">
-                                                            <ShieldCheck className="w-4 h-4 text-green-600" />
-                                                            Verified Seller
-                                                        </div>
+                                                    <div className="flex flex-col gap-2 min-w-[140px]">
+                                                        {acceptedBidId === bid.id ? (
+                                                            <Button disabled className="w-full bg-green-600 text-white border-none h-12">
+                                                                <CheckCircle2 className="w-4 h-4 mr-2" />
+                                                                Accepted
+                                                            </Button>
+                                                        ) : (
+                                                            <>
+                                                                <Button
+                                                                    className="w-full h-12"
+                                                                    onClick={() => handleAccept(bid.id)}
+                                                                    disabled={!!acceptedBidId}
+                                                                >
+                                                                    Accept Bid
+                                                                </Button>
+                                                                <Button variant="outline" className="w-full" disabled={!!acceptedBidId}>
+                                                                    Reject
+                                                                </Button>
+                                                            </>
+                                                        )}
                                                     </div>
                                                 </div>
-
-                                                <div className="flex flex-col gap-2 min-w-[140px]">
-                                                    {acceptedBidId === bid.id ? (
-                                                        <Button disabled className="w-full bg-green-600 text-white border-none h-12">
-                                                            <CheckCircle2 className="w-4 h-4 mr-2" />
-                                                            Accepted
-                                                        </Button>
-                                                    ) : (
-                                                        <>
-                                                            <Button
-                                                                className="w-full h-12"
-                                                                onClick={() => handleAccept(bid.id)}
-                                                                disabled={!!acceptedBidId}
-                                                            >
-                                                                Accept Bid
-                                                            </Button>
-                                                            <Button variant="outline" className="w-full" disabled={!!acceptedBidId}>
-                                                                Reject
-                                                            </Button>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                </motion.div>
-                            ))}
+                                            </CardContent>
+                                        </Card>
+                                    </motion.div>
+                                ))
+                            )}
                         </div>
                     )}
                 </div>
