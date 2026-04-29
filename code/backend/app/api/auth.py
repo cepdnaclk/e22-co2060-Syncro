@@ -120,9 +120,9 @@ async def delete_account(current_user: User = Depends(get_current_user_from_toke
     # 3. Delete bids placed by this user (uses actual DB column: seller_id)
     db.execute(text("DELETE FROM bids WHERE seller_id = :uid"), {"uid": user_id})
 
-    # 4. Delete bids referencing this user's bid_requests (actual FK col: request_id)
+    # 4. Delete bids referencing this user's bid_requests (actual FK col: bid_request_id)
     db.execute(text(
-        "DELETE FROM bids WHERE request_id IN "
+        "DELETE FROM bids WHERE bid_request_id IN "
         "(SELECT id FROM bid_requests WHERE user_id = :uid)"
     ), {"uid": user_id})
 
