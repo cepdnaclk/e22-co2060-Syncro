@@ -203,18 +203,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('syncro_userProfile');
   };
 
-  // Toggle role — calls backend and updates token
+  // Toggle role — switch instantly (optimistic), then sync token with backend in background
   const toggleRole = async () => {
     if (!authUser) return;
-    const data = await authApi.toggleRole();
-    const newRole = data.active_role === 'seller' ? 'seller' : 'buyer';
+    const newRole = role === 'buyer' ? 'seller' : 'buyer';
+
+    // Apply immediately so the UI feels instant
     setRoleState(newRole);
     localStorage.setItem('syncro_role', newRole);
-    // Mark as seller-capable the first time they successfully switch to seller
     if (newRole === 'seller') setHasSellerAccount(true);
-    // Update stored token with the new one
-    const updatedUser: AuthUser = { ...authUser, role: newRole, token: data.access_token };
-    setAuthUser(updatedUser);
+
+    // Sync with backend in the background (non-blocking)
+    authApi.toggleRole().then(data => {
+      const apiRole = data.active_role === 'seller' ? 'seller' : 'buyer';
+      setRoleState(apiRole);
+      localStorage.setItem('syncro_role', apiRole);
+      if (apiRole === 'seller') setHasSellerAccount(true);
+      const updatedUser: AuthUser = { ...authUser, role: apiRole, token: data.access_token };
+      setAuthUser(updatedUser);
+    }).catch(() => {
+      // Backend unavailable — local switch already applied, nothing to revert
+    });
   };
 
   // Side effects
