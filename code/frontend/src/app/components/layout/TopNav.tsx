@@ -9,7 +9,6 @@ export function TopNav() {
   const { role, theme, setTheme, businessProfile, userProfile, authUser, logout, toggleRole, hasSellerAccount } = useApp();
   // hasSellerAccount (from AppContext) stays true even when role = 'buyer',
   // so the Buyer/Seller toggle persists after switching back to buyer.
-  const [roleToggling, setRoleToggling] = React.useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
 
@@ -39,16 +38,9 @@ export function TopNav() {
     navigate('/login');
   };
 
-  const handleToggleRole = async (newRole: 'buyer' | 'seller') => {
-    if (newRole === role || roleToggling) return;
-    setRoleToggling(true);
-    try {
-      await toggleRole();
-    } catch (e) {
-      console.error('Role toggle failed', e);
-    } finally {
-      setRoleToggling(false);
-    }
+  const handleToggleRole = (newRole: 'buyer' | 'seller') => {
+    if (newRole === role) return;
+    toggleRole();
   };
 
   const notifications = [
@@ -99,26 +91,26 @@ export function TopNav() {
             </div>
           )}
 
-          {/* Role Toggle - show whenever user has a seller account (persists in buyer mode) */}
-          {hasSellerAccount && (
+          {/* Role Toggle - show for all authenticated users */}
+          {true && (
             <div className="flex items-center bg-muted rounded-lg p-1">
               <button
                 onClick={() => handleToggleRole('buyer')}
-                disabled={roleToggling}
-                className={`px-4 py-1.5 rounded-md text-sm transition-all ${role === 'buyer'
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-                  } ${roleToggling ? 'opacity-60 cursor-not-allowed' : ''}`}
+                className={`px-4 py-1.5 rounded-md text-sm transition-all ${
+                  role === 'buyer'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
               >
                 Buyer
               </button>
               <button
                 onClick={() => handleToggleRole('seller')}
-                disabled={roleToggling}
-                className={`px-4 py-1.5 rounded-md text-sm transition-all ${role === 'seller'
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-                  } ${roleToggling ? 'opacity-60 cursor-not-allowed' : ''}`}
+                className={`px-4 py-1.5 rounded-md text-sm transition-all ${
+                  role === 'seller'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
               >
                 Seller
               </button>
