@@ -35,7 +35,7 @@ const conversationMessages: Record<number, { id: number; sender: string; text: s
 };
 
 export function Messages() {
-  const [selectedChatId, setSelectedChatId] = useState<number>(1);
+  const [selectedChatId, setSelectedChatId] = useState<number | null>(null);
   const [messageInput, setMessageInput] = useState('');
   const [localMessages, setLocalMessages] = useState<Record<number, { id: number; sender: string; text: string; timestamp: string }[]>>(
     conversationMessages
@@ -51,16 +51,18 @@ export function Messages() {
     avatar: msg.avatar,
   }));
 
-  const activeConversation = conversations.find(c => c.id === selectedChatId)!;
-  const messages = localMessages[selectedChatId] ?? [];
+  // Auto-select first conversation if none selected and conversations exist
+  const effectiveChatId = selectedChatId ?? conversations[0]?.id ?? null;
+  const activeConversation = conversations.find(c => c.id === effectiveChatId) ?? null;
+  const messages = effectiveChatId != null ? (localMessages[effectiveChatId] ?? []) : [];
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     const text = messageInput.trim();
-    if (!text) return;
+    if (!text || effectiveChatId == null) return;
 
     const newMessage = {
-      id: (localMessages[selectedChatId]?.length ?? 0) + 1,
+      id: (localMessages[effectiveChatId]?.length ?? 0) + 1,
       sender: 'me',
       text,
       timestamp: 'Just now',
@@ -68,7 +70,7 @@ export function Messages() {
 
     setLocalMessages(prev => ({
       ...prev,
-      [selectedChatId]: [...(prev[selectedChatId] ?? []), newMessage],
+      [effectiveChatId]: [...(prev[effectiveChatId] ?? []), newMessage],
     }));
     setMessageInput('');
   };
@@ -94,117 +96,131 @@ export function Messages() {
             </div>
           </div>
           <div className="flex-1 overflow-y-auto">
-            {conversations.map((conv) => (
-              <motion.button
-                key={conv.id}
-                onClick={() => setSelectedChatId(conv.id)}
-                whileHover={{ backgroundColor: 'rgba(85, 185, 195, 0.1)' }}
-                className={`w-full p-4 border-b border-border text-left transition-colors ${selectedChatId === conv.id ? 'bg-accent' : ''
-                  }`}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="relative">
-                    <div className="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center">
-                      <span className="text-white font-semibold">
-                        {conv.name.split(' ').map(n => n[0]).join('')}
-                      </span>
-                    </div>
-                    {conv.online && (
-                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-card rounded-full"></div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <h4 className="font-semibold truncate">{conv.name}</h4>
-                      <span className="text-xs text-muted-foreground">{conv.timestamp}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm text-muted-foreground truncate">{conv.lastMessage}</p>
-                      {conv.unread > 0 && (
-                        <Badge variant="default" className="ml-2">{conv.unread}</Badge>
+            {conversations.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full py-16 text-center px-4">
+                <p className="text-muted-foreground text-sm">No conversations yet.</p>
+              </div>
+            ) : (
+              conversations.map((conv) => (
+                <motion.button
+                  key={conv.id}
+                  onClick={() => setSelectedChatId(conv.id)}
+                  whileHover={{ backgroundColor: 'rgba(85, 185, 195, 0.1)' }}
+                  className={`w-full p-4 border-b border-border text-left transition-colors ${effectiveChatId === conv.id ? 'bg-accent' : ''
+                    }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="relative">
+                      <div className="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center">
+                        <span className="text-white font-semibold">
+                          {conv.name.split(' ').map(n => n[0]).join('')}
+                        </span>
+                      </div>
+                      {conv.online && (
+                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-card rounded-full"></div>
                       )}
                     </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <h4 className="font-semibold truncate">{conv.name}</h4>
+                        <span className="text-xs text-muted-foreground">{conv.timestamp}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-muted-foreground truncate">{conv.lastMessage}</p>
+                        {conv.unread > 0 && (
+                          <Badge variant="default" className="ml-2">{conv.unread}</Badge>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </motion.button>
-            ))}
+                </motion.button>
+              ))
+            )}
           </div>
         </Card>
 
         {/* Chat Area */}
         <Card className="lg:col-span-8 flex flex-col">
-          {/* Chat Header */}
-          <div className="p-4 border-b border-border flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center">
-                  <span className="text-white font-semibold">
-                    {activeConversation.name.split(' ').map(n => n[0]).join('')}
-                  </span>
-                </div>
-                {activeConversation.online && (
-                  <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-card rounded-full"></div>
-                )}
-              </div>
-              <div>
-                <h3 className="font-semibold">{activeConversation.name}</h3>
-                <p className="text-xs text-muted-foreground">
-                  {activeConversation.online ? 'Online' : 'Offline'}
-                </p>
-              </div>
+          {activeConversation == null ? (
+            <div className="flex flex-col items-center justify-center flex-1 py-16 text-center px-4">
+              <p className="text-muted-foreground text-sm">Select a conversation to start chatting.</p>
             </div>
-            <button className="p-2 hover:bg-accent rounded-lg transition-colors">
-              <MoreVertical className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-4">
-            {messages.map((message) => (
-              <motion.div
-                key={message.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`flex ${message.sender === 'me' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div className={`max-w-[70%]`}>
-                  <div
-                    className={`p-4 rounded-2xl ${message.sender === 'me'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted'
-                      }`}
-                  >
-                    <p className="text-sm">{message.text}</p>
+          ) : (
+            <>
+              {/* Chat Header */}
+              <div className="p-4 border-b border-border flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center">
+                      <span className="text-white font-semibold">
+                        {activeConversation.name.split(' ').map(n => n[0]).join('')}
+                      </span>
+                    </div>
+                    {activeConversation.online && (
+                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-card rounded-full"></div>
+                    )}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1 px-2">
-                    {message.timestamp}
-                  </p>
+                  <div>
+                    <h3 className="font-semibold">{activeConversation.name}</h3>
+                    <p className="text-xs text-muted-foreground">
+                      {activeConversation.online ? 'Online' : 'Offline'}
+                    </p>
+                  </div>
                 </div>
-              </motion.div>
-            ))}
-          </div>
+                <button className="p-2 hover:bg-accent rounded-lg transition-colors">
+                  <MoreVertical className="w-5 h-5" />
+                </button>
+              </div>
 
-          {/* Message Input */}
-          <div className="p-4 border-t border-border">
-            <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-              <button
-                type="button"
-                className="p-2 hover:bg-accent rounded-lg transition-colors"
-              >
-                <Paperclip className="w-5 h-5" />
-              </button>
-              <input
-                type="text"
-                placeholder="Type a message..."
-                value={messageInput}
-                onChange={(e) => setMessageInput(e.target.value)}
-                className="flex-1 px-4 py-2 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-              <Button type="submit">
-                <Send className="w-5 h-5" />
-              </Button>
-            </form>
-          </div>
+              {/* Messages */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                {messages.map((message) => (
+                  <motion.div
+                    key={message.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`flex ${message.sender === 'me' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div className={`max-w-[70%]`}>
+                      <div
+                        className={`p-4 rounded-2xl ${message.sender === 'me'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted'
+                          }`}
+                      >
+                        <p className="text-sm">{message.text}</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1 px-2">
+                        {message.timestamp}
+                      </p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Message Input */}
+              <div className="p-4 border-t border-border">
+                <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="p-2 hover:bg-accent rounded-lg transition-colors"
+                  >
+                    <Paperclip className="w-5 h-5" />
+                  </button>
+                  <input
+                    type="text"
+                    placeholder="Type a message..."
+                    value={messageInput}
+                    onChange={(e) => setMessageInput(e.target.value)}
+                    className="flex-1 px-4 py-2 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                  <Button type="submit">
+                    <Send className="w-5 h-5" />
+                  </Button>
+                </form>
+              </div>
+            </>
+          )}
         </Card>
       </div>
     </div>

@@ -89,10 +89,10 @@ import { MessageCircle } from 'lucide-react';
 
 function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirstName }: BuyerDashboardProps) {
   const stats = [
-    { label: 'Active Orders', value: '8', icon: ShoppingCart, iconColor: 'text-[#0057B8] dark:text-[#60A5FA]', bgColor: 'bg-[#EBF3FC] dark:bg-[#2563EB]/20' },
-    { label: 'Completed', value: '24', icon: CheckCircle, iconColor: 'text-[#00D084] dark:text-[#34D399]', bgColor: 'bg-[#E6FAF0] dark:bg-[#10B981]/20' },
-    { label: 'Pending Payment', value: '2', icon: Clock, iconColor: 'text-[#F5A623] dark:text-[#FBBF24]', bgColor: 'bg-[#FEF6E9] dark:bg-[#D97706]/20' },
-    { label: 'Messages', value: '5', icon: MessageSquare, iconColor: 'text-[#B620E0] dark:text-[#E879F9]', bgColor: 'bg-[#F8E9FB] dark:bg-[#C026D3]/20' },
+    { label: 'Active Orders', value: '0', icon: ShoppingCart, iconColor: 'text-[#0057B8] dark:text-[#60A5FA]', bgColor: 'bg-[#EBF3FC] dark:bg-[#2563EB]/20' },
+    { label: 'Completed', value: '0', icon: CheckCircle, iconColor: 'text-[#00D084] dark:text-[#34D399]', bgColor: 'bg-[#E6FAF0] dark:bg-[#10B981]/20' },
+    { label: 'Pending Payment', value: '0', icon: Clock, iconColor: 'text-[#F5A623] dark:text-[#FBBF24]', bgColor: 'bg-[#FEF6E9] dark:bg-[#D97706]/20' },
+    { label: 'Messages', value: '0', icon: MessageSquare, iconColor: 'text-[#B620E0] dark:text-[#E879F9]', bgColor: 'bg-[#F8E9FB] dark:bg-[#C026D3]/20' },
   ];
 
 
@@ -224,17 +224,21 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {buyerActivities.map((activity: Activity, index: number) => (
-                  <div key={index} className="flex items-start gap-3 pb-3 border-b border-border last:border-0">
-                    <div className={`w-2 h-2 rounded-full mt-2 ${activity.type === 'success' ? 'bg-green-500' :
-                      activity.type === 'info' ? 'bg-blue-500' : 'bg-muted-foreground'
-                      }`} />
-                    <div className="flex-1">
-                      <p className="text-sm">{activity.text}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{activity.time}</p>
+                {buyerActivities.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">No recent activity yet.</p>
+                ) : (
+                  buyerActivities.map((activity: Activity, index: number) => (
+                    <div key={index} className="flex items-start gap-3 pb-3 border-b border-border last:border-0">
+                      <div className={`w-2 h-2 rounded-full mt-2 ${activity.type === 'success' ? 'bg-green-500' :
+                        activity.type === 'info' ? 'bg-blue-500' : 'bg-muted-foreground'
+                        }`} />
+                      <div className="flex-1">
+                        <p className="text-sm">{activity.text}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{activity.time}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
@@ -265,19 +269,27 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
                   </tr>
                 </thead>
                 <tbody>
-                  {buyerOrders.map((order) => (
-                    <tr key={order.id} className="border-b border-border last:border-0 hover:bg-muted/50">
-                      <td className="py-3 px-4 text-sm font-medium">{order.id}</td>
-                      <td className="py-3 px-4 text-sm">{order.service}</td>
-                      <td className="py-3 px-4 text-sm text-muted-foreground">{order.seller}</td>
-                      <td className="py-3 px-4">
-                        <Badge variant={statusVariant(order.status)}>
-                          {order.status}
-                        </Badge>
+                  {buyerOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
+                        No orders yet.
                       </td>
-                      <td className="py-3 px-4 text-sm font-semibold text-right">${order.amount}</td>
                     </tr>
-                  ))}
+                  ) : (
+                    buyerOrders.map((order) => (
+                      <tr key={order.id} className="border-b border-border last:border-0 hover:bg-muted/50">
+                        <td className="py-3 px-4 text-sm font-medium">{order.id}</td>
+                        <td className="py-3 px-4 text-sm">{order.service}</td>
+                        <td className="py-3 px-4 text-sm text-muted-foreground">{order.seller}</td>
+                        <td className="py-3 px-4">
+                          <Badge variant={statusVariant(order.status)}>
+                            {order.status}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4 text-sm font-semibold text-right">${order.amount}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -307,10 +319,10 @@ function SyncroChatTriggerButton() {
 
 function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboardProps) {
   const stats = [
-    { label: 'Total Earnings', value: '$12,450', icon: DollarSign, color: 'text-green-500' },
-    { label: 'Active Listings', value: '12', icon: Package, color: 'text-blue-500' },
-    { label: 'Orders Received', value: '34', icon: ShoppingCart, color: 'text-purple-500' },
-    { label: 'Growth', value: '+23%', icon: TrendingUp, color: 'text-teal-500' },
+    { label: 'Total Earnings', value: '$0', icon: DollarSign, color: 'text-green-500' },
+    { label: 'Active Listings', value: '0', icon: Package, color: 'text-blue-500' },
+    { label: 'Orders Received', value: '0', icon: ShoppingCart, color: 'text-purple-500' },
+    { label: 'Growth', value: '—', icon: TrendingUp, color: 'text-teal-500' },
   ];
 
   return (
@@ -448,19 +460,27 @@ function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboa
                   </tr>
                 </thead>
                 <tbody>
-                  {sellerOrders.map((order) => (
-                    <tr key={order.id} className="border-b border-border last:border-0 hover:bg-muted/50">
-                      <td className="py-3 px-4 text-sm font-medium">{order.id}</td>
-                      <td className="py-3 px-4 text-sm">{order.service}</td>
-                      <td className="py-3 px-4 text-sm text-muted-foreground">{order.buyer}</td>
-                      <td className="py-3 px-4">
-                        <Badge variant={statusVariant(order.status)}>
-                          {order.status}
-                        </Badge>
+                  {sellerOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
+                        No orders received yet.
                       </td>
-                      <td className="py-3 px-4 text-sm font-semibold text-right">${order.amount}</td>
                     </tr>
-                  ))}
+                  ) : (
+                    sellerOrders.map((order) => (
+                      <tr key={order.id} className="border-b border-border last:border-0 hover:bg-muted/50">
+                        <td className="py-3 px-4 text-sm font-medium">{order.id}</td>
+                        <td className="py-3 px-4 text-sm">{order.service}</td>
+                        <td className="py-3 px-4 text-sm text-muted-foreground">{order.buyer}</td>
+                        <td className="py-3 px-4">
+                          <Badge variant={statusVariant(order.status)}>
+                            {order.status}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4 text-sm font-semibold text-right">${order.amount}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
