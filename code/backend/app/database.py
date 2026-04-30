@@ -8,7 +8,9 @@ load_dotenv(find_dotenv(), override=True)
 DEFAULT_DATABASE_URL = "postgresql://postgres:password@localhost/syncro_db"
 
 # Ensure this matches your .env file, mapping fallback if .env is missing or empty
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL") or DEFAULT_DATABASE_URL
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
+if not SQLALCHEMY_DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable is not set!")
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
