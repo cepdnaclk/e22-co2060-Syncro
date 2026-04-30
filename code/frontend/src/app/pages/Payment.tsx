@@ -21,9 +21,9 @@ export function Payment() {
   const state = (location.state as LocationState) ?? {};
 
   // Use order data passed via router state when available; fallback to sensible defaults
-  const serviceName = state.service ?? 'Professional Logo Design';
-  const packageName = state.packageName ?? 'Standard';
-  const price = state.price ?? 750;
+  const serviceName = state.service ?? '';
+  const packageName = state.packageName ?? '';
+  const price = state.price ?? 0;
   const platformFee = parseFloat((price * PLATFORM_FEE_PCT).toFixed(2));
   const total = parseFloat((price + platformFee).toFixed(2));
 
@@ -32,6 +32,16 @@ export function Payment() {
   const [success, setSuccess] = useState(false);
 
   const handlePayment = (e: React.FormEvent | React.MouseEvent) => {
+    const transaction = {
+      id: 'TXN-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+      orderId: 'ORD-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+      date: new Date().toLocaleString(),
+      service: serviceName,
+      package: packageName,
+      seller: 'Unknown',
+      amount: total,
+      paymentMethod: paymentMethod,
+    };
     // Works for both FormEvent (card) and MouseEvent (PayPal button)
     e.preventDefault();
     setProcessing(true);
@@ -42,7 +52,7 @@ export function Payment() {
       setSuccess(true);
 
       setTimeout(() => {
-        navigate('/payment/success');
+        navigate('/payment/success', { state: { transaction } });
       }, 1500);
     }, 2000);
   };
@@ -137,7 +147,7 @@ export function Payment() {
                     </div>
                     <Input
                       label="Cardholder Name"
-                      placeholder="John Doe"
+                      placeholder="Shehani Cooray"
                       required
                     />
 
@@ -188,8 +198,8 @@ export function Payment() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <h4 className="font-semibold mb-1">{serviceName}</h4>
-                  <Badge variant="info">{packageName} Package</Badge>
+                  <h4 className="font-semibold mb-1">{serviceName || 'No service selected'}</h4>
+                  {packageName && <Badge variant="info">{packageName} Package</Badge>}
                 </div>
 
                 <div className="space-y-3 py-4 border-y border-border">

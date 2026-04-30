@@ -97,7 +97,7 @@ export function Register() {
                 <Input
                   type="text"
                   label="First Name"
-                  placeholder="John"
+                  placeholder="Shehani"
                   value={formData.firstName}
                   onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                   required
@@ -105,7 +105,7 @@ export function Register() {
                 <Input
                   type="text"
                   label="Last Name"
-                  placeholder="Doe"
+                  placeholder="Cooray"
                   value={formData.lastName}
                   onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                   required

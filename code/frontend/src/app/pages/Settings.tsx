@@ -178,11 +178,11 @@ export function Settings() {
                     label="Email"
                     defaultValue={userProfile.email}
                   />
-                  <Input
-                    type="tel"
-                    label="Phone Number"
-                    placeholder="+1 (555) 000-0000"
-                  />
+                    <Input
+                      type="tel"
+                      label="Phone Number"
+                      placeholder="+94 77 123 4567"
+                    />
 
                   <div>
                     <label className="block text-sm font-medium mb-2">Bio</label>

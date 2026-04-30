@@ -169,12 +169,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       role: data.role,
       token: data.access_token,
     };
+
+    // Set token in localStorage immediately so subsequent requests work
+    localStorage.setItem('syncro_token', user.token);
+
     setAuthUser(user);
     const newRole = data.role === 'seller' ? 'seller' : 'buyer';
     setRoleState(newRole);
     localStorage.setItem('syncro_role', newRole);
     // Seed the user profile from backend response
     setUserProfileState(prev => ({ ...prev, firstName: data.first_name, email }));
+
+    if (data.role === 'seller') {
+      setHasSellerAccount(true);
+    }
+
+    // Try to fetch seller profile to restore seller toggle state
+    try {
+      // Must use profilesApi from the imported module (already added to top of file)
+      const { profilesApi } = await import('../services/api');
+      const profile = await profilesApi.get(data.user_id);
+      if (profile) {
+        setHasSellerAccount(true);
+        setBusinessProfileState({
+          name: profile.name,
+          initials: profile.name.substring(0, 2).toUpperCase(),
+          rating: 0,
+          reviewCount: 0,
+          description: profile.description,
+          logo: profile.logo,
+          coverImage: profile.cover_image,
+        });
+      }
+    } catch (e) {
+      // Ignore errors (user likely doesn't have a seller profile yet)
+    }
   };
 
   // Real register — calls backend

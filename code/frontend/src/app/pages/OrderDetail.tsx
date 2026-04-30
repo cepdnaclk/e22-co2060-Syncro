@@ -25,35 +25,8 @@ export function OrderDetail() {
   const [proposedPrice, setProposedPrice] = useState('');
   const [showReviewModal, setShowReviewModal] = useState(false);
 
-  const order = {
-    id: 'ORD-A1B2C3D4',
-    service: 'Professional Logo Design',
-    package: 'Standard',
-    status: 'completed', // Changed to completed to show review button
-    buyer: 'Tech Startup Ltd',
-    seller: 'Design Studio Pro',
-    sellerId: 'seller-1',
-    createdAt: '2026-02-15',
-    deadline: '2026-02-20',
-    amount: 750,
-    platformFee: 37.5,
-    total: 787.5,
-    notes: 'Looking for a modern, minimalist logo that represents innovation and technology.',
-    hasReview: false,
-    timeline: [
-      { status: 'placed', label: 'Order Placed', date: '2026-02-15 10:30 AM', completed: true },
-      { status: 'confirmed', label: 'Order Confirmed', date: '2026-02-15 10:35 AM', completed: true },
-      { status: 'in-progress', label: 'In Progress', date: '2026-02-15 2:00 PM', completed: true },
-      { status: 'review', label: 'Under Review', date: '2026-02-18 4:00 PM', completed: true },
-      { status: 'completed', label: 'Completed', date: '2026-02-19 11:00 AM', completed: true },
-    ],
-  };
-
-  const messages = [
-    { id: 1, sender: 'seller', text: 'Hi! Thanks for your order. I\'ve reviewed your requirements and will start working on concepts.', time: '10:40 AM' },
-    { id: 2, sender: 'buyer', text: 'Great! Looking forward to seeing your designs.', time: '11:05 AM' },
-    { id: 3, sender: 'seller', text: 'I have 3 initial concepts ready. Would you like me to share them now?', time: '2:15 PM' },
-  ];
+  const order: any = null;
+  const messages: any[] = [];
 
   const handleSubmitReview = (rating: number, comment: string) => {
     // In production, this would submit to API
@@ -65,8 +38,8 @@ export function OrderDetail() {
         id: `review-${Date.now()}`,
         rating,
         comment,
-        buyerName: 'Alex Rivera',
-        buyerInitials: 'AR',
+        buyerName: 'Shehani Cooray',
+        buyerInitials: 'SC',
         date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         orderId: order.id,
       };
@@ -86,26 +59,36 @@ export function OrderDetail() {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link to="/orders">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Orders
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold">Order #{order.id}</h1>
-            <p className="text-muted-foreground">Placed on {order.createdAt}</p>
+      {!order ? (
+        <Card className="border-dashed border-2 bg-muted/20">
+          <CardContent className="flex flex-col items-center justify-center py-20 text-center">
+            <Package className="w-12 h-12 text-muted-foreground mb-4 opacity-30" />
+            <h3 className="text-xl font-semibold mb-2">Order Not Found</h3>
+            <p className="text-muted-foreground">We couldn't find the order details for ID: {id}</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link to="/orders">
+                <Button variant="ghost" size="sm">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to Orders
+                </Button>
+              </Link>
+              <div>
+                <h1 className="text-3xl font-bold">Order #{order.id}</h1>
+                <p className="text-muted-foreground">Placed on {order.createdAt}</p>
+              </div>
+            </div>
+            <Badge variant={
+              order.status === 'completed' ? 'success' :
+                order.status === 'in-progress' ? 'info' : 'warning'
+            }>
+              {order.status.replace('-', ' ')}
+            </Badge>
           </div>
-        </div>
-        <Badge variant={
-          order.status === 'completed' ? 'success' :
-          order.status === 'in-progress' ? 'info' : 'warning'
-        }>
-          {order.status.replace('-', ' ')}
-        </Badge>
-      </div>
 
       {/* Review Button for Buyer (if completed and no review) */}
       {role === 'buyer' && order.status === 'completed' && !order.hasReview && (
@@ -354,6 +337,8 @@ export function OrderDetail() {
           sellerName={order.seller}
           onSubmit={handleSubmitReview}
         />
+      )}
+        </>
       )}
     </div>
   );

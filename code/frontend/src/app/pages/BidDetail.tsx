@@ -17,37 +17,8 @@ import { Link, useParams } from 'react-router';
 // Mock Data
 // ──────────────────────────────────────────────────────────────
 
-const MOCK_REQUEST = {
-    id: 'req_1',
-    description: 'Need 100 custom branded T-shirts for a corporate tech event in Colombo. Looking for high-quality cotton, black color, with white logo printing on the front. Delivery needed within 2 weeks.',
-    category: 'Clothing & Fashion',
-    status: 'open',
-    createdAt: '2024-03-05T10:00:00Z',
-    userName: 'John Doe',
-};
-
-const MOCK_BIDS = [
-    {
-        id: 'bid_1',
-        sellerName: 'City Print Solutions',
-        rating: 4.8,
-        price: 1200,
-        quantity: 100,
-        deliveryTime: '10 days',
-        message: 'We specialize in corporate branding. Our cotton is premium 200GSM. Can deliver to Colombo for free.',
-        status: 'pending',
-    },
-    {
-        id: 'bid_2',
-        sellerName: 'Fashion Hub',
-        rating: 4.5,
-        price: 1050,
-        quantity: 100,
-        deliveryTime: '14 days',
-        message: 'Best price guaranteed for bulk orders. 100% organic cotton available.',
-        status: 'pending',
-    },
-];
+const MOCK_REQUEST: { id: string; description: string; category: string; status: string; createdAt: string; userName: string } | null = null;
+const MOCK_BIDS: { id: string; sellerName: string; rating: number; price: number; quantity: number; deliveryTime: string; message: string; status: string }[] = [];
 
 const fadeInUp = {
     initial: { opacity: 0, y: 20 },
@@ -85,58 +56,68 @@ export function BidDetail() {
             <div className="grid lg:grid-cols-3 gap-8">
                 {/* Request Details */}
                 <div className="lg:col-span-2 space-y-8">
-                    <motion.div {...fadeInUp}>
-                        <Card className="border-border/50 shadow-sm overflow-hidden">
-                            <CardHeader className="bg-muted/30 p-8 border-b border-border/50">
-                                <div className="flex items-center justify-between gap-4 mb-4">
-                                    <Badge variant="info" className="bg-primary/5 text-primary border-primary/20">
-                                        {MOCK_REQUEST.category}
-                                    </Badge>
-                                    <Badge className="bg-green-500 text-white border-none px-4">
-                                        {MOCK_REQUEST.status.toUpperCase()}
-                                    </Badge>
-                                </div>
-                                <h1 className="text-2xl font-bold leading-tight">
-                                    {MOCK_REQUEST.description.substring(0, 100)}...
-                                </h1>
-                            </CardHeader>
-                            <CardContent className="p-8 space-y-6">
-                                <div className="space-y-4">
-                                    <h3 className="font-semibold text-lg flex items-center gap-2">
-                                        <AlertCircle className="w-5 h-5 text-primary" />
-                                        Full Description
-                                    </h3>
-                                    <p className="text-muted-foreground leading-relaxed">
-                                        {MOCK_REQUEST.description}
-                                    </p>
-                                </div>
-
-                                <div className="grid sm:grid-cols-3 gap-6 pt-6 border-t border-border/50">
-                                    <div className="space-y-1">
-                                        <p className="text-xs text-muted-foreground uppercase font-semibold">User</p>
-                                        <p className="font-medium flex items-center gap-2">
-                                            <User className="w-4 h-4" />
-                                            {MOCK_REQUEST.userName}
-                                        </p>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <p className="text-xs text-muted-foreground uppercase font-semibold">Posted On</p>
-                                        <p className="font-medium flex items-center gap-2">
-                                            <Clock className="w-4 h-4" />
-                                            {new Date(MOCK_REQUEST.createdAt).toLocaleDateString()}
-                                        </p>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <p className="text-xs text-muted-foreground uppercase font-semibold">Total Proposals</p>
-                                        <p className="font-medium flex items-center gap-2">
-                                            <Gavel className="w-4 h-4" />
-                                            {MOCK_BIDS.length} sellers
-                                        </p>
-                                    </div>
-                                </div>
+                    {!MOCK_REQUEST ? (
+                        <Card className="border-dashed border-2 bg-muted/20">
+                            <CardContent className="flex flex-col items-center justify-center py-20 text-center">
+                                <AlertCircle className="w-12 h-12 text-muted-foreground mb-4 opacity-30" />
+                                <h3 className="text-xl font-semibold mb-2">Request Not Found</h3>
+                                <p className="text-muted-foreground">The request you are looking for does not exist or has been removed.</p>
                             </CardContent>
                         </Card>
-                    </motion.div>
+                    ) : (
+                        <motion.div {...fadeInUp}>
+                            <Card className="border-border/50 shadow-sm overflow-hidden">
+                                <CardHeader className="bg-muted/30 p-8 border-b border-border/50">
+                                    <div className="flex items-center justify-between gap-4 mb-4">
+                                        <Badge variant="info" className="bg-primary/5 text-primary border-primary/20">
+                                            {MOCK_REQUEST.category}
+                                        </Badge>
+                                        <Badge className="bg-green-500 text-white border-none px-4">
+                                            {MOCK_REQUEST.status.toUpperCase()}
+                                        </Badge>
+                                    </div>
+                                    <h1 className="text-2xl font-bold leading-tight">
+                                        {MOCK_REQUEST.description.substring(0, 100)}...
+                                    </h1>
+                                </CardHeader>
+                                <CardContent className="p-8 space-y-6">
+                                    <div className="space-y-4">
+                                        <h3 className="font-semibold text-lg flex items-center gap-2">
+                                            <AlertCircle className="w-5 h-5 text-primary" />
+                                            Full Description
+                                        </h3>
+                                        <p className="text-muted-foreground leading-relaxed">
+                                            {MOCK_REQUEST.description}
+                                        </p>
+                                    </div>
+
+                                    <div className="grid sm:grid-cols-3 gap-6 pt-6 border-t border-border/50">
+                                        <div className="space-y-1">
+                                            <p className="text-xs text-muted-foreground uppercase font-semibold">User</p>
+                                            <p className="font-medium flex items-center gap-2">
+                                                <User className="w-4 h-4" />
+                                                {MOCK_REQUEST.userName}
+                                            </p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-xs text-muted-foreground uppercase font-semibold">Posted On</p>
+                                            <p className="font-medium flex items-center gap-2">
+                                                <Clock className="w-4 h-4" />
+                                                {new Date(MOCK_REQUEST.createdAt).toLocaleDateString()}
+                                            </p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-xs text-muted-foreground uppercase font-semibold">Total Proposals</p>
+                                            <p className="font-medium flex items-center gap-2">
+                                                <Gavel className="w-4 h-4" />
+                                                {MOCK_BIDS.length} sellers
+                                            </p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </motion.div>
+                    )}
 
                     {/* Bids List (Buyer View) */}
                     {role === 'buyer' && (
