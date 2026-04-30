@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<deployment>
+  <id>bb5d585e40540becd69ab9ab2fbae38659c10651</id>
+  <author>Matheesha</author>
+  <deployer>GitHub</deployer>
+  <authorEmail>e22052@eng.pdn.ac.lk</authorEmail>
+  <message>Add startup script for Azure App Service deployment</message>
+  <progress></progress>
+  <status>Success</status>
+  <statusText></statusText>
+  <lastSuccessEndTime>2026-04-30T12:23:46.3233502Z</lastSuccessEndTime>
+  <receivedTime>2026-04-30T09:32:33.9501864Z</receivedTime>
+  <startTime>2026-04-30T12:22:48.3815734Z</startTime>
+  <endTime>2026-04-30T12:23:46.3233502Z</endTime>
+  <complete>True</complete>
+  <is_temp>False</is_temp>
+  <is_readonly>False</is_readonly>
+  <containerId>04ca920ea456</containerId>
+  <buildSummary />
+</deployment>
