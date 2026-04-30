@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { User, Bell, Shield, Moon, Sun, Monitor, Building2, AlertTriangle } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
@@ -8,7 +8,7 @@ import { Badge } from '../components/ui/Badge';
 import { useApp } from '../context/AppContext';
 import { SellerProfileSettings } from '../components/SellerProfileSettings';
 import { useSearchParams, useNavigate } from 'react-router';
-import { authApi } from '../services/api';
+import { authApi, profilesApi } from '../services/api';
 
 type Tab = 'profile' | 'notifications' | 'appearance' | 'privacy' | 'business';
 
@@ -20,11 +20,31 @@ const baseTabs: { id: Tab; label: string; icon: React.ElementType }[] = [
 ];
 
 export function Settings() {
-  const { theme, setTheme, userProfile, role, hasSellerProfile, logout } = useApp();
+  const { theme, setTheme, userProfile, setUserProfile, role, hasSellerProfile, logout } = useApp();
   const navigate = useNavigate();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string>(() => localStorage.getItem('syncro_avatar') || '');
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarUploading(true);
+    try {
+      const { url } = await profilesApi.uploadImage(file);
+      setAvatarUrl(url);
+      localStorage.setItem('syncro_avatar', url);
+    } catch (err: any) {
+      alert('Photo upload failed: ' + (err.message || 'Unknown error'));
+    } finally {
+      setAvatarUploading(false);
+      // Reset input so the same file can be re-selected
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  };
 
   const handleDeleteAccount = async () => {
     setDeleteLoading(true);
@@ -112,13 +132,35 @@ export function Settings() {
                 <CardContent className="space-y-6">
                   {/* Avatar */}
                   <div className="flex items-center gap-6">
-                    <div className="w-20 h-20 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center">
-                      <span className="text-white font-bold text-2xl">
-                        {userProfile.firstName[0]}{userProfile.lastName[0]}
-                      </span>
-                    </div>
+                    {avatarUrl ? (
+                      <img
+                        src={avatarUrl}
+                        alt="Profile"
+                        className="w-20 h-20 rounded-full object-cover border-2 border-primary"
+                      />
+                    ) : (
+                      <div className="w-20 h-20 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center">
+                        <span className="text-white font-bold text-2xl">
+                          {userProfile.firstName?.[0]}{userProfile.lastName?.[0]}
+                        </span>
+                      </div>
+                    )}
                     <div>
-                      <Button variant="outline" size="sm">Change Photo</Button>
+                      <input
+                        ref={avatarInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/gif"
+                        className="hidden"
+                        onChange={handleAvatarChange}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => avatarInputRef.current?.click()}
+                        disabled={avatarUploading}
+                      >
+                        {avatarUploading ? 'Uploading...' : 'Change Photo'}
+                      </Button>
                       <p className="text-xs text-muted-foreground mt-1">JPG, GIF or PNG. Max size 2MB.</p>
                     </div>
                   </div>
