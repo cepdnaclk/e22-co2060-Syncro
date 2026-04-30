@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Plus, Gavel, Clock, CheckCircle, ChevronRight, MessageSquare, AlertCircle } from 'lucide-react';
+import { Plus, Gavel, Clock, CheckCircle, ChevronRight, MessageSquare, AlertCircle, Package } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -12,43 +12,11 @@ import { Link } from 'react-router';
 // Mock Data
 // ──────────────────────────────────────────────────────────────
 
-const MOCK_REQUESTS = [
-    {
-        id: 'req_1',
-        description: 'Need 100 custom branded T-shirts for a corporate tech event in Colombo.',
-        category: 'Clothing & Fashion',
-        status: 'open',
-        bidsCount: 3,
-        createdAt: '2024-03-05T10:00:00Z',
-    },
-    {
-        id: 'req_2',
-        description: 'Looking for a wedding cake vendor for 200 guests. Pastel theme preferred.',
-        category: 'Bakery',
-        status: 'accepted',
-        bidsCount: 5,
-        createdAt: '2024-03-01T15:30:00Z',
-    },
-];
-
-const MOCK_AVAILABLE_JOBS = [
-    {
-        id: 'job_1',
-        description: 'Require a professional event photographer for a 2-day workshop.',
-        category: 'Photography',
-        budget: '$200 - $500',
-        timeLeft: '2 days',
-        bidsCount: 8,
-    },
-    {
-        id: 'job_2',
-        description: 'Bulk order for 50 floral centerpieces for a gala dinner.',
-        category: 'Floral Design',
-        budget: 'Negotiable',
-        timeLeft: '16 hours',
-        bidsCount: 4,
-    },
-];
+const MOCK_REQUEST: { id: string; description: string; category: string; status: string; createdAt: string; userName: string } | null = null;
+const MOCK_BIDS: { id: string; sellerName: string; rating: number; price: number; quantity: number; deliveryTime: string; message: string; status: string }[] = [];
+const MOCK_REQUESTS: { id: string; description: string; category: string; status: string; bidsCount: number; createdAt: string }[] = [];
+const MOCK_AVAILABLE_JOBS: { id: string; description: string; category: string; budget: string; timeLeft: string; bidsCount: number }[] = [];
+const notifications: { id: number; text: string; time: string; unread: boolean }[] = [];
 
 const fadeInUp = {
     initial: { opacity: 0, y: 20 },
@@ -99,7 +67,19 @@ export function Bids() {
 
                 <TabsContent value="requests" className="space-y-4">
                     {role === 'buyer' ? (
-                        MOCK_REQUESTS.map((req, index) => (
+                        MOCK_REQUESTS.length === 0 ? (
+                            <Card className="border-dashed border-2 bg-muted/20">
+                                <CardContent className="flex flex-col items-center justify-center py-20 text-center">
+                                    <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                                        <Gavel className="w-8 h-8 text-muted-foreground" />
+                                    </div>
+                                    <h3 className="text-xl font-semibold mb-2">No Requests Yet</h3>
+                                    <p className="text-muted-foreground max-w-xs">
+                                        Your service requests will appear here once you create them.
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        ) : MOCK_REQUESTS.map((req, index) => (
                             <motion.div key={req.id} {...fadeInUp} transition={{ delay: index * 0.1 }}>
                                 <Link to={`/bids/${req.id}`}>
                                     <Card hover className="overflow-hidden group border-border/50">
@@ -141,7 +121,19 @@ export function Bids() {
                             </motion.div>
                         ))
                     ) : (
-                        MOCK_AVAILABLE_JOBS.map((job, index) => (
+                        MOCK_AVAILABLE_JOBS.length === 0 ? (
+                            <Card className="border-dashed border-2 bg-muted/20">
+                                <CardContent className="flex flex-col items-center justify-center py-20 text-center">
+                                    <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                                        <Package className="w-8 h-8 text-muted-foreground" />
+                                    </div>
+                                    <h3 className="text-xl font-semibold mb-2">No Available Jobs</h3>
+                                    <p className="text-muted-foreground max-w-xs">
+                                        Check back later for new opportunities that match your skills.
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        ) : MOCK_AVAILABLE_JOBS.map((job, index) => (
                             <motion.div key={job.id} {...fadeInUp} transition={{ delay: index * 0.1 }}>
                                 <Card hover className="overflow-hidden border-border/50">
                                     <CardContent className="p-6">

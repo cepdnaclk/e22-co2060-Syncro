@@ -51,11 +51,7 @@ export function TopNav() {
     }
   };
 
-  const notifications = [
-    { id: 1, text: 'New order received', time: '5 min ago', unread: true },
-    { id: 2, text: 'Payment confirmed', time: '1 hour ago', unread: true },
-    { id: 3, text: 'Message from buyer', time: '2 hours ago', unread: false },
-  ];
+  const notifications: { id: number; text: string; time: string; unread: boolean }[] = [];
 
   const unreadCount = notifications.filter(n => n.unread).length;
 

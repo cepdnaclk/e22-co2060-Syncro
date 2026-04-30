@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import { motion } from 'motion/react';
 import { CheckCircle, Download, MessageSquare, Home } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/Card';
@@ -7,15 +7,18 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 
 export function PaymentSuccess() {
-  const transaction = {
-    id: 'TXN-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
-    orderId: 'ORD-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+  const location = useLocation();
+  const state = (location.state as { transaction: any }) ?? {};
+
+  const transaction = state.transaction ?? {
+    id: 'TXN-000000000',
+    orderId: 'ORD-000000000',
     date: new Date().toLocaleString(),
-    service: 'Professional Logo Design',
-    package: 'Standard',
-    seller: 'Design Studio Pro',
-    amount: 787.5,
-    paymentMethod: 'Visa •••• 4242',
+    service: 'Service Name',
+    package: 'Package',
+    seller: 'Seller Name',
+    amount: 0,
+    paymentMethod: 'Payment Method',
   };
 
   return (
