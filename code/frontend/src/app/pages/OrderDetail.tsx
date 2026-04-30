@@ -38,8 +38,8 @@ export function OrderDetail() {
         id: `review-${Date.now()}`,
         rating,
         comment,
-        buyerName: 'Alex Rivera',
-        buyerInitials: 'AR',
+        buyerName: 'Shehani Cooray',
+        buyerInitials: 'SC',
         date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         orderId: order.id,
       };

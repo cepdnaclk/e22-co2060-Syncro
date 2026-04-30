@@ -55,14 +55,14 @@ function statusVariant(status: Order['status']): 'success' | 'info' | 'warning' 
 // ────────────────────────── Main export ────────────────────
 
 export function Dashboard() {
-  const { role, businessProfile, hasSellerProfile, showOnboarding, setShowOnboarding, userProfile } = useApp();
+  const { role, businessProfile, hasSellerProfile, hasSellerAccount, showOnboarding, setShowOnboarding, userProfile } = useApp();
 
   if (role === 'buyer') {
     return (
       <>
         <BuyerDashboard
           orderData={orderData}
-          hasSellerProfile={hasSellerProfile}
+          hasSellerProfile={hasSellerAccount || hasSellerProfile}
           onStartSelling={() => setShowOnboarding(true)}
           userFirstName={userProfile.firstName}
         />

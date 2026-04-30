@@ -35,12 +35,12 @@ export function SellerOnboarding({ onClose }: SellerOnboardingProps) {
     'Other',
   ];
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     // Create business profile
-    const finalCategory = formData.category === 'Other' && formData.customCategory 
-      ? formData.customCategory 
+    const finalCategory = formData.category === 'Other' && formData.customCategory
+      ? formData.customCategory
       : formData.category;
-      
+
     const profile = {
       name: formData.businessName,
       initials: formData.businessName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase(),
@@ -62,10 +62,25 @@ export function SellerOnboarding({ onClose }: SellerOnboardingProps) {
 
     setBusinessProfile(profile);
     setRole('seller');
+
+    try {
+      const { profilesApi } = await import('../services/api');
+      await profilesApi.update({
+        name: formData.businessName,
+        description: formData.description,
+        address: formData.address,
+        phone: formData.phone,
+        website: formData.website,
+        logo: formData.logo || undefined
+      });
+    } catch (e) {
+      console.error("Failed to save profile to backend", e);
+    }
+
     onClose();
   };
 
-  const isStep2Valid = formData.businessName && formData.category && formData.description && formData.email && 
+  const isStep2Valid = formData.businessName && formData.category && formData.description && formData.email &&
     (formData.category !== 'Other' || formData.customCategory);
   const isStep3Valid = true; // Optional fields
 
@@ -94,9 +109,8 @@ export function SellerOnboarding({ onClose }: SellerOnboardingProps) {
                 {[1, 2, 3, 4].map((step) => (
                   <div
                     key={step}
-                    className={`h-2 flex-1 rounded-full transition-all ${
-                      step <= currentStep ? 'bg-primary' : 'bg-muted'
-                    }`}
+                    className={`h-2 flex-1 rounded-full transition-all ${step <= currentStep ? 'bg-primary' : 'bg-muted'
+                      }`}
                   />
                 ))}
               </div>
@@ -159,7 +173,7 @@ function Step1({ onNext, onClose }: { onNext: () => void; onClose: () => void })
       <div className="w-20 h-20 bg-gradient-to-br from-primary to-accent rounded-2xl flex items-center justify-center mx-auto">
         <Sparkles className="w-10 h-10 text-white" />
       </div>
-      
+
       <div>
         <h2 className="text-3xl font-bold mb-3">Start Selling on Syncro</h2>
         <p className="text-muted-foreground text-lg max-w-xl mx-auto">
@@ -203,7 +217,7 @@ function Step2({
   isValid,
 }: any) {
   const [dragActive, setDragActive] = useState(false);
-  
+
   const businessInitials = formData.businessName
     ? formData.businessName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
     : 'BL';
@@ -233,7 +247,7 @@ function Step2({
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
+
     const file = e.dataTransfer.files?.[0];
     if (file && (file.type === 'image/png' || file.type === 'image/jpeg')) {
       const reader = new FileReader();
@@ -268,11 +282,10 @@ function Step2({
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
             onDrop={handleDrop}
-            className={`relative flex flex-col items-center gap-4 p-8 border-2 border-dashed rounded-xl transition-all cursor-pointer ${
-              dragActive 
-                ? 'border-primary bg-primary/5' 
+            className={`relative flex flex-col items-center gap-4 p-8 border-2 border-dashed rounded-xl transition-all cursor-pointer ${dragActive
+                ? 'border-primary bg-primary/5'
                 : 'border-border hover:border-primary/50 hover:bg-accent/20'
-            }`}
+              }`}
           >
             <input
               type="file"
@@ -280,7 +293,7 @@ function Step2({
               onChange={handleLogoUpload}
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             />
-            
+
             {formData.logo ? (
               <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-border">
                 <img src={formData.logo} alt="Logo" className="w-full h-full object-cover" />
@@ -290,7 +303,7 @@ function Step2({
                 <span className="text-white font-bold text-3xl">{businessInitials}</span>
               </div>
             )}
-            
+
             <div className="text-center">
               <div className="flex items-center gap-2 justify-center mb-1">
                 <Upload className="w-4 h-4 text-primary" />
@@ -376,7 +389,7 @@ function Step2({
           label="Business Phone (Optional)"
           value={formData.phone}
           onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-          placeholder="+1 (555) 000-0000"
+          placeholder="+94 77 123 4567"
         />
       </div>
 
@@ -508,7 +521,7 @@ function Step4({ businessName, onComplete }: { businessName: string; onComplete:
       >
         <Check className="w-12 h-12 text-white" />
       </motion.div>
-      
+
       <div>
         <h2 className="text-3xl font-bold mb-3">You're Now a Seller!</h2>
         <p className="text-muted-foreground text-lg max-w-xl mx-auto">

@@ -147,7 +147,7 @@ export function Payment() {
                     </div>
                     <Input
                       label="Cardholder Name"
-                      placeholder="John Doe"
+                      placeholder="Shehani Cooray"
                       required
                     />
 

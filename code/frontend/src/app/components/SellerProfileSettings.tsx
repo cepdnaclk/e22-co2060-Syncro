@@ -349,7 +349,7 @@ export function SellerProfileSettings() {
                   label="Business Phone"
                   value={formData.businessPhone}
                   onChange={(e) => setFormData({ ...formData, businessPhone: e.target.value })}
-                  placeholder="+1 (555) 000-0000"
+                  placeholder="+94 77 123 4567"
                 />
                 <Input
                   label="Website"
@@ -398,7 +398,7 @@ export function SellerProfileSettings() {
                 label="Phone"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="+1 (555) 000-0000"
+                placeholder="+94 77 123 4567"
               />
             </div>
           </div>
