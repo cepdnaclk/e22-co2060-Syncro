@@ -89,9 +89,17 @@ export function Sidebar() {
         {role === 'seller' && hasSellerProfile && businessProfile && (
           <div className="pb-6 border-b border-sidebar-border">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center flex-shrink-0">
-                <span className="text-white font-bold text-lg">{businessProfile.initials}</span>
-              </div>
+              {businessProfile.logo ? (
+                <img
+                  src={businessProfile.logo}
+                  alt={businessProfile.name}
+                  className="w-12 h-12 rounded-lg object-cover flex-shrink-0 shadow-sm"
+                />
+              ) : (
+                <div className="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center flex-shrink-0">
+                  <span className="text-white font-bold text-lg">{businessProfile.initials}</span>
+                </div>
+              )}
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-sm truncate">{businessProfile.name}</h3>
                 <div className="flex items-center gap-1 mt-0.5">

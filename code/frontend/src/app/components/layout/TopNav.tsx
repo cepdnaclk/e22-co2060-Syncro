@@ -92,9 +92,17 @@ export function TopNav() {
           {/* Business Name Badge (Seller Mode Only) */}
           {role === 'seller' && businessProfile && (
             <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-muted/50 border border-border rounded-lg">
-              <div className="w-6 h-6 bg-gradient-to-br from-primary to-accent rounded-md flex items-center justify-center">
-                <span className="text-white text-xs font-semibold">{businessProfile.initials}</span>
-              </div>
+              {businessProfile.logo ? (
+                <img
+                  src={businessProfile.logo}
+                  alt={businessProfile.name}
+                  className="w-6 h-6 rounded-md object-cover"
+                />
+              ) : (
+                <div className="w-6 h-6 bg-gradient-to-br from-primary to-accent rounded-md flex items-center justify-center">
+                  <span className="text-white text-xs font-semibold">{businessProfile.initials}</span>
+                </div>
+              )}
               <span className="text-sm font-medium">{businessProfile.name}</span>
             </div>
           )}
@@ -185,9 +193,17 @@ export function TopNav() {
               }}
               className="flex items-center gap-2 p-2 hover:bg-accent rounded-lg transition-colors"
             >
-              <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center" title={authUser?.firstName || userProfile.firstName}>
-                <span className="text-white text-sm font-semibold">{userInitials}</span>
-              </div>
+              {userProfile.avatar ? (
+                <img
+                  src={userProfile.avatar}
+                  alt="Profile"
+                  className="w-8 h-8 rounded-full object-cover border border-border"
+                />
+              ) : (
+                <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center" title={authUser?.firstName || userProfile.firstName}>
+                  <span className="text-white text-sm font-semibold">{userInitials}</span>
+                </div>
+              )}
               <ChevronDown className="w-4 h-4" />
             </button>
 

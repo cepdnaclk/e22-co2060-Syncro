@@ -25,7 +25,6 @@ export function Settings() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [avatarUrl, setAvatarUrl] = useState<string>(() => localStorage.getItem('syncro_avatar') || '');
   const [avatarUploading, setAvatarUploading] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
@@ -35,8 +34,7 @@ export function Settings() {
     setAvatarUploading(true);
     try {
       const { url } = await profilesApi.uploadImage(file);
-      setAvatarUrl(url);
-      localStorage.setItem('syncro_avatar', url);
+      setUserProfile({ ...userProfile, avatar: url });
     } catch (err: any) {
       alert('Photo upload failed: ' + (err.message || 'Unknown error'));
     } finally {
@@ -132,9 +130,9 @@ export function Settings() {
                 <CardContent className="space-y-6">
                   {/* Avatar */}
                   <div className="flex items-center gap-6">
-                    {avatarUrl ? (
+                    {userProfile.avatar ? (
                       <img
-                        src={avatarUrl}
+                        src={userProfile.avatar}
                         alt="Profile"
                         className="w-20 h-20 rounded-full object-cover border-2 border-primary"
                       />
