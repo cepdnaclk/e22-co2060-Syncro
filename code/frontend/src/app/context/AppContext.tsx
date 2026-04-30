@@ -38,6 +38,7 @@ interface UserProfile {
   email: string;
   phone?: string;
   bio?: string;
+  avatar?: string;
 }
 
 // Authenticated user info from JWT response
