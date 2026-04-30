@@ -9,9 +9,7 @@ class Settings:
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your_development_secret")
     ALGORITHM: str = "HS256"
     
-    # Cloudinary Settings
-    CLOUDINARY_NAME: str = os.getenv("CLOUDINARY_NAME")
-    CLOUDINARY_API_KEY: str = os.getenv("CLOUDINARY_API_KEY")
-    CLOUDINARY_API_SECRET: str = os.getenv("CLOUDINARY_API_SECRET")
+    # ImageKit Settings (v5 SDK only needs private_key for server-side uploads)
+    IMAGEKIT_PRIVATE_KEY: str = os.getenv("IMAGEKIT_PRIVATE_KEY")
 
 settings = Settings()

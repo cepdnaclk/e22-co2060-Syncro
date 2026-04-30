@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { Building2, Globe, MapPin, Upload, X, Star, Image as ImageIcon, Tag } from 'lucide-react';
 import { Card, CardHeader, CardContent } from './ui/Card';
@@ -8,6 +8,7 @@ import { Badge } from './ui/Badge';
 import { useApp } from '../context/AppContext';
 import { serviceCategories } from '../services/mockData';
 import { useNavigate } from 'react-router';
+import { profilesApi } from '../services/api';
 
 // Demo gallery images for testing
 const demoGalleryImages = [
@@ -20,6 +21,59 @@ const demoGalleryImages = [
 export function SellerProfileSettings() {
   const navigate = useNavigate();
   const { businessProfile, setBusinessProfile, userProfile, setUserProfile } = useApp();
+
+  // Upload state
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [coverUploading, setCoverUploading] = useState(false);
+  const [galleryUploading, setGalleryUploading] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoUploading(true);
+    try {
+      const { url } = await profilesApi.uploadImage(file);
+      setBusinessProfile({ ...businessProfile!, logo: url });
+    } catch (err: any) {
+      alert('Logo upload failed: ' + (err.message || 'Unknown error'));
+    } finally {
+      setLogoUploading(false);
+      if (logoInputRef.current) logoInputRef.current.value = '';
+    }
+  };
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCoverUploading(true);
+    try {
+      const { url } = await profilesApi.uploadImage(file);
+      setCoverImage(url);
+    } catch (err: any) {
+      alert('Cover image upload failed: ' + (err.message || 'Unknown error'));
+    } finally {
+      setCoverUploading(false);
+      if (coverInputRef.current) coverInputRef.current.value = '';
+    }
+  };
+
+  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || gallery.length >= 8) return;
+    setGalleryUploading(true);
+    try {
+      const { url } = await profilesApi.uploadImage(file);
+      setGallery(prev => [...prev, url]);
+    } catch (err: any) {
+      alert('Gallery upload failed: ' + (err.message || 'Unknown error'));
+    } finally {
+      setGalleryUploading(false);
+      if (galleryInputRef.current) galleryInputRef.current.value = '';
+    }
+  };
 
   const [formData, setFormData] = useState({
     // Personal
@@ -73,11 +127,7 @@ export function SellerProfileSettings() {
   };
 
   const handleAddGalleryImage = () => {
-    // In production, this would open a file picker
-    const mockImageUrl = `https://images.unsplash.com/photo-${Date.now()}?w=800&h=600&fit=crop`;
-    if (gallery.length < 8) {
-      setGallery([...gallery, mockImageUrl]);
-    }
+    galleryInputRef.current?.click();
   };
 
   const handleRemoveGalleryImage = (index: number) => {
@@ -125,6 +175,13 @@ export function SellerProfileSettings() {
           {/* Cover Image */}
           <div>
             <label className="block mb-3 font-medium">Cover Image</label>
+            <input
+              ref={coverInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleCoverUpload}
+            />
             <div className="relative h-48 bg-gradient-to-br from-primary via-primary to-accent rounded-xl overflow-hidden">
               {coverImage ? (
                 <>
@@ -138,11 +195,14 @@ export function SellerProfileSettings() {
                 </>
               ) : (
                 <button
-                  onClick={() => setCoverImage('https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&h=400&fit=crop')}
+                  onClick={() => coverInputRef.current?.click()}
+                  disabled={coverUploading}
                   className="w-full h-full flex flex-col items-center justify-center gap-2 hover:bg-black/10 transition-colors"
                 >
                   <Upload className="w-8 h-8 text-white" />
-                  <span className="text-white font-medium">Upload Cover Image</span>
+                  <span className="text-white font-medium">
+                    {coverUploading ? 'Uploading...' : 'Upload Cover Image'}
+                  </span>
                   <span className="text-white/80 text-sm">1200x400px recommended</span>
                 </button>
               )}
@@ -152,16 +212,37 @@ export function SellerProfileSettings() {
           {/* Business Logo */}
           <div>
             <label className="block mb-3 font-medium">Business Logo</label>
+            <input
+              ref={logoInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleLogoUpload}
+            />
             <div className="flex items-center gap-6">
-              <div className="w-32 h-32 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center shadow-lg">
-                <span className="text-white font-bold text-4xl">
-                  {formData.businessName ? formData.businessName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'BN'}
-                </span>
-              </div>
+              {businessProfile?.logo ? (
+                <img
+                  src={businessProfile.logo}
+                  alt="Logo"
+                  className="w-32 h-32 rounded-xl object-cover shadow-lg"
+                />
+              ) : (
+                <div className="w-32 h-32 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center shadow-lg">
+                  <span className="text-white font-bold text-4xl">
+                    {formData.businessName ? formData.businessName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'BN'}
+                  </span>
+                </div>
+              )}
               <div>
-                <Button variant="outline" size="sm" className="mb-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mb-2"
+                  onClick={() => logoInputRef.current?.click()}
+                  disabled={logoUploading}
+                >
                   <Upload className="w-4 h-4 mr-2" />
-                  Upload Logo
+                  {logoUploading ? 'Uploading...' : 'Upload Logo'}
                 </Button>
                 <p className="text-sm text-muted-foreground">Square image recommended. Max size 5MB</p>
               </div>
@@ -175,15 +256,24 @@ export function SellerProfileSettings() {
                 <ImageIcon className="w-4 h-4" />
                 Business Gallery ({gallery.length}/8)
               </label>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleAddGalleryImage}
-                disabled={gallery.length >= 8}
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Add Image
-              </Button>
+              <>
+                <input
+                  ref={galleryInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={handleGalleryUpload}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddGalleryImage}
+                  disabled={gallery.length >= 8 || galleryUploading}
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  {galleryUploading ? 'Uploading...' : 'Add Image'}
+                </Button>
+              </>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
               Showcase your work with 3-8 images

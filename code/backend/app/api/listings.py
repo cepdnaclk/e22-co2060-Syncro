@@ -1,7 +1,7 @@
 # app/api/listings.py
 from fastapi import APIRouter, UploadFile, File, Form, Depends
 from typing import List
-from ..utils.media import upload_image_to_cloudinary
+from ..utils.media import upload_image
 from ..models.models import Listing, User
 from ..schemas.schemas import ListingResponse
 from ..database import get_db
@@ -23,10 +23,10 @@ async def create_listing_with_image(
 ):
     image_url = None
     if image:
-        # 1. Upload the photo to Cloudinary
-        image_url = upload_image_to_cloudinary(image.file)
+        # 1. Upload the photo to ImageKit
+        image_url = upload_image(image.file)
     
-    # 2. Save the listing and the Cloudinary URL to PostgreSQL
+    # 2. Save the listing and the ImageKit URL to PostgreSQL
     new_listing = Listing(
         title=title,
         price=price,

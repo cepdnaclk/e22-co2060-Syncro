@@ -1,11 +1,6 @@
-# app/core/cloudinary_config.py
-import cloudinary
-import cloudinary.uploader
-from config import settings
-
-cloudinary.config(
-    cloud_name=settings.CLOUDINARY_NAME,
-    api_key=settings.CLOUDINARY_API_KEY,
-    api_secret=settings.CLOUDINARY_API_SECRET,
-    secure=True
-)
+# app/core/imagekit_config.py
+# ImageKit is initialised inline in app/utils/media.py using settings from config.py.
+# No global configuration file is required for the ImageKit SDK.
+# Credentials are sourced from:
+#   IMAGEKIT_PUBLIC_KEY, IMAGEKIT_PRIVATE_KEY, IMAGEKIT_URL_ENDPOINT
+# See .env / .env.example for the required variables.

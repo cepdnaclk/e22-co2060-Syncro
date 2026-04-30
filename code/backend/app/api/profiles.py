@@ -5,7 +5,7 @@ from ..database import get_db
 from ..models.models import Profile, User
 from ..schemas.schemas import ProfileResponse, ProfileCreate, ProfileUpdate
 from ..api.auth import get_current_user_from_token
-from ..utils.media import upload_image_to_cloudinary
+from ..utils.media import upload_image
 
 router = APIRouter(prefix="/profiles", tags=["Profiles"])
 
@@ -55,7 +55,7 @@ async def upload_profile_image(
     current_user: User = Depends(get_current_user_from_token)
 ):
     try:
-        url = upload_image_to_cloudinary(image.file)
+        url = upload_image(image.file)
         return {"url": url}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
