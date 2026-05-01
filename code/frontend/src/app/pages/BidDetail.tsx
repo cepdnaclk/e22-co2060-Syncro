@@ -53,7 +53,7 @@ export function BidDetail() {
         }
     }, [id, role]);
 
-    const hasPlacedBid = myBids.some(b => b.bid_request_id === Number(id));
+    const hasPlacedActiveBid = myBids.some(b => b.bid_request_id === Number(id) && b.status.toLowerCase() !== 'rejected');
 
     const handleAccept = async (bidId: number) => {
         try {
@@ -250,19 +250,7 @@ export function BidDetail() {
                 {/* Sidebar - Bid Form (Seller View) */}
                 <div className="space-y-6">
                     {role === 'seller' ? (
-                        request?.status?.toLowerCase() !== 'open' ? (
-                            <Card className="border-dashed border-2 bg-muted/20 sticky top-24">
-                                <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                                    <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-4">
-                                        <CheckCircle2 className="w-8 h-8 text-green-500" />
-                                    </div>
-                                    <h3 className="text-xl font-semibold mb-2">Request Closed</h3>
-                                    <p className="text-sm text-muted-foreground leading-relaxed">
-                                        This request has already been accepted by the buyer and is no longer accepting new proposals.
-                                    </p>
-                                </CardContent>
-                            </Card>
-                        ) : hasPlacedBid ? (
+                        hasPlacedActiveBid ? (
                             <Card className="border-dashed border-2 bg-muted/20 sticky top-24">
                                 <CardContent className="flex flex-col items-center justify-center py-16 text-center">
                                     <div className="w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-4">

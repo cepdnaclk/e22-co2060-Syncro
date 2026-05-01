@@ -141,9 +141,12 @@ def get_matching_requests(
         BidRequest.user_id != current_user.id
     ).all()
     
-    # Get requests this seller has already bid on
+    # Get requests this seller has already bid on (and the bid is NOT rejected)
     from ..models.models import Bid
-    existing_bids = db.query(Bid.bid_request_id).filter(Bid.seller_id == current_user.id).all()
+    existing_bids = db.query(Bid.bid_request_id).filter(
+        Bid.seller_id == current_user.id,
+        Bid.status != BidStatus.REJECTED
+    ).all()
     bid_request_ids = {b[0] for b in existing_bids}
     
     matching_requests = []
@@ -195,9 +198,6 @@ async def submit_bid(
     bid_request = db.query(BidRequest).filter(BidRequest.id == bid.bid_request_id).first()
     if not bid_request:
         raise HTTPException(status_code=404, detail="Bid request not found")
-    
-    if bid_request.status != BidRequestStatus.OPEN:
-        raise HTTPException(status_code=400, detail="This request is no longer open for bids")
 
     new_bid = Bid(
         bid_request_id=bid.bid_request_id,
