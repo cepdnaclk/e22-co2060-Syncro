@@ -149,7 +149,10 @@ async def delete_account(current_user: User = Depends(get_current_user_from_toke
     # 7. Delete profile
     db.execute(text("DELETE FROM profiles WHERE user_id = :uid"), {"uid": user_id})
 
-    # 8. Finally delete the user
+    # 8. Delete notifications
+    db.execute(text("DELETE FROM notifications WHERE user_id = :uid"), {"uid": user_id})
+
+    # 9. Finally delete the user
     db.execute(text("DELETE FROM users WHERE id = :uid"), {"uid": user_id})
     db.commit()
 
