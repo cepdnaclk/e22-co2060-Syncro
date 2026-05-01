@@ -141,9 +141,17 @@ def get_matching_requests(
         BidRequest.user_id != current_user.id
     ).all()
     
+    # Get requests this seller has already bid on
+    from ..models.models import Bid
+    existing_bids = db.query(Bid.bid_request_id).filter(Bid.seller_id == current_user.id).all()
+    bid_request_ids = {b[0] for b in existing_bids}
+    
     matching_requests = []
     
     for req in open_requests:
+        if req.id in bid_request_ids:
+            continue
+            
         # Match by listing category
         if req.category_id in category_ids:
             matching_requests.append(req)
@@ -253,6 +261,16 @@ def get_bids_for_request(
         raise HTTPException(status_code=403, detail="Forbidden")
         
     return db.query(Bid).filter(Bid.bid_request_id == request_id).all()
+
+@router.get("/my-bids", response_model=List[BidResponse])
+def get_my_bids(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_from_token)
+):
+    if current_user.active_role != "seller":
+        raise HTTPException(status_code=403, detail="Only sellers can view their bids")
+        
+    return db.query(Bid).filter(Bid.seller_id == current_user.id).all()
 
 @router.patch("/{bid_id}/accept", response_model=BidResponse)
 async def accept_bid(

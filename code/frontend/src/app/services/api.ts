@@ -271,6 +271,13 @@ export const bidsApi = {
         return handleResponse<Bid[]>(res);
     },
 
+    async getMyBids(): Promise<Bid[]> {
+        const res = await fetch(`${BASE_URL}/bids/my-bids`, {
+            headers: headers(true),
+        });
+        return handleResponse<Bid[]>(res);
+    },
+
     async submitBid(data: {
         bid_request_id: number;
         price: number;
