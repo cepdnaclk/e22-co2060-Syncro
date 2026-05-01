@@ -4,6 +4,19 @@ from datetime import datetime
 from sqlalchemy.orm import relationship
 from ..database import Base
 
+class Notification(Base):
+    __tablename__ = "notifications"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    title = Column(String, nullable=False)
+    message = Column(String, nullable=False)
+    is_read = Column(Boolean, default=False)
+    type = Column(String, nullable=True)
+    reference_id = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    user = relationship("User", back_populates="notifications")
+
 class UserRole(str, enum.Enum):
     CLIENT = "client"
     SELLER = "seller"
@@ -41,6 +54,7 @@ class User(Base):
     orders_as_seller = relationship("Order", back_populates="seller", foreign_keys="Order.seller_id", cascade="all, delete-orphan")
     reviews_given = relationship("Review", back_populates="reviewer", foreign_keys="Review.reviewer_id", cascade="all, delete-orphan")
     reviews_received = relationship("Review", back_populates="reviewee", foreign_keys="Review.reviewee_id", cascade="all, delete-orphan")
+    notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
 
 class Profile(Base):
     __tablename__ = "profiles"

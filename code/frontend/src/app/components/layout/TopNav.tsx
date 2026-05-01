@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 
 export function TopNav() {
   const navigate = useNavigate();
-  const { role, theme, setTheme, businessProfile, userProfile, authUser, logout, toggleRole, hasSellerAccount } = useApp();
+  const { role, theme, setTheme, businessProfile, userProfile, authUser, logout, toggleRole, hasSellerAccount, notifications, markNotificationRead } = useApp();
   // hasSellerAccount (from AppContext) stays true even when role = 'buyer',
   // so the Buyer/Seller toggle persists after switching back to buyer.
   const [roleToggling, setRoleToggling] = React.useState(false);
@@ -51,9 +51,7 @@ export function TopNav() {
     }
   };
 
-  const notifications: { id: number; text: string; time: string; unread: boolean }[] = [];
-
-  const unreadCount = notifications.filter(n => n.unread).length;
+  const unreadCount = notifications.filter(n => !n.is_read).length;
 
   // Get user initials
   const firstInitial = authUser?.firstName?.[0] || userProfile.firstName?.[0] || '?';
@@ -156,16 +154,30 @@ export function TopNav() {
                     <h3 className="font-semibold">Notifications</h3>
                   </div>
                   <div className="max-h-96 overflow-y-auto">
-                    {notifications.map((notif) => (
-                      <div
-                        key={notif.id}
-                        className={`p-4 border-b border-border hover:bg-accent/50 cursor-pointer ${notif.unread ? 'bg-primary/5' : ''
-                          }`}
-                      >
-                        <p className="text-sm">{notif.text}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{notif.time}</p>
-                      </div>
-                    ))}
+                    {notifications.length === 0 ? (
+                      <div className="p-4 text-center text-sm text-muted-foreground">No notifications</div>
+                    ) : (
+                      notifications.map((notif) => (
+                        <div
+                          key={notif.id}
+                          onClick={() => {
+                            if (!notif.is_read) {
+                              markNotificationRead(notif.id);
+                            }
+                            if (notif.reference_id) {
+                              navigate('/bids');
+                            }
+                          }}
+                          className={`p-4 border-b border-border hover:bg-accent/50 cursor-pointer ${!notif.is_read ? 'bg-primary/5' : ''
+                            }`}
+                        >
+                          <p className="text-sm">{notif.message}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {new Date(notif.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </motion.div>
               )}

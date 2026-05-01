@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import {
     ChevronLeft, Clock, Gavel, DollarSign, Package,
@@ -12,13 +12,14 @@ import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
 import { Textarea } from '../components/ui/textarea';
 import { Link, useParams } from 'react-router';
+import { bidsApi, BidRequest, Bid } from '../services/api';
+import { toast } from 'sonner';
 
 // ──────────────────────────────────────────────────────────────
 // Mock Data
 // ──────────────────────────────────────────────────────────────
 
-const MOCK_REQUEST: { id: string; description: string; category: string; status: string; createdAt: string; userName: string } | null = null;
-const MOCK_BIDS: { id: string; sellerName: string; rating: number; price: number; quantity: number; deliveryTime: string; message: string; status: string }[] = [];
+
 
 const fadeInUp = {
     initial: { opacity: 0, y: 20 },
@@ -33,14 +34,52 @@ const fadeInUp = {
 export function BidDetail() {
     const { id } = useParams();
     const { role } = useApp();
-    const [acceptedBidId, setAcceptedBidId] = useState<string | null>(null);
+    const [acceptedBidId, setAcceptedBidId] = useState<number | null>(null);
     const [bidAmount, setBidAmount] = useState('');
     const [deliveryTime, setDeliveryTime] = useState('');
     const [proposal, setProposal] = useState('');
+    const [request, setRequest] = useState<BidRequest | null>(null);
+    const [bids, setBids] = useState<Bid[]>([]);
+    const [submitting, setSubmitting] = useState(false);
 
-    const handleAccept = (bidId: string) => {
-        setAcceptedBidId(bidId);
-        // In a real app, call API
+    useEffect(() => {
+        if (!id) return;
+        bidsApi.getRequestById(Number(id)).then(setRequest).catch(console.error);
+        if (role === 'buyer') {
+            bidsApi.getBidsForRequest(Number(id)).then(setBids).catch(console.error);
+        }
+    }, [id, role]);
+
+    const handleAccept = async (bidId: number) => {
+        try {
+            await bidsApi.acceptBid(bidId);
+            setAcceptedBidId(bidId);
+            toast.success("Bid accepted successfully!");
+        } catch (e: any) {
+            toast.error(e.message || "Failed to accept bid");
+        }
+    };
+
+    const handleSubmitBid = async () => {
+        if (!id || !bidAmount || submitting) return;
+        try {
+            setSubmitting(true);
+            await bidsApi.submitBid({
+                bid_request_id: Number(id),
+                price: Number(bidAmount),
+                quantity: 1,
+                delivery_time: deliveryTime,
+                message: proposal
+            });
+            toast.success("Bid submitted successfully!");
+            setBidAmount('');
+            setDeliveryTime('');
+            setProposal('');
+        } catch (e: any) {
+            toast.error(e.message || "Failed to submit bid");
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     return (
@@ -56,7 +95,7 @@ export function BidDetail() {
             <div className="grid lg:grid-cols-3 gap-8">
                 {/* Request Details */}
                 <div className="lg:col-span-2 space-y-8">
-                    {!MOCK_REQUEST ? (
+                    {!request ? (
                         <Card className="border-dashed border-2 bg-muted/20">
                             <CardContent className="flex flex-col items-center justify-center py-20 text-center">
                                 <AlertCircle className="w-12 h-12 text-muted-foreground mb-4 opacity-30" />
@@ -70,14 +109,14 @@ export function BidDetail() {
                                 <CardHeader className="bg-muted/30 p-8 border-b border-border/50">
                                     <div className="flex items-center justify-between gap-4 mb-4">
                                         <Badge variant="info" className="bg-primary/5 text-primary border-primary/20">
-                                            {MOCK_REQUEST.category}
+                                            Cat: {request.category_id}
                                         </Badge>
                                         <Badge className="bg-green-500 text-white border-none px-4">
-                                            {MOCK_REQUEST.status.toUpperCase()}
+                                            {request.status.toUpperCase()}
                                         </Badge>
                                     </div>
                                     <h1 className="text-2xl font-bold leading-tight">
-                                        {MOCK_REQUEST.description.substring(0, 100)}...
+                                        {request.description.substring(0, 100)}...
                                     </h1>
                                 </CardHeader>
                                 <CardContent className="p-8 space-y-6">
@@ -87,7 +126,7 @@ export function BidDetail() {
                                             Full Description
                                         </h3>
                                         <p className="text-muted-foreground leading-relaxed">
-                                            {MOCK_REQUEST.description}
+                                            {request.description}
                                         </p>
                                     </div>
 
@@ -96,21 +135,21 @@ export function BidDetail() {
                                             <p className="text-xs text-muted-foreground uppercase font-semibold">User</p>
                                             <p className="font-medium flex items-center gap-2">
                                                 <User className="w-4 h-4" />
-                                                {MOCK_REQUEST.userName}
+                                                User {request.user_id}
                                             </p>
                                         </div>
                                         <div className="space-y-1">
                                             <p className="text-xs text-muted-foreground uppercase font-semibold">Posted On</p>
                                             <p className="font-medium flex items-center gap-2">
                                                 <Clock className="w-4 h-4" />
-                                                {new Date(MOCK_REQUEST.createdAt).toLocaleDateString()}
+                                                {new Date(request.created_at).toLocaleDateString()}
                                             </p>
                                         </div>
                                         <div className="space-y-1">
                                             <p className="text-xs text-muted-foreground uppercase font-semibold">Total Proposals</p>
                                             <p className="font-medium flex items-center gap-2">
                                                 <Gavel className="w-4 h-4" />
-                                                {MOCK_BIDS.length} sellers
+                                                {bids.length} sellers
                                             </p>
                                         </div>
                                     </div>
@@ -123,7 +162,9 @@ export function BidDetail() {
                     {role === 'buyer' && (
                         <div className="space-y-6">
                             <h2 className="text-2xl font-bold">Received Bids</h2>
-                            {MOCK_BIDS.map((bid, index) => (
+                            {bids.length === 0 ? (
+                                <p className="text-muted-foreground">No bids received yet.</p>
+                            ) : bids.map((bid, index) => (
                                 <motion.div
                                     key={bid.id}
                                     {...fadeInUp}
@@ -135,10 +176,10 @@ export function BidDetail() {
                                                 <div className="flex-1 space-y-4">
                                                     <div className="flex items-center justify-between">
                                                         <div>
-                                                            <h3 className="font-bold text-lg">{bid.sellerName}</h3>
+                                                            <h3 className="font-bold text-lg">Seller {bid.seller_id}</h3>
                                                             <div className="flex items-center gap-1 mt-1">
                                                                 <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
-                                                                <span className="text-sm font-medium">{bid.rating}</span>
+                                                                <span className="text-sm font-medium">--</span>
                                                                 <span className="text-xs text-muted-foreground ml-1">Rating</span>
                                                             </div>
                                                         </div>
@@ -155,7 +196,7 @@ export function BidDetail() {
                                                     <div className="flex items-center gap-6 text-sm">
                                                         <div className="flex items-center gap-2 font-medium">
                                                             <Clock className="w-4 h-4 text-primary" />
-                                                            {bid.deliveryTime} delivery
+                                                            {bid.delivery_time} delivery
                                                         </div>
                                                         <div className="flex items-center gap-2 font-medium">
                                                             <ShieldCheck className="w-4 h-4 text-green-600" />
@@ -238,8 +279,8 @@ export function BidDetail() {
                                             />
                                         </div>
                                     </div>
-                                    <Button className="w-full h-12 text-lg shadow-lg shadow-primary/20 group">
-                                        Send Proposal
+                                    <Button onClick={handleSubmitBid} disabled={submitting} className="w-full h-12 text-lg shadow-lg shadow-primary/20 group">
+                                                        {submitting ? 'Sending...' : 'Send Proposal'}
                                         <Send className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                                     </Button>
                                 </CardContent>

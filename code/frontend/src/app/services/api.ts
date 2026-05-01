@@ -191,3 +191,106 @@ export const profilesApi = {
         return handleResponse(res);
     },
 };
+
+// ---------- Notifications ----------
+export interface Notification {
+    id: number;
+    title: string;
+    message: string;
+    is_read: boolean;
+    type?: string;
+    reference_id?: number;
+    created_at: string;
+}
+
+export const notificationsApi = {
+    async getAll(): Promise<Notification[]> {
+        const res = await fetch(`${BASE_URL}/notifications`, {
+            headers: headers(true),
+        });
+        return handleResponse<Notification[]>(res);
+    },
+
+    async markRead(id: number): Promise<Notification> {
+        const res = await fetch(`${BASE_URL}/notifications/${id}/read`, {
+            method: 'PUT',
+            headers: headers(true),
+        });
+        return handleResponse<Notification>(res);
+    },
+};
+
+// ---------- Bids ----------
+export interface BidRequest {
+    id: number;
+    user_id: number;
+    category_id: number;
+    description: string;
+    status: string;
+    created_at: string;
+}
+
+export interface Bid {
+    id: number;
+    bid_request_id: number;
+    seller_id: number;
+    price: number;
+    quantity: number;
+    delivery_time?: string;
+    message?: string;
+    status: string;
+    created_at: string;
+}
+
+export const bidsApi = {
+    async getRequestById(requestId: number): Promise<BidRequest> {
+        const res = await fetch(`${BASE_URL}/bids/requests/${requestId}`, {
+            headers: headers(true),
+        });
+        return handleResponse<BidRequest>(res);
+    },
+
+    async getMyRequests(): Promise<BidRequest[]> {
+        const res = await fetch(`${BASE_URL}/bids/requests`, {
+            headers: headers(true),
+        });
+        return handleResponse<BidRequest[]>(res);
+    },
+
+    async getMatchingRequests(): Promise<BidRequest[]> {
+        const res = await fetch(`${BASE_URL}/bids/requests/matches`, {
+            headers: headers(true),
+        });
+        return handleResponse<BidRequest[]>(res);
+    },
+
+    async getBidsForRequest(requestId: number): Promise<Bid[]> {
+        const res = await fetch(`${BASE_URL}/bids/request/${requestId}`, {
+            headers: headers(true),
+        });
+        return handleResponse<Bid[]>(res);
+    },
+
+    async submitBid(data: {
+        bid_request_id: number;
+        price: number;
+        quantity: number;
+        delivery_time?: string;
+        message?: string;
+    }): Promise<Bid> {
+        const res = await fetch(`${BASE_URL}/bids/`, {
+            method: 'POST',
+            headers: headers(true),
+            body: JSON.stringify(data),
+        });
+        return handleResponse<Bid>(res);
+    },
+
+    async acceptBid(bidId: number): Promise<Bid> {
+        const res = await fetch(`${BASE_URL}/bids/${bidId}/accept`, {
+            method: 'PATCH',
+            headers: headers(true),
+        });
+        return handleResponse<Bid>(res);
+    },
+};

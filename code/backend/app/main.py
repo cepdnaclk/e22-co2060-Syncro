@@ -1,9 +1,9 @@
 import socketio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .api import listings, auth, profiles, orders, reviews, bids, chat  # Import your API routers
-from .database import engine # Import the database engine and Base for table creation
-from .models import models  # Import the models so SQLAlchemy knows which tables to create
+from app.api import listings, auth, profiles, orders, reviews, bids, chat, notifications  # Import your API routers
+from app.database import engine # Import the database engine and Base for table creation
+from app.models import models  # Import the models so SQLAlchemy knows which tables to create
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -12,7 +12,7 @@ app = FastAPI(title="Syncro Backend")
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=["*"],  # For production, you can restrict this to your Azure frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -25,14 +25,17 @@ app.include_router(orders.router)
 app.include_router(reviews.router)
 app.include_router(bids.router)
 app.include_router(chat.router)
+app.include_router(notifications.router)
 
 
-# 1. Create the Socket.IO server with CORS allowed for your React frontend
+# 1. Create the Socket.IO server
 sio = socketio.AsyncServer(cors_allowed_origins='*', async_mode='asgi')
 
-# 3. Wrap with ASGI and mount to the FastAPI app
-socket_app = socketio.ASGIApp(sio, other_asgi_app=app)
-app.mount("/socket.io", socket_app) # Handles the /socket.io/ path
+# 2. Create the combined ASGI application
+# Note: We serve 'app' via uvicorn, so we mount the Socket.IO app into FastAPI
+socket_app = socketio.ASGIApp(sio)
+app.mount("/socket.io", socket_app)
+app.state.sio = sio
 
 # Standard HTTP Route
 @app.get("/")
@@ -48,3 +51,10 @@ async def connect(sid, environ):
 @sio.on("disconnect")
 async def disconnect(sid):
     print(f" Client disconnected: {sid}")
+
+@sio.on("identify")
+async def on_identify(sid, data):
+    user_id = data.get("userId")
+    if user_id:
+        sio.enter_room(sid, f"user_{user_id}")
+        print(f"User {user_id} joined room user_{user_id}")

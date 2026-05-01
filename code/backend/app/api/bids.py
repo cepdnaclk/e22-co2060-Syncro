@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from typing import List
 from ..database import get_db
@@ -42,15 +42,71 @@ def get_matching_requests(
     if current_user.active_role != "seller":
         raise HTTPException(status_code=403, detail="Only sellers can view matching requests")
     
-    # In a real app, we'd match based on seller categories. 
-    # For now, return all open requests.
-    return db.query(BidRequest).filter(BidRequest.status == BidRequestStatus.OPEN).all()
+    # We want requests where:
+    # 1. The request's category_id is in the seller's listing categories
+    # OR 2. The request's keywords overlap with the seller's profile keywords
+    
+    from ..models.models import Category, Profile, Listing
+    import re
+    
+    def get_keywords(text):
+        if not text: return set()
+        words = re.findall(r'\b\w+\b', text.lower())
+        stop_words = {"a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for", "with", "by", "of", "is", "are", "was", "were", "i", "we", "you", "they", "it", "this", "that", "want", "need", "looking", "buy", "sell", "get", "make", "some", "any"}
+        return {w for w in words if w not in stop_words and len(w) > 2}
+    
+    # Get the seller's profile text keywords
+    profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
+    profile_text = f"{profile.name or ''} {profile.description or ''}" if profile else ""
+    prof_keywords = get_keywords(profile_text)
+        
+    # Get the seller's listing categories
+    listing_categories = db.query(Listing.category_id).filter(Listing.seller_id == current_user.id).all()
+    category_ids = {c[0] for c in listing_categories}
+    
+    # Find all open requests
+    open_requests = db.query(BidRequest).filter(
+        BidRequest.status == BidRequestStatus.OPEN,
+        BidRequest.user_id != current_user.id
+    ).all()
+    
+    matching_requests = []
+    
+    for req in open_requests:
+        # Match by listing category
+        if req.category_id in category_ids:
+            matching_requests.append(req)
+            continue
+            
+        # Match by bio/name keywords
+        category = db.query(Category).filter(Category.id == req.category_id).first() if req.category_id else None
+        cat_name = category.name if category else ""
+        request_text = f"{cat_name} {req.description or ''}"
+        req_keywords = get_keywords(request_text)
+        
+        if req_keywords.intersection(prof_keywords):
+            matching_requests.append(req)
+            continue
+                
+    return matching_requests
+
+@router.get("/requests/{request_id}", response_model=BidRequestResponse)
+def get_bid_request_by_id(
+    request_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_from_token)
+):
+    req = db.query(BidRequest).filter(BidRequest.id == request_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+    return req
 
 # --- Bids ---
 
 @router.post("/", response_model=BidResponse)
-def submit_bid(
+async def submit_bid(
     bid: BidCreate,
+    fastapi_req: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user_from_token)
 ):
@@ -76,6 +132,39 @@ def submit_bid(
     db.add(new_bid)
     db.commit()
     db.refresh(new_bid)
+    
+    # Send notification to the buyer
+    from ..models.models import Notification, Profile
+    
+    buyer_id = bid_request.user_id
+    seller_profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
+    seller_name = seller_profile.name if seller_profile and seller_profile.name else f"User {current_user.id}"
+    
+    new_notif = Notification(
+        user_id=buyer_id,
+        title="New Proposal Received",
+        message=f"{seller_name} has submitted a proposal for your request.",
+        type="new_bid",
+        reference_id=bid_request.id
+    )
+    db.add(new_notif)
+    db.commit()
+    db.refresh(new_notif)
+    
+    try:
+        sio = fastapi_req.app.state.sio
+        await sio.emit("new_notification", {
+            "id": new_notif.id,
+            "title": new_notif.title,
+            "text": new_notif.message,
+            "time": "Just now",
+            "unread": not new_notif.is_read,
+            "type": new_notif.type,
+            "reference_id": new_notif.reference_id
+        }, room=f"user_{buyer_id}")
+    except Exception as e:
+        print(f"Failed to send notification: {e}")
+        
     return new_bid
 
 @router.get("/request/{request_id}", response_model=List[BidResponse])
