@@ -1,0 +1,4 @@
+{
+    "appService.defaultWebAppToDeploy": "/subscriptions/f1525fe3-914b-4680-b6ed-353f3e276f08/resourceGroups/syncro-marketplace/providers/Microsoft.Web/sites/syncro-marketplace",
+    "appService.deploySubpath": "."
+}
