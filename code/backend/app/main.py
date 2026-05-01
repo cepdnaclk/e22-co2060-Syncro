@@ -6,7 +6,12 @@ from app.api import listings, auth, profiles, orders, reviews, bids, chat, notif
 from app.database import engine # Import the database engine and Base for table creation
 from app.models import models  # Import the models so SQLAlchemy knows which tables to create
 
-models.Base.metadata.create_all(bind=engine)
+#models.Base.metadata.create_all(bind=engine)
+try:
+    models.Base.metadata.create_all(bind=engine)
+except Exception as e:
+    print(f"CRITICAL DATABASE ERROR: {e}")
+    raise e
 
 app = FastAPI(title="Syncro Backend")
 
