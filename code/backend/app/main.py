@@ -1,5 +1,7 @@
 import os
 import socketio
+import sys
+import traceback
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import listings, auth, profiles, orders, reviews, bids, chat, notifications  # Import your API routers
