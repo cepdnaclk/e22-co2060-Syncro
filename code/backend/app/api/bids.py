@@ -184,8 +184,9 @@ def get_bids_for_request(
     return db.query(Bid).filter(Bid.bid_request_id == request_id).all()
 
 @router.patch("/{bid_id}/accept", response_model=BidResponse)
-def accept_bid(
+async def accept_bid(
     bid_id: int,
+    fastapi_req: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user_from_token)
 ):
@@ -207,6 +208,51 @@ def accept_bid(
         Bid.id != bid_id
     ).update({"status": BidStatus.REJECTED})
     
+    # Create an Order
+    from ..models.models import Order, OrderStatus, Category, Notification
+    
+    category = db.query(Category).filter(Category.id == bid_request.category_id).first()
+    cat_name = category.name if category else "Custom Request"
+    service_name = f"Custom Order: {cat_name}"
+    
+    new_order = Order(
+        buyer_id=current_user.id,
+        seller_id=bid.seller_id,
+        service_name=service_name,
+        amount=bid.price,
+        status=OrderStatus.PENDING
+    )
+    db.add(new_order)
+    
+    # Notify the seller
+    buyer_name = f"{current_user.first_name or ''} {current_user.last_name or ''}".strip() or "A buyer"
+    new_notif = Notification(
+        user_id=bid.seller_id,
+        title="Bid Accepted!",
+        message=f"{buyer_name} has accepted your proposal for '{cat_name}'. A new order has been created.",
+        type="bid_accepted",
+        reference_id=bid.id
+    )
+    db.add(new_notif)
+    
     db.commit()
     db.refresh(bid)
+    db.refresh(new_order)
+    db.refresh(new_notif)
+    
+    # Emit real-time notification
+    try:
+        sio = fastapi_req.app.state.sio
+        await sio.emit("new_notification", {
+            "id": new_notif.id,
+            "title": new_notif.title,
+            "text": new_notif.message,
+            "time": "Just now",
+            "unread": not new_notif.is_read,
+            "type": new_notif.type,
+            "reference_id": new_notif.reference_id
+        }, room=f"user_{bid.seller_id}")
+    except Exception as e:
+        print(f"Failed to send notification: {e}")
+    
     return bid

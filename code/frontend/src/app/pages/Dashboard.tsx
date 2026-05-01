@@ -19,8 +19,10 @@ import { useApp } from '../context/AppContext';
 import { Link } from 'react-router';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { SellerOnboarding } from '../components/SellerOnboarding';
-import { buyerOrders, sellerOrders, buyerActivities, revenueData, orderData } from '../services/mockData';
-import type { Activity, Order } from '../services/mockData';
+import { buyerActivities, revenueData, orderData } from '../services/mockData';
+import type { Activity } from '../services/mockData';
+import { ordersApi, Order } from '../services/api';
+import { useEffect, useState } from 'react';
 
 // ────────────────────────── Types ──────────────────────────
 
@@ -102,6 +104,26 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
     if (hour < 18) return 'Good Afternoon';
     return 'Good Evening';
   };
+
+  const { authUser } = useApp();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadOrders() {
+      if (authUser?.userId) {
+        try {
+          const data = await ordersApi.getForUser(authUser.userId);
+          // Only show orders where user is buyer
+          setOrders(data.filter(o => o.buyer_id === authUser.userId));
+        } catch (error) {
+          console.error("Failed to load orders:", error);
+        }
+      }
+      setLoading(false);
+    }
+    loadOrders();
+  }, [authUser?.userId]);
 
   return (
     <div className="space-y-8">
@@ -267,23 +289,29 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
                   </tr>
                 </thead>
                 <tbody>
-                  {buyerOrders.length === 0 ? (
+                  {loading ? (
+                    <tr>
+                      <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                        Loading orders...
+                      </td>
+                    </tr>
+                  ) : orders.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
                         No orders yet. Browse services to place your first order.
                       </td>
                     </tr>
-                  ) : buyerOrders.map((order) => (
+                  ) : orders.map((order) => (
                     <tr key={order.id} className="border-b border-border last:border-0 hover:bg-muted/50">
-                      <td className="py-3 px-4 text-sm font-medium">{order.id}</td>
-                      <td className="py-3 px-4 text-sm">{order.service}</td>
-                      <td className="py-3 px-4 text-sm text-muted-foreground">{order.seller}</td>
+                      <td className="py-3 px-4 text-sm font-medium">#{order.id}</td>
+                      <td className="py-3 px-4 text-sm">{order.service_name}</td>
+                      <td className="py-3 px-4 text-sm text-muted-foreground">Seller {order.seller_id}</td>
                       <td className="py-3 px-4">
-                        <Badge variant={statusVariant(order.status)}>
+                        <Badge variant={statusVariant(order.status as any)}>
                           {order.status}
                         </Badge>
                       </td>
-                      <td className="py-3 px-4 text-sm font-semibold text-right">${order.amount}</td>
+                      <td className="py-3 px-4 text-sm font-semibold text-right">LKR {order.amount}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -320,6 +348,26 @@ function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboa
     { label: 'Orders Received', value: '0', icon: ShoppingCart, color: 'text-purple-500' },
     { label: 'Growth', value: '0%', icon: TrendingUp, color: 'text-teal-500' },
   ];
+
+  const { authUser } = useApp();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadOrders() {
+      if (authUser?.userId) {
+        try {
+          const data = await ordersApi.getForUser(authUser.userId);
+          // Only show orders where user is seller
+          setOrders(data.filter(o => o.seller_id === authUser.userId));
+        } catch (error) {
+          console.error("Failed to load orders:", error);
+        }
+      }
+      setLoading(false);
+    }
+    loadOrders();
+  }, [authUser?.userId]);
 
   return (
     <div className="space-y-8">
@@ -456,23 +504,29 @@ function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboa
                   </tr>
                 </thead>
                 <tbody>
-                  {sellerOrders.length === 0 ? (
+                  {loading ? (
+                    <tr>
+                      <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                        Loading orders...
+                      </td>
+                    </tr>
+                  ) : orders.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
                         No orders received yet. Create listings to start getting orders.
                       </td>
                     </tr>
-                  ) : sellerOrders.map((order) => (
+                  ) : orders.map((order) => (
                     <tr key={order.id} className="border-b border-border last:border-0 hover:bg-muted/50">
-                      <td className="py-3 px-4 text-sm font-medium">{order.id}</td>
-                      <td className="py-3 px-4 text-sm">{order.service}</td>
-                      <td className="py-3 px-4 text-sm text-muted-foreground">{order.buyer}</td>
+                      <td className="py-3 px-4 text-sm font-medium">#{order.id}</td>
+                      <td className="py-3 px-4 text-sm">{order.service_name}</td>
+                      <td className="py-3 px-4 text-sm text-muted-foreground">Buyer {order.buyer_id}</td>
                       <td className="py-3 px-4">
-                        <Badge variant={statusVariant(order.status)}>
+                        <Badge variant={statusVariant(order.status as any)}>
                           {order.status}
                         </Badge>
                       </td>
-                      <td className="py-3 px-4 text-sm font-semibold text-right">${order.amount}</td>
+                      <td className="py-3 px-4 text-sm font-semibold text-right">LKR {order.amount}</td>
                     </tr>
                   ))}
                 </tbody>

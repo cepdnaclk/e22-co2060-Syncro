@@ -194,7 +194,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Must use profilesApi from the imported module (already added to top of file)
       const { profilesApi } = await import('../services/api');
       const profile = await profilesApi.get(data.user_id);
-      if (profile) {
+      
+      // A user is only considered to have a seller account if they completed onboarding
+      // The default profile created on registration has an empty description
+      if (profile && profile.description && profile.description.trim() !== '') {
         setHasSellerAccount(true);
         setBusinessProfileState({
           name: profile.name,
