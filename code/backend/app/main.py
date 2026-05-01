@@ -9,12 +9,26 @@ from app.database import engine # Import the database engine and Base for table 
 from app.models import models  # Import the models so SQLAlchemy knows which tables to create
 
 #models.Base.metadata.create_all(bind=engine)
+import sys
+import traceback
+import os
+
 try:
-    print("--- ATTEMPTING DATABASE CONNECTION ---", file=sys.stderr)
+    # Get the URL
+    db_url = os.getenv("DATABASE_URL")
+    # Redact the password for security
+    if db_url and "://" in db_url and "@" in db_url:
+        parts = db_url.split("@")
+        redacted_url = parts[0].split(":")[0] + "://****:****@" + parts[1]
+        print(f"--- ATTEMPTING CONNECTION TO: {redacted_url} ---", file=sys.stderr, flush=True)
+    else:
+        print("--- DATABASE_URL NOT FOUND OR INVALID FORMAT ---", file=sys.stderr, flush=True)
+
     models.Base.metadata.create_all(bind=engine)
-    print("--- DATABASE CONNECTION SUCCESSFUL ---", file=sys.stderr)
+    print("--- DATABASE CONNECTION SUCCESSFUL ---", file=sys.stderr, flush=True)
+
 except Exception as e:
-    print("!!! CRITICAL DATABASE ERROR !!!", file=sys.stderr)
+    print("!!! CRITICAL DATABASE ERROR !!!", file=sys.stderr, flush=True)
     traceback.print_exc(file=sys.stderr)
     raise e
 
