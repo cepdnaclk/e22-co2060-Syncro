@@ -49,6 +49,20 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
     
+    # Automatically create a default profile for the user
+    from ..models.models import Profile
+    profile_name = f"{new_user.first_name or ''} {new_user.last_name or ''}".strip()
+    if not profile_name:
+        profile_name = new_user.email.split('@')[0]
+        
+    new_profile = Profile(
+        user_id=new_user.id,
+        name=profile_name,
+        description=""
+    )
+    db.add(new_profile)
+    db.commit()
+    
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": new_user.email, "role": new_user.active_role}, expires_delta=access_token_expires

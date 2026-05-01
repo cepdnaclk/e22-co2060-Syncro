@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authApi } from '../services/api';
+import { io, Socket } from 'socket.io-client';
+import { toast } from 'sonner';
 
 type UserRole = 'buyer' | 'seller';
 
@@ -72,6 +74,8 @@ interface AppContextType {
   toggleRole: () => Promise<void>;
   isChatOpen: boolean;
   setIsChatOpen: (open: boolean) => void;
+  notifications: any[];
+  markNotificationRead: (id: number) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -142,6 +146,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [businessProfile]);
 
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
 
   const isAuthenticated = authUser !== null;
 
@@ -228,6 +233,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setRoleState('buyer');
     setBusinessProfileState(null);
     setHasSellerAccount(false);
+    setNotifications([]);
     localStorage.removeItem('syncro_role');
     localStorage.removeItem('syncro_businessProfile');
     localStorage.removeItem('syncro_userProfile');
@@ -248,6 +254,64 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Side effects
+  useEffect(() => {
+    if (!authUser) return;
+
+    const fetchNotifs = async () => {
+      try {
+        const { notificationsApi } = await import('../services/api');
+        const data = await notificationsApi.getAll();
+        setNotifications(data);
+        
+        // Show toasts for missed notifications
+        const unread = data.filter((n: any) => !n.is_read);
+        unread.forEach((n: any) => {
+          toast.success(n.title, {
+            description: n.message,
+            duration: 5000,
+          });
+        });
+      } catch (e) {
+        console.error("Failed to fetch notifications", e);
+      }
+    };
+    fetchNotifs();
+
+    const socket: Socket = io('http://localhost:8000');
+    
+    socket.on('connect', () => {
+      socket.emit('identify', { userId: authUser.userId });
+    });
+
+    socket.on('new_notification', (data) => {
+      toast.success(data.title, {
+        description: data.text,
+        duration: 5000,
+      });
+      setNotifications(prev => [{
+        id: data.id, 
+        title: data.title, 
+        message: data.text, 
+        is_read: false, 
+        created_at: new Date().toISOString()
+      }, ...prev]);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [authUser]);
+
+  const markNotificationRead = async (id: number) => {
+    try {
+      const { notificationsApi } = await import('../services/api');
+      await notificationsApi.markRead(id);
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+    } catch (e) {
+      console.error("Failed to mark notification as read", e);
+    }
+  };
+
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove('light', 'dark');
@@ -293,6 +357,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       toggleRole,
       isChatOpen,
       setIsChatOpen,
+      notifications,
+      markNotificationRead,
     }}>
       {children}
     </AppContext.Provider>

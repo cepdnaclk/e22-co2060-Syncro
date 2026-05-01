@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Plus, Gavel, Clock, CheckCircle, ChevronRight, MessageSquare, AlertCircle, Package } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { bidsApi, BidRequest } from '../services/api';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -12,11 +13,6 @@ import { Link } from 'react-router';
 // Mock Data
 // ──────────────────────────────────────────────────────────────
 
-const MOCK_REQUEST: { id: string; description: string; category: string; status: string; createdAt: string; userName: string } | null = null;
-const MOCK_BIDS: { id: string; sellerName: string; rating: number; price: number; quantity: number; deliveryTime: string; message: string; status: string }[] = [];
-const MOCK_REQUESTS: { id: string; description: string; category: string; status: string; bidsCount: number; createdAt: string }[] = [];
-const MOCK_AVAILABLE_JOBS: { id: string; description: string; category: string; budget: string; timeLeft: string; bidsCount: number }[] = [];
-const notifications: { id: number; text: string; time: string; unread: boolean }[] = [];
 
 const fadeInUp = {
     initial: { opacity: 0, y: 20 },
@@ -31,6 +27,16 @@ const fadeInUp = {
 export function Bids() {
     const { role, setIsChatOpen } = useApp();
     const [activeTab, setActiveTab] = useState<'requests' | 'my-bids'>(role === 'buyer' ? 'requests' : 'requests');
+    const [myRequests, setMyRequests] = useState<BidRequest[]>([]);
+    const [availableJobs, setAvailableJobs] = useState<BidRequest[]>([]);
+
+    useEffect(() => {
+        if (role === 'buyer') {
+            bidsApi.getMyRequests().then(data => setMyRequests(data)).catch(console.error);
+        } else {
+            bidsApi.getMatchingRequests().then(data => setAvailableJobs(data)).catch(console.error);
+        }
+    }, [role]);
 
     return (
         <div className="space-y-8">
@@ -67,7 +73,7 @@ export function Bids() {
 
                 <TabsContent value="requests" className="space-y-4">
                     {role === 'buyer' ? (
-                        MOCK_REQUESTS.length === 0 ? (
+                        myRequests.length === 0 ? (
                             <Card className="border-dashed border-2 bg-muted/20">
                                 <CardContent className="flex flex-col items-center justify-center py-20 text-center">
                                     <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
@@ -79,7 +85,7 @@ export function Bids() {
                                     </p>
                                 </CardContent>
                             </Card>
-                        ) : MOCK_REQUESTS.map((req, index) => (
+                        ) : myRequests.map((req, index) => (
                             <motion.div key={req.id} {...fadeInUp} transition={{ delay: index * 0.1 }}>
                                 <Link to={`/bids/${req.id}`}>
                                     <Card hover className="overflow-hidden group border-border/50">
@@ -88,7 +94,7 @@ export function Bids() {
                                                 <div className="flex-1 space-y-3">
                                                     <div className="flex items-center gap-2">
                                                         <Badge variant="info" className="bg-primary/5 text-primary border-primary/20 capitalize">
-                                                            {req.category}
+                                                            Cat: {req.category_id}
                                                         </Badge>
                                                         <Badge className={req.status === 'open' ? 'bg-green-500/10 text-green-600 border-none' : 'bg-blue-500/10 text-blue-600 border-none'}>
                                                             {req.status.toUpperCase()}
@@ -100,11 +106,11 @@ export function Bids() {
                                                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                                         <div className="flex items-center gap-1.5">
                                                             <Clock className="w-4 h-4" />
-                                                            {new Date(req.createdAt).toLocaleDateString()}
+                                                            {new Date(req.created_at).toLocaleDateString()}
                                                         </div>
                                                         <div className="flex items-center gap-1.5">
                                                             <Gavel className="w-4 h-4" />
-                                                            {req.bidsCount} bids received
+                                                            view bids
                                                         </div>
                                                     </div>
                                                 </div>
@@ -121,7 +127,7 @@ export function Bids() {
                             </motion.div>
                         ))
                     ) : (
-                        MOCK_AVAILABLE_JOBS.length === 0 ? (
+                        availableJobs.length === 0 ? (
                             <Card className="border-dashed border-2 bg-muted/20">
                                 <CardContent className="flex flex-col items-center justify-center py-20 text-center">
                                     <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
@@ -133,7 +139,7 @@ export function Bids() {
                                     </p>
                                 </CardContent>
                             </Card>
-                        ) : MOCK_AVAILABLE_JOBS.map((job, index) => (
+                        ) : availableJobs.map((job, index) => (
                             <motion.div key={job.id} {...fadeInUp} transition={{ delay: index * 0.1 }}>
                                 <Card hover className="overflow-hidden border-border/50">
                                     <CardContent className="p-6">
@@ -141,7 +147,7 @@ export function Bids() {
                                             <div className="flex-1 space-y-3">
                                                 <div className="flex items-center gap-2">
                                                     <Badge variant="info" className="bg-primary/5 text-primary border-primary/20">
-                                                        {job.category}
+                                                        Cat: {job.category_id}
                                                     </Badge>
                                                     <Badge variant="secondary" className="bg-orange-500/10 text-orange-600 border-none">
                                                         NEW JOB
@@ -151,11 +157,11 @@ export function Bids() {
                                                 <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                                                     <div className="flex items-center gap-1.5">
                                                         <DollarSign className="w-4 h-4" />
-                                                        Budget: {job.budget}
+                                                        Open
                                                     </div>
                                                     <div className="flex items-center gap-1.5">
                                                         <Clock className="w-4 h-4" />
-                                                        Ends in: {job.timeLeft}
+                                                        {new Date(job.created_at).toLocaleDateString()}
                                                     </div>
                                                 </div>
                                             </div>
