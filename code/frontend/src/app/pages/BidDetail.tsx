@@ -53,11 +53,10 @@ export function BidDetail() {
     const handleAccept = async (bidId: number) => {
         try {
             await bidsApi.acceptBid(bidId);
-            setAcceptedBidId(bidId);
-            // Also update local state so the rest of the UI matches immediately
-            setRequest(prev => prev ? { ...prev, status: 'accepted' } : null);
+            setAcceptedBidId(bidId); // Keeps track of the most recently accepted one for highlighting
+            // Update local state for just the accepted bid
             setBids(prev => prev.map(b => 
-                b.id === bidId ? { ...b, status: 'accepted' } : { ...b, status: 'rejected' }
+                b.id === bidId ? { ...b, status: 'accepted' } : b
             ));
             toast.success("Bid accepted successfully!");
         } catch (e: any) {
@@ -211,7 +210,7 @@ export function BidDetail() {
                                                 </div>
 
                                                 <div className="flex flex-col gap-2 min-w-[140px]">
-                                                    {acceptedBidId === bid.id || bid.status.toLowerCase() === 'accepted' ? (
+                                                    {bid.status.toLowerCase() === 'accepted' ? (
                                                         <Button disabled className="w-full bg-green-600 text-white border-none h-12 opacity-100">
                                                             <CheckCircle2 className="w-4 h-4 mr-2" />
                                                             Accepted
@@ -225,11 +224,10 @@ export function BidDetail() {
                                                             <Button
                                                                 className="w-full h-12"
                                                                 onClick={() => handleAccept(bid.id)}
-                                                                disabled={!!acceptedBidId || request.status.toLowerCase() === 'accepted'}
                                                             >
                                                                 Accept Bid
                                                             </Button>
-                                                            <Button variant="outline" className="w-full" disabled={!!acceptedBidId || request.status.toLowerCase() === 'accepted'}>
+                                                            <Button variant="outline" className="w-full">
                                                                 Reject
                                                             </Button>
                                                         </>
