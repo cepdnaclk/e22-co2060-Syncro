@@ -38,6 +38,9 @@ export function Bids() {
         }
     }, [role]);
 
+    const openRequests = myRequests.filter(req => req.status.toLowerCase() === 'open');
+    const historyRequests = myRequests.filter(req => req.status.toLowerCase() !== 'open');
+
     return (
         <div className="space-y-8">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -73,7 +76,7 @@ export function Bids() {
 
                 <TabsContent value="requests" className="space-y-4">
                     {role === 'buyer' ? (
-                        myRequests.length === 0 ? (
+                        openRequests.length === 0 ? (
                             <Card className="border-dashed border-2 bg-muted/20">
                                 <CardContent className="flex flex-col items-center justify-center py-20 text-center">
                                     <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
@@ -81,11 +84,11 @@ export function Bids() {
                                     </div>
                                     <h3 className="text-xl font-semibold mb-2">No Requests Yet</h3>
                                     <p className="text-muted-foreground max-w-xs">
-                                        Your service requests will appear here once you create them.
+                                        Your open service requests will appear here once you create them.
                                     </p>
                                 </CardContent>
                             </Card>
-                        ) : myRequests.map((req, index) => (
+                        ) : openRequests.map((req, index) => (
                             <motion.div key={req.id} {...fadeInUp} transition={{ delay: index * 0.1 }}>
                                 <Link to={`/bids/${req.id}`}>
                                     <Card hover className="overflow-hidden group border-border/50">
@@ -96,7 +99,7 @@ export function Bids() {
                                                         <Badge variant="info" className="bg-primary/5 text-primary border-primary/20 capitalize">
                                                             Cat: {req.category_id}
                                                         </Badge>
-                                                        <Badge className={req.status === 'open' ? 'bg-green-500/10 text-green-600 border-none' : 'bg-blue-500/10 text-blue-600 border-none'}>
+                                                        <Badge className={req.status.toLowerCase() === 'open' ? 'bg-green-500/10 text-green-600 border-none' : 'bg-blue-500/10 text-blue-600 border-none'}>
                                                             {req.status.toUpperCase()}
                                                         </Badge>
                                                     </div>
@@ -176,18 +179,70 @@ export function Bids() {
                     )}
                 </TabsContent>
 
-                <TabsContent value="history">
-                    <Card className="border-dashed border-2 bg-muted/20">
-                        <CardContent className="flex flex-col items-center justify-center py-20 text-center">
-                            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                                <Clock className="w-8 h-8 text-muted-foreground" />
-                            </div>
-                            <h3 className="text-xl font-semibold mb-2">No History Yet</h3>
-                            <p className="text-muted-foreground max-w-xs">
-                                Completed or non-active items will appear here once you start using the bidding portal.
-                            </p>
-                        </CardContent>
-                    </Card>
+                <TabsContent value="history" className="space-y-4">
+                    {role === 'buyer' ? (
+                        historyRequests.length === 0 ? (
+                            <Card className="border-dashed border-2 bg-muted/20">
+                                <CardContent className="flex flex-col items-center justify-center py-20 text-center">
+                                    <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                                        <Clock className="w-8 h-8 text-muted-foreground" />
+                                    </div>
+                                    <h3 className="text-xl font-semibold mb-2">No History Yet</h3>
+                                    <p className="text-muted-foreground max-w-xs">
+                                        Completed or closed requests will appear here.
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        ) : historyRequests.map((req, index) => (
+                            <motion.div key={req.id} {...fadeInUp} transition={{ delay: index * 0.1 }}>
+                                <Link to={`/bids/${req.id}`}>
+                                    <Card hover className="overflow-hidden group border-border/50 opacity-80">
+                                        <CardContent className="p-6">
+                                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                                <div className="flex-1 space-y-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <Badge variant="info" className="bg-primary/5 text-primary border-primary/20 capitalize">
+                                                            Cat: {req.category_id}
+                                                        </Badge>
+                                                        <Badge className={req.status.toLowerCase() === 'open' ? 'bg-green-500/10 text-green-600 border-none' : 'bg-blue-500/10 text-blue-600 border-none'}>
+                                                            {req.status.toUpperCase()}
+                                                        </Badge>
+                                                    </div>
+                                                    <h3 className="text-lg font-semibold line-clamp-2">
+                                                        {req.description}
+                                                    </h3>
+                                                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <Clock className="w-4 h-4" />
+                                                            {new Date(req.created_at).toLocaleDateString()}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-4">
+                                                    <Button variant="ghost" size="sm" className="hidden md:flex">
+                                                        View Details
+                                                        <ChevronRight className="w-4 h-4 ml-1" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </Link>
+                            </motion.div>
+                        ))
+                    ) : (
+                        <Card className="border-dashed border-2 bg-muted/20">
+                            <CardContent className="flex flex-col items-center justify-center py-20 text-center">
+                                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                                    <Clock className="w-8 h-8 text-muted-foreground" />
+                                </div>
+                                <h3 className="text-xl font-semibold mb-2">No History Yet</h3>
+                                <p className="text-muted-foreground max-w-xs">
+                                    Completed or non-active bids will appear here.
+                                </p>
+                            </CardContent>
+                        </Card>
+                    )}
                 </TabsContent>
             </Tabs>
         </div>
