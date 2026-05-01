@@ -54,6 +54,11 @@ export function BidDetail() {
         try {
             await bidsApi.acceptBid(bidId);
             setAcceptedBidId(bidId);
+            // Also update local state so the rest of the UI matches immediately
+            setRequest(prev => prev ? { ...prev, status: 'accepted' } : null);
+            setBids(prev => prev.map(b => 
+                b.id === bidId ? { ...b, status: 'accepted' } : { ...b, status: 'rejected' }
+            ));
             toast.success("Bid accepted successfully!");
         } catch (e: any) {
             toast.error(e.message || "Failed to accept bid");
@@ -206,21 +211,25 @@ export function BidDetail() {
                                                 </div>
 
                                                 <div className="flex flex-col gap-2 min-w-[140px]">
-                                                    {acceptedBidId === bid.id ? (
-                                                        <Button disabled className="w-full bg-green-600 text-white border-none h-12">
+                                                    {acceptedBidId === bid.id || bid.status.toLowerCase() === 'accepted' ? (
+                                                        <Button disabled className="w-full bg-green-600 text-white border-none h-12 opacity-100">
                                                             <CheckCircle2 className="w-4 h-4 mr-2" />
                                                             Accepted
+                                                        </Button>
+                                                    ) : bid.status.toLowerCase() === 'rejected' ? (
+                                                        <Button disabled variant="outline" className="w-full bg-red-50 text-red-600 border-red-200">
+                                                            Rejected
                                                         </Button>
                                                     ) : (
                                                         <>
                                                             <Button
                                                                 className="w-full h-12"
                                                                 onClick={() => handleAccept(bid.id)}
-                                                                disabled={!!acceptedBidId}
+                                                                disabled={!!acceptedBidId || request.status.toLowerCase() === 'accepted'}
                                                             >
                                                                 Accept Bid
                                                             </Button>
-                                                            <Button variant="outline" className="w-full" disabled={!!acceptedBidId}>
+                                                            <Button variant="outline" className="w-full" disabled={!!acceptedBidId || request.status.toLowerCase() === 'accepted'}>
                                                                 Reject
                                                             </Button>
                                                         </>
