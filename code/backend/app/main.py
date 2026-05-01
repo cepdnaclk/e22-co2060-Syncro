@@ -8,9 +8,12 @@ from app.models import models  # Import the models so SQLAlchemy knows which tab
 
 #models.Base.metadata.create_all(bind=engine)
 try:
+    print("--- ATTEMPTING DATABASE CONNECTION ---", file=sys.stderr)
     models.Base.metadata.create_all(bind=engine)
+    print("--- DATABASE CONNECTION SUCCESSFUL ---", file=sys.stderr)
 except Exception as e:
-    print(f"CRITICAL DATABASE ERROR: {e}")
+    print("!!! CRITICAL DATABASE ERROR !!!", file=sys.stderr)
+    traceback.print_exc(file=sys.stderr)
     raise e
 
 app = FastAPI(title="Syncro Backend")
