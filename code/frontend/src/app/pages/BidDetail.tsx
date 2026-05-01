@@ -40,6 +40,7 @@ export function BidDetail() {
     const [proposal, setProposal] = useState('');
     const [request, setRequest] = useState<BidRequest | null>(null);
     const [bids, setBids] = useState<Bid[]>([]);
+    const [myBids, setMyBids] = useState<Bid[]>([]);
     const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
@@ -47,8 +48,12 @@ export function BidDetail() {
         bidsApi.getRequestById(Number(id)).then(setRequest).catch(console.error);
         if (role === 'buyer') {
             bidsApi.getBidsForRequest(Number(id)).then(setBids).catch(console.error);
+        } else if (role === 'seller') {
+            bidsApi.getMyBids().then(setMyBids).catch(console.error);
         }
     }, [id, role]);
+
+    const hasPlacedBid = myBids.some(b => b.bid_request_id === Number(id));
 
     const handleAccept = async (bidId: number) => {
         try {
@@ -245,11 +250,36 @@ export function BidDetail() {
                 {/* Sidebar - Bid Form (Seller View) */}
                 <div className="space-y-6">
                     {role === 'seller' ? (
-                        <motion.div
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            className="sticky top-24"
-                        >
+                        request?.status?.toLowerCase() !== 'open' ? (
+                            <Card className="border-dashed border-2 bg-muted/20 sticky top-24">
+                                <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                                    <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-4">
+                                        <CheckCircle2 className="w-8 h-8 text-green-500" />
+                                    </div>
+                                    <h3 className="text-xl font-semibold mb-2">Request Closed</h3>
+                                    <p className="text-sm text-muted-foreground leading-relaxed">
+                                        This request has already been accepted by the buyer and is no longer accepting new proposals.
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        ) : hasPlacedBid ? (
+                            <Card className="border-dashed border-2 bg-muted/20 sticky top-24">
+                                <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                                    <div className="w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-4">
+                                        <CheckCircle2 className="w-8 h-8 text-blue-500" />
+                                    </div>
+                                    <h3 className="text-xl font-semibold mb-2">Proposal Submitted</h3>
+                                    <p className="text-sm text-muted-foreground leading-relaxed">
+                                        You have already submitted a proposal for this request. Check the "My Bids" tab to track its status.
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            <motion.div
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className="sticky top-24"
+                            >
                             <Card className="border-primary/20 shadow-lg shadow-primary/5">
                                 <CardHeader className="bg-primary/5 p-6 border-b border-primary/10 text-center">
                                     <h3 className="text-xl font-bold text-primary">Submit Your Proposal</h3>
@@ -293,6 +323,7 @@ export function BidDetail() {
                                 </CardContent>
                             </Card>
                         </motion.div>
+                        )
                     ) : (
                         <Card className="bg-muted/10 border-dashed sticky top-24">
                             <CardContent className="p-8 text-center space-y-4">
