@@ -1,22 +1,29 @@
-name: Deploy Backend
+name: Build and Deploy Python App
+
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v4
+
+      - name: Set up Python version
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          
+
+      - name: Create artifact for deployment
+        run: |
+          # This creates a zip of your code including the app folder
+          zip -r release.zip . -x "*.git*" "venv/*" "__pycache__/*"
+
       - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v2
+        uses: azure/webapps-deploy@v3
         with:
           app-name: 'syncro-backend-2yp'
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: '.'
+          package: release.zip
