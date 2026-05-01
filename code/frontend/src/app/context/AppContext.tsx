@@ -277,7 +277,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
     fetchNotifs();
 
-    const socket: Socket = io('http://localhost:8000');
+    const socket: Socket = io(import.meta.env.VITE_API_URL || 'http://localhost:8000');
     
     socket.on('connect', () => {
       socket.emit('identify', { userId: authUser.userId });

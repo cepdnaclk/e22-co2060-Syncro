@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
 // Change this if your FastAPI runs on a different port
-const API_BASE = "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 // ─── COMPONENT ───────────────────────────────────────────────────────────────
 export default function RFPChatbot({ authToken, onComplete }) {

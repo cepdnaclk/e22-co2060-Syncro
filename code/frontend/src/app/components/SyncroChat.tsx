@@ -5,7 +5,7 @@ import { MessageCircle, X, Send, Bot, Sparkles, ArrowRight, Gavel } from 'lucide
 import { Button } from './ui/Button';
 import { useApp } from '../context/AppContext';
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 // ──────────────────────────────────────────────────────────────
 // Types

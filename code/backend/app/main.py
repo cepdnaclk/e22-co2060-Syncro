@@ -1,3 +1,4 @@
+import os
 import socketio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,10 +10,13 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Syncro Backend")
 
-# Configure CORS
+# Configure CORS — set ALLOWED_ORIGINS env var in production (comma-separated)
+# e.g. "https://your-frontend.azurestaticapps.net,https://yourdomain.com"
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For production, you can restrict this to your Azure frontend URL
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
