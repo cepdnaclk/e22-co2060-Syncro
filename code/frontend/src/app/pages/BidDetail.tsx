@@ -40,6 +40,7 @@ export function BidDetail() {
     const [proposal, setProposal] = useState('');
     const [request, setRequest] = useState<BidRequest | null>(null);
     const [bids, setBids] = useState<Bid[]>([]);
+    const [myBids, setMyBids] = useState<Bid[]>([]);
     const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
@@ -47,13 +48,21 @@ export function BidDetail() {
         bidsApi.getRequestById(Number(id)).then(setRequest).catch(console.error);
         if (role === 'buyer') {
             bidsApi.getBidsForRequest(Number(id)).then(setBids).catch(console.error);
+        } else if (role === 'seller') {
+            bidsApi.getMyBids().then(setMyBids).catch(console.error);
         }
     }, [id, role]);
+
+    const hasPlacedActiveBid = myBids.some(b => b.bid_request_id === Number(id) && b.status.toLowerCase() !== 'rejected');
 
     const handleAccept = async (bidId: number) => {
         try {
             await bidsApi.acceptBid(bidId);
-            setAcceptedBidId(bidId);
+            setAcceptedBidId(bidId); // Keeps track of the most recently accepted one for highlighting
+            // Update local state for just the accepted bid
+            setBids(prev => prev.map(b => 
+                b.id === bidId ? { ...b, status: 'accepted' } : b
+            ));
             toast.success("Bid accepted successfully!");
         } catch (e: any) {
             toast.error(e.message || "Failed to accept bid");
@@ -206,21 +215,24 @@ export function BidDetail() {
                                                 </div>
 
                                                 <div className="flex flex-col gap-2 min-w-[140px]">
-                                                    {acceptedBidId === bid.id ? (
-                                                        <Button disabled className="w-full bg-green-600 text-white border-none h-12">
+                                                    {bid.status.toLowerCase() === 'accepted' ? (
+                                                        <Button disabled className="w-full bg-green-600 text-white border-none h-12 opacity-100">
                                                             <CheckCircle2 className="w-4 h-4 mr-2" />
                                                             Accepted
+                                                        </Button>
+                                                    ) : bid.status.toLowerCase() === 'rejected' ? (
+                                                        <Button disabled variant="outline" className="w-full bg-red-50 text-red-600 border-red-200">
+                                                            Rejected
                                                         </Button>
                                                     ) : (
                                                         <>
                                                             <Button
                                                                 className="w-full h-12"
                                                                 onClick={() => handleAccept(bid.id)}
-                                                                disabled={!!acceptedBidId}
                                                             >
                                                                 Accept Bid
                                                             </Button>
-                                                            <Button variant="outline" className="w-full" disabled={!!acceptedBidId}>
+                                                            <Button variant="outline" className="w-full">
                                                                 Reject
                                                             </Button>
                                                         </>
@@ -238,11 +250,24 @@ export function BidDetail() {
                 {/* Sidebar - Bid Form (Seller View) */}
                 <div className="space-y-6">
                     {role === 'seller' ? (
-                        <motion.div
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            className="sticky top-24"
-                        >
+                        hasPlacedActiveBid ? (
+                            <Card className="border-dashed border-2 bg-muted/20 sticky top-24">
+                                <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                                    <div className="w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-4">
+                                        <CheckCircle2 className="w-8 h-8 text-blue-500" />
+                                    </div>
+                                    <h3 className="text-xl font-semibold mb-2">Proposal Submitted</h3>
+                                    <p className="text-sm text-muted-foreground leading-relaxed">
+                                        You have already submitted a proposal for this request. Check the "My Bids" tab to track its status.
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            <motion.div
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className="sticky top-24"
+                            >
                             <Card className="border-primary/20 shadow-lg shadow-primary/5">
                                 <CardHeader className="bg-primary/5 p-6 border-b border-primary/10 text-center">
                                     <h3 className="text-xl font-bold text-primary">Submit Your Proposal</h3>
@@ -286,6 +311,7 @@ export function BidDetail() {
                                 </CardContent>
                             </Card>
                         </motion.div>
+                        )
                     ) : (
                         <Card className="bg-muted/10 border-dashed sticky top-24">
                             <CardContent className="p-8 text-center space-y-4">

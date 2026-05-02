@@ -29,12 +29,14 @@ export function Bids() {
     const [activeTab, setActiveTab] = useState<'requests' | 'my-bids'>(role === 'buyer' ? 'requests' : 'requests');
     const [myRequests, setMyRequests] = useState<BidRequest[]>([]);
     const [availableJobs, setAvailableJobs] = useState<BidRequest[]>([]);
+    const [myBids, setMyBids] = useState<any[]>([]);
 
     useEffect(() => {
         if (role === 'buyer') {
             bidsApi.getMyRequests().then(data => setMyRequests(data)).catch(console.error);
         } else {
             bidsApi.getMatchingRequests().then(data => setAvailableJobs(data)).catch(console.error);
+            bidsApi.getMyBids().then(data => setMyBids(data)).catch(console.error);
         }
     }, [role]);
 
@@ -231,17 +233,59 @@ export function Bids() {
                             </motion.div>
                         ))
                     ) : (
-                        <Card className="border-dashed border-2 bg-muted/20">
-                            <CardContent className="flex flex-col items-center justify-center py-20 text-center">
-                                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                                    <Clock className="w-8 h-8 text-muted-foreground" />
-                                </div>
-                                <h3 className="text-xl font-semibold mb-2">No History Yet</h3>
-                                <p className="text-muted-foreground max-w-xs">
-                                    Completed or non-active bids will appear here.
-                                </p>
-                            </CardContent>
-                        </Card>
+                        myBids.length === 0 ? (
+                            <Card className="border-dashed border-2 bg-muted/20">
+                                <CardContent className="flex flex-col items-center justify-center py-20 text-center">
+                                    <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                                        <Gavel className="w-8 h-8 text-muted-foreground" />
+                                    </div>
+                                    <h3 className="text-xl font-semibold mb-2">No Bids Placed</h3>
+                                    <p className="text-muted-foreground max-w-xs">
+                                        You haven't submitted any proposals yet.
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        ) : myBids.map((bid, index) => (
+                            <motion.div key={bid.id} {...fadeInUp} transition={{ delay: index * 0.1 }}>
+                                <Link to={`/bids/${bid.bid_request_id}`}>
+                                    <Card hover className="overflow-hidden group border-border/50">
+                                        <CardContent className="p-6">
+                                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                                <div className="flex-1 space-y-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <Badge className={
+                                                            bid.status.toLowerCase() === 'accepted' ? 'bg-green-500/10 text-green-600 border-none' :
+                                                            bid.status.toLowerCase() === 'rejected' ? 'bg-red-500/10 text-red-600 border-none' :
+                                                            'bg-blue-500/10 text-blue-600 border-none'
+                                                        }>
+                                                            {bid.status.toUpperCase()}
+                                                        </Badge>
+                                                    </div>
+                                                    <h3 className="text-lg font-semibold line-clamp-2">
+                                                        Proposal: Rs. {bid.price.toLocaleString()} for {bid.quantity} unit(s)
+                                                    </h3>
+                                                    <p className="text-sm text-muted-foreground line-clamp-1 italic">
+                                                        "{bid.message}"
+                                                    </p>
+                                                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <Clock className="w-4 h-4" />
+                                                            Submitted: {new Date(bid.created_at).toLocaleDateString()}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-4">
+                                                    <Button variant="ghost" size="sm" className="hidden md:flex">
+                                                        View Request
+                                                        <ChevronRight className="w-4 h-4 ml-1" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </Link>
+                            </motion.div>
+                        ))
                     )}
                 </TabsContent>
             </Tabs>
