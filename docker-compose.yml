@@ -24,6 +24,9 @@ services:
       context: ./code/backend
       dockerfile: Dockerfile
     container_name: syncro_backend
+    volumes:
+      - ./code/backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     environment:
       DATABASE_URL: postgresql://postgres:syncro123@db:5432/syncro_db
       SECRET_KEY: syncro_dev_secret_key_change_in_production

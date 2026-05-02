@@ -56,8 +56,12 @@ This is the safest way to develop locally. It runs the database in Docker, but r
    ```
    *The API will be available at `http://localhost:8000`.*
 
-### Option 2: Full Docker Setup (Hands-off)
-If you just want the backend running in the background and do not need live-reloading, run the entire stack via Docker.
+### Option 2: Full Docker Setup (Recommended)
+You can run the entire stack via Docker. We have configured Docker to support live-reloading, so any changes you make to your local python files will automatically restart the server inside Docker!
+```bash
+docker-compose up -d --build
+```
+*The API will be available at `http://localhost:8000`.*
 
 From the root directory (`SYNCRO-2YP`), run:
 ```bash
