@@ -209,4 +209,14 @@
   .dark [class*="shadow"] {
     --tw-shadow-color: oklch(0.05 0 0 / 0.5);
   }
+
+  /* Red validation styling */
+  input:invalid:not(:placeholder-shown) {
+    border-color: #d4183d !important;
+  }
+  
+  input:invalid:not(:placeholder-shown):focus {
+    --tw-ring-color: #d4183d !important;
+    border-color: #d4183d !important;
+  }
 }
