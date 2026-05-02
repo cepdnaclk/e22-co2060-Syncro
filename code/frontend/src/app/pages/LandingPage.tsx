@@ -132,12 +132,35 @@ export function LandingPage() {
       </header>
 
       {/* Hero Section with Carousel */}
-      <section
-        className="relative overflow-hidden bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: theme === 'light' ? 'url("/main_light_bg.png")' : 'url("/main_bg.png")' }}
-      >
+      <section className="relative overflow-hidden">
+        {/* Video Background */}
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{
+            filter: 'brightness(1.05) contrast(1.1)',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden',
+          }}
+        >
+          <source src="/videos/Drone_view_descending_market_street_d95f575874.mp4" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
         {/* Overlay for readability */}
         <div className="absolute inset-0 bg-white/40 dark:bg-slate-950/70 backdrop-blur-[1px]" />
+        
+        {/* Gradient Overlay - Darkest behind text, fades toward edges */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: 'radial-gradient(ellipse 800px 400px at center, rgba(0,0,0,0.6), rgba(0,0,0,0.3) 40%, rgba(0,0,0,0))',
+            zIndex: 5,
+          }}
+        />
         <div className="container mx-auto px-6 py-24 relative z-10">
           <div className="relative h-96 flex items-center justify-center">
             {heroSlides.map((slide, index) => (
@@ -149,13 +172,13 @@ export function LandingPage() {
                   x: currentSlide === index ? 0 : currentSlide > index ? -100 : 100,
                 }}
                 transition={{ duration: 0.5 }}
-                className={`absolute inset-0 flex flex-col items-center justify-center text-center ${currentSlide === index ? 'pointer-events-auto' : 'pointer-events-none'
+                className={`absolute inset-0 flex flex-col items-center justify-center text-center z-10 ${currentSlide === index ? 'pointer-events-auto' : 'pointer-events-none'
                   }`}
               >
-                <h1 className="text-6xl font-bold mb-6 pb-2 bg-gradient-to-r from-indigo-600 to-teal-500 bg-clip-text text-transparent drop-shadow-lg" style={{ fontFamily: "'Roboto Condensed', sans-serif" }}>
+                <h1 className={`text-6xl font-bold mb-6 pb-2 bg-gradient-to-r bg-clip-text text-transparent drop-shadow-lg ${theme === 'light' ? 'from-indigo-500 to-teal-400' : 'from-indigo-400 to-teal-300'}`} style={{ fontFamily: "'Roboto Condensed', sans-serif", textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
                   {slide.title}
                 </h1>
-                <p className={`text-xl italic mb-8 max-w-2xl ${theme === 'light' ? 'text-slate-700' : 'text-slate-300'}`}>
+                <p className={`text-xl font-bold mb-8 max-w-2xl drop-shadow-lg ${theme === 'light' ? 'text-white' : 'text-white'}`} style={{ textShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
                   {slide.subtitle}
                 </p>
               </motion.div>
