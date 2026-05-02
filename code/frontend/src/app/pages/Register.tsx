@@ -17,29 +17,40 @@ export function Register() {
     password: '',
     confirmPassword: '',
   });
-  const [error, setError] = useState('');
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
+  const [apiError, setApiError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const validate = () => {
+    const errors: { [key: string]: string } = {};
+    if (!formData.firstName) errors.firstName = 'First name is required';
+    if (!formData.lastName) errors.lastName = 'Last name is required';
+    if (!formData.email) errors.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) errors.email = 'Invalid email address';
+    
+    if (!formData.password) errors.password = 'Password is required';
+    else if (formData.password.length < 6) errors.password = 'Password must be at least 6 characters';
+    
+    if (formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long.');
-      return;
-    }
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match. Please try again.');
-      setFormData({ ...formData, confirmPassword: '' });
-      return;
-    }
+    setApiError('');
+    
+    if (!validate()) return;
 
     setLoading(true);
     try {
       await register(formData.email, formData.password, formData.firstName, formData.lastName);
       navigate('/dashboard');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
+      setApiError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -92,14 +103,18 @@ export function Register() {
           </div>
 
           <Card className="p-6 shadow-xl border-border/50">
-            <form onSubmit={handleSubmit} className="space-y-3">
+            <form onSubmit={handleSubmit} className="space-y-3" noValidate>
               <div className="grid grid-cols-2 gap-3">
                 <Input
                   type="text"
                   label="First Name"
                   placeholder="Shehani"
                   value={formData.firstName}
-                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                  error={formErrors.firstName}
+                  onChange={(e) => {
+                    setFormData({ ...formData, firstName: e.target.value });
+                    if (formErrors.firstName) setFormErrors({ ...formErrors, firstName: '' });
+                  }}
                   required
                 />
                 <Input
@@ -107,7 +122,11 @@ export function Register() {
                   label="Last Name"
                   placeholder="Cooray"
                   value={formData.lastName}
-                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                  error={formErrors.lastName}
+                  onChange={(e) => {
+                    setFormData({ ...formData, lastName: e.target.value });
+                    if (formErrors.lastName) setFormErrors({ ...formErrors, lastName: '' });
+                  }}
                   required
                 />
               </div>
@@ -117,7 +136,11 @@ export function Register() {
                 label="Email"
                 placeholder="you@example.com"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                error={formErrors.email}
+                onChange={(e) => {
+                  setFormData({ ...formData, email: e.target.value });
+                  if (formErrors.email) setFormErrors({ ...formErrors, email: '' });
+                }}
                 required
               />
 
@@ -126,7 +149,11 @@ export function Register() {
                 label="Password"
                 placeholder="••••••••"
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                error={formErrors.password}
+                onChange={(e) => {
+                  setFormData({ ...formData, password: e.target.value });
+                  if (formErrors.password) setFormErrors({ ...formErrors, password: '' });
+                }}
                 required
               />
 
@@ -135,16 +162,17 @@ export function Register() {
                 label="Confirm Password"
                 placeholder="••••••••"
                 value={formData.confirmPassword}
+                error={formErrors.confirmPassword}
                 onChange={(e) => {
                   setFormData({ ...formData, confirmPassword: e.target.value });
-                  if (error) setError('');
+                  if (formErrors.confirmPassword) setFormErrors({ ...formErrors, confirmPassword: '' });
                 }}
                 required
               />
 
-              {error && (
+              {apiError && (
                 <div className="px-4 py-3 bg-destructive/10 border border-destructive/30 rounded-lg text-sm text-destructive">
-                  {error}
+                  {apiError}
                 </div>
               )}
 

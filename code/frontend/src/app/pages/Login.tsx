@@ -11,12 +11,27 @@ export function Login() {
   const navigate = useNavigate();
   const { theme, setTheme, login } = useApp();
   const [formData, setFormData] = useState({ email: '', password: '' });
-  const [error, setError] = useState('');
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
+  const [apiError, setApiError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const validate = () => {
+    const errors: { [key: string]: string } = {};
+    if (!formData.email) errors.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) errors.email = 'Invalid email address';
+    
+    if (!formData.password) errors.password = 'Password is required';
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setApiError('');
+    
+    if (!validate()) return;
+
     setLoading(true);
     try {
       await login(formData.email, formData.password);
@@ -80,13 +95,17 @@ export function Login() {
           </div>
 
           <Card className="p-6 shadow-xl border-border/50">
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
               <Input
                 type="email"
                 label="Email"
                 placeholder="you@example.com"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                error={formErrors.email}
+                onChange={(e) => {
+                  setFormData({ ...formData, email: e.target.value });
+                  if (formErrors.email) setFormErrors({ ...formErrors, email: '' });
+                }}
                 required
               />
 
@@ -95,13 +114,17 @@ export function Login() {
                 label="Password"
                 placeholder="••••••••"
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                error={formErrors.password}
+                onChange={(e) => {
+                  setFormData({ ...formData, password: e.target.value });
+                  if (formErrors.password) setFormErrors({ ...formErrors, password: '' });
+                }}
                 required
               />
 
-              {error && (
+              {apiError && (
                 <div className="px-4 py-3 bg-destructive/10 border border-destructive/30 rounded-lg text-sm text-destructive">
-                  {error}
+                  {apiError}
                 </div>
               )}
 
