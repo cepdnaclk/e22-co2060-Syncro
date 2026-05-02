@@ -18,8 +18,9 @@ jobs:
 
       - name: Create artifact for deployment
         run: |
-          # This creates a zip of your code including the app folder
-          zip -r release.zip . -x "*.git*" "venv/*" "__pycache__/*"
+          # Change to backend directory before zipping so requirements.txt is at the root
+          cd code/backend
+          zip -r ../../release.zip . -x "venv/*" "__pycache__/*"
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
