@@ -217,7 +217,7 @@ export function LandingPage() {
       <section className="py-24 bg-muted/30">
         <div className="container mx-auto px-6">
           <motion.div {...fadeInUp} className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4" style={{ fontFamily: "'Roboto Condensed', sans-serif" }}>How It Works</h2>
+            <h2 className="text-4xl font-bold mb-4 dark:text-white" style={{ fontFamily: "'Roboto Condensed', sans-serif" }}>How It Works</h2>
             <p className="text-xl italic text-slate-600 dark:text-slate-400">Simple steps to success</p>
           </motion.div>
 
@@ -265,7 +265,7 @@ export function LandingPage() {
       <section className="py-24">
         <div className="container mx-auto px-6">
           <motion.div {...fadeInUp} className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4" style={{ fontFamily: "'Roboto Condensed', sans-serif" }}>The Syncro Advantage</h2>
+            <h2 className="text-4xl font-bold mb-4 dark:text-white" style={{ fontFamily: "'Roboto Condensed', sans-serif" }}>The Syncro Advantage</h2>
             <p className="text-xl italic text-slate-600 dark:text-slate-400">Built to empower every side of the deal</p>
           </motion.div>
 
@@ -325,7 +325,7 @@ export function LandingPage() {
       <section className="py-24 bg-muted/30">
         <div className="container mx-auto px-6">
           <motion.div {...fadeInUp} className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4" style={{ fontFamily: "'Roboto Condensed', sans-serif" }}>Trusted by Thousands</h2>
+            <h2 className="text-4xl font-bold mb-4 dark:text-white" style={{ fontFamily: "'Roboto Condensed', sans-serif" }}>Trusted by Thousands</h2>
             <p className="text-xl italic text-slate-600 dark:text-slate-400">Real people. Real results.</p>
           </motion.div>
 
