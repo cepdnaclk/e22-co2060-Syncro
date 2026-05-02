@@ -22,7 +22,12 @@ export function Login() {
       await login(formData.email, formData.password);
       navigate('/dashboard');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
+      const msg = err instanceof Error ? err.message : '';
+      setError(
+        msg && !msg.toLowerCase().includes('fetch') && !msg.toLowerCase().includes('network')
+          ? msg
+          : 'Invalid email or password. Please try again.'
+      );
     } finally {
       setLoading(false);
     }
