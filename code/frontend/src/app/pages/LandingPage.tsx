@@ -138,6 +138,8 @@ export function LandingPage() {
       >
         {/* Overlay for readability */}
         <div className="absolute inset-0 bg-white/40 dark:bg-slate-950/70 backdrop-blur-[1px]" />
+        {/* Dark-mode vignette: centre transparent → edges ~20% darker dark-blue */}
+        <div className="absolute inset-0 hidden dark:block pointer-events-none" style={{ background: 'radial-gradient(ellipse at center, transparent 30%, rgba(2, 8, 30, 0.75) 100%)' }} />
         <div className="container mx-auto px-6 py-24 relative z-10">
           <div className="relative h-96 flex items-center justify-center">
             {heroSlides.map((slide, index) => (
@@ -152,7 +154,7 @@ export function LandingPage() {
                 className={`absolute inset-0 flex flex-col items-center justify-center text-center ${currentSlide === index ? 'pointer-events-auto' : 'pointer-events-none'
                   }`}
               >
-                <h1 className="text-6xl font-bold mb-6 pb-2 bg-gradient-to-r from-indigo-600 to-teal-500 bg-clip-text text-transparent drop-shadow-lg" style={{ fontFamily: "'Roboto Condensed', sans-serif" }}>
+                <h1 className="text-6xl font-bold mb-6 pb-2 bg-gradient-to-r from-indigo-600 to-teal-500 dark:from-indigo-300 dark:to-teal-300 bg-clip-text text-transparent drop-shadow-lg" style={{ fontFamily: "'Roboto Condensed', sans-serif" }}>
                   {slide.title}
                 </h1>
                 <p className={`text-xl italic mb-8 max-w-2xl ${theme === 'light' ? 'text-slate-700' : 'text-slate-300'}`}>
@@ -217,7 +219,7 @@ export function LandingPage() {
       <section className="py-24 bg-muted/30">
         <div className="container mx-auto px-6">
           <motion.div {...fadeInUp} className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4" style={{ fontFamily: "'Roboto Condensed', sans-serif" }}>How It Works</h2>
+            <h2 className="text-4xl font-bold mb-4 dark:text-white" style={{ fontFamily: "'Roboto Condensed', sans-serif" }}>How It Works</h2>
             <p className="text-xl italic text-slate-600 dark:text-slate-400">Simple steps to success</p>
           </motion.div>
 
@@ -265,7 +267,7 @@ export function LandingPage() {
       <section className="py-24">
         <div className="container mx-auto px-6">
           <motion.div {...fadeInUp} className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4" style={{ fontFamily: "'Roboto Condensed', sans-serif" }}>The Syncro Advantage</h2>
+            <h2 className="text-4xl font-bold mb-4 dark:text-white" style={{ fontFamily: "'Roboto Condensed', sans-serif" }}>The Syncro Advantage</h2>
             <p className="text-xl italic text-slate-600 dark:text-slate-400">Built to empower every side of the deal</p>
           </motion.div>
 
@@ -325,7 +327,7 @@ export function LandingPage() {
       <section className="py-24 bg-muted/30">
         <div className="container mx-auto px-6">
           <motion.div {...fadeInUp} className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4" style={{ fontFamily: "'Roboto Condensed', sans-serif" }}>Trusted by Thousands</h2>
+            <h2 className="text-4xl font-bold mb-4 dark:text-white" style={{ fontFamily: "'Roboto Condensed', sans-serif" }}>Trusted by Thousands</h2>
             <p className="text-xl italic text-slate-600 dark:text-slate-400">Real people. Real results.</p>
           </motion.div>
 

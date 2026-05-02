@@ -38,7 +38,7 @@ export function Login() {
       navigate('/dashboard');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : '';
-      setApiError(
+      setError(
         msg && !msg.toLowerCase().includes('fetch') && !msg.toLowerCase().includes('network')
           ? msg
           : 'Invalid email or password. Please try again.'
