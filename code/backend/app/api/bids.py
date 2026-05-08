@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from typing import List
 from ..database import get_db
-from ..models.models import Bid, BidRequest, User, BidRequestStatus, BidStatus
+from ..models.models import Bid, BidRequest, User, BidRequestStatus, BidStatus, UserRole
 from ..schemas.schemas import BidCreate, BidResponse, BidRequestCreate, BidRequestResponse
 from .auth import get_current_user_from_token
 
@@ -43,8 +43,16 @@ async def create_bid_request(
     request_text = f"{cat_name} {request.description or ''}"
     req_keywords = get_keywords(request_text)
     
-    # Get all users who are sellers
-    sellers = db.query(User).filter(User.active_role == UserRole.SELLER, User.id != current_user.id).all()
+    # Get all users who have a seller profile (regardless of current active_role).
+    # A seller may be browsing in "buyer" mode — we still want to notify them.
+    from ..models.models import Profile as ProfileModel
+    seller_user_ids = db.query(ProfileModel.user_id).filter(
+        ProfileModel.description != None,
+        ProfileModel.description != "",
+        ProfileModel.user_id != current_user.id
+    ).all()
+    seller_ids_list = [row[0] for row in seller_user_ids]
+    sellers = db.query(User).filter(User.id.in_(seller_ids_list)).all()
     
     matched_seller_ids = set()
     
@@ -74,7 +82,7 @@ async def create_bid_request(
         new_notif = Notification(
             user_id=seller_id,
             title="New Matching Request",
-            message=f"{buyer_name} has posted a new request that matches your profile: '{request.description[:50]}...'",
+            message=f"{buyer_name} has posted a new request that matches your profile: '{request.description[:50]}{'...' if len(request.description) > 50 else ''}'",
             type="new_request",
             reference_id=new_request.id
         )
@@ -110,7 +118,7 @@ def get_matching_requests(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user_from_token)
 ):
-    if current_user.active_role != "seller":
+    if current_user.active_role != UserRole.SELLER:
         raise HTTPException(status_code=403, detail="Only sellers can view matching requests")
     
     # We want requests where:
@@ -246,6 +254,28 @@ async def submit_bid(
         
     return new_bid
 
+def _enrich_bids(bids, db):
+    """Attach seller_name and seller_logo from the seller's Profile to each bid."""
+    from ..models.models import Profile as ProfileModel
+    results = []
+    for bid in bids:
+        profile = db.query(ProfileModel).filter(ProfileModel.user_id == bid.seller_id).first()
+        d = {
+            "id": bid.id,
+            "bid_request_id": bid.bid_request_id,
+            "seller_id": bid.seller_id,
+            "price": bid.price,
+            "quantity": bid.quantity,
+            "delivery_time": bid.delivery_time,
+            "message": bid.message,
+            "status": bid.status,
+            "created_at": bid.created_at,
+            "seller_name": profile.name if profile and profile.name else None,
+            "seller_logo": profile.logo if profile else None,
+        }
+        results.append(d)
+    return results
+
 @router.get("/request/{request_id}", response_model=List[BidResponse])
 def get_bids_for_request(
     request_id: int,
@@ -255,22 +285,24 @@ def get_bids_for_request(
     bid_request = db.query(BidRequest).filter(BidRequest.id == request_id).first()
     if not bid_request:
         raise HTTPException(status_code=404, detail="Bid request not found")
-    
+
     # Only the owner can see bids
     if bid_request.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Forbidden")
-        
-    return db.query(Bid).filter(Bid.bid_request_id == request_id).all()
+
+    bids = db.query(Bid).filter(Bid.bid_request_id == request_id).all()
+    return _enrich_bids(bids, db)
 
 @router.get("/my-bids", response_model=List[BidResponse])
 def get_my_bids(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user_from_token)
 ):
-    if current_user.active_role != "seller":
+    if current_user.active_role != UserRole.SELLER:
         raise HTTPException(status_code=403, detail="Only sellers can view their bids")
-        
-    return db.query(Bid).filter(Bid.seller_id == current_user.id).all()
+
+    bids = db.query(Bid).filter(Bid.seller_id == current_user.id).all()
+    return _enrich_bids(bids, db)
 
 @router.patch("/{bid_id}/accept", response_model=BidResponse)
 async def accept_bid(
@@ -342,4 +374,63 @@ async def accept_bid(
     except Exception as e:
         print(f"Failed to send notification: {e}")
     
+    return bid
+
+
+@router.patch("/{bid_id}/reject", response_model=BidResponse)
+async def reject_bid(
+    bid_id: int,
+    fastapi_req: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_from_token)
+):
+    bid = db.query(Bid).filter(Bid.id == bid_id).first()
+    if not bid:
+        raise HTTPException(status_code=404, detail="Bid not found")
+
+    bid_request = db.query(BidRequest).filter(BidRequest.id == bid.bid_request_id).first()
+    if bid_request.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only the request owner can reject bids")
+
+    if bid.status == BidStatus.ACCEPTED:
+        raise HTTPException(status_code=400, detail="Cannot reject an already accepted bid")
+
+    # Mark the bid as rejected
+    bid.status = BidStatus.REJECTED
+    db.commit()
+
+    # Notify the seller
+    from ..models.models import Notification, Category
+
+    category = db.query(Category).filter(Category.id == bid_request.category_id).first()
+    cat_name = category.name if category else "your request"
+    buyer_name = f"{current_user.first_name or ''} {current_user.last_name or ''}".strip() or "A buyer"
+
+    new_notif = Notification(
+        user_id=bid.seller_id,
+        title="Proposal Rejected",
+        message=f"{buyer_name} has declined your proposal for '{cat_name}'. Keep submitting — more opportunities await!",
+        type="bid_rejected",
+        reference_id=bid.bid_request_id
+    )
+    db.add(new_notif)
+    db.commit()
+    db.refresh(bid)
+    db.refresh(new_notif)
+
+    # Emit real-time notification to the seller
+    try:
+        sio = fastapi_req.app.state.sio
+        await sio.emit("new_notification", {
+            "id": new_notif.id,
+            "title": new_notif.title,
+            "text": new_notif.message,
+            "time": "Just now",
+            "unread": not new_notif.is_read,
+            "type": new_notif.type,
+            "reference_id": new_notif.reference_id
+        }, room=f"user_{bid.seller_id}")
+    except Exception as e:
+        print(f"Failed to send rejection notification: {e}")
+
     return bid

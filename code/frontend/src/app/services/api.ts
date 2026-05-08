@@ -68,6 +68,8 @@ export interface Order {
     created_at: string;
     buyer_id: number;
     seller_id: number;
+    buyer_name?: string;
+    seller_name?: string;
     listing_id?: number;
 }
 
@@ -234,6 +236,8 @@ export interface Bid {
     id: number;
     bid_request_id: number;
     seller_id: number;
+    seller_name?: string;
+    seller_logo?: string;
     price: number;
     quantity: number;
     delivery_time?: string;
@@ -295,6 +299,14 @@ export const bidsApi = {
 
     async acceptBid(bidId: number): Promise<Bid> {
         const res = await fetch(`${BASE_URL}/bids/${bidId}/accept`, {
+            method: 'PATCH',
+            headers: headers(true),
+        });
+        return handleResponse<Bid>(res);
+    },
+
+    async rejectBid(bidId: number): Promise<Bid> {
+        const res = await fetch(`${BASE_URL}/bids/${bidId}/reject`, {
             method: 'PATCH',
             headers: headers(true),
         });
