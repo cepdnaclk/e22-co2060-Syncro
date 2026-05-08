@@ -42,6 +42,7 @@ export function BidDetail() {
     const [bids, setBids] = useState<Bid[]>([]);
     const [myBids, setMyBids] = useState<Bid[]>([]);
     const [submitting, setSubmitting] = useState(false);
+    const [rejecting, setRejecting] = useState<number | null>(null);
 
     useEffect(() => {
         if (!id) return;
@@ -66,6 +67,22 @@ export function BidDetail() {
             toast.success("Bid accepted successfully!");
         } catch (e: any) {
             toast.error(e.message || "Failed to accept bid");
+        }
+    };
+
+    const handleReject = async (bidId: number) => {
+        if (rejecting) return;
+        try {
+            setRejecting(bidId);
+            await bidsApi.rejectBid(bidId);
+            setBids(prev => prev.map(b =>
+                b.id === bidId ? { ...b, status: 'rejected' } : b
+            ));
+            toast.success('Proposal rejected.');
+        } catch (e: any) {
+            toast.error(e.message || 'Failed to reject bid');
+        } finally {
+            setRejecting(null);
         }
     };
 
@@ -184,12 +201,29 @@ export function BidDetail() {
                                             <div className="flex flex-col md:flex-row gap-6">
                                                 <div className="flex-1 space-y-4">
                                                     <div className="flex items-center justify-between">
-                                                        <div>
-                                                            <h3 className="font-bold text-lg">Seller {bid.seller_id}</h3>
-                                                            <div className="flex items-center gap-1 mt-1">
-                                                                <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
-                                                                <span className="text-sm font-medium">--</span>
-                                                                <span className="text-xs text-muted-foreground ml-1">Rating</span>
+                                                        <div className="flex items-center gap-3">
+                                                            {bid.seller_logo ? (
+                                                                <img
+                                                                    src={bid.seller_logo}
+                                                                    alt={bid.seller_name || 'Seller'}
+                                                                    className="w-10 h-10 rounded-lg object-cover border border-border shrink-0"
+                                                                />
+                                                            ) : (
+                                                                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center shrink-0 border border-border">
+                                                                    <span className="text-sm font-bold text-primary">
+                                                                        {(bid.seller_name || `S${bid.seller_id}`).substring(0, 2).toUpperCase()}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                            <div>
+                                                                <h3 className="font-bold text-lg">
+                                                                    {bid.seller_name || `Seller ${bid.seller_id}`}
+                                                                </h3>
+                                                                <div className="flex items-center gap-1 mt-1">
+                                                                    <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+                                                                    <span className="text-sm font-medium">--</span>
+                                                                    <span className="text-xs text-muted-foreground ml-1">Rating</span>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                         <div className="text-right">
@@ -232,8 +266,13 @@ export function BidDetail() {
                                                             >
                                                                 Accept Bid
                                                             </Button>
-                                                            <Button variant="outline" className="w-full">
-                                                                Reject
+                                                            <Button
+                                                                variant="outline"
+                                                                className="w-full"
+                                                                disabled={rejecting === bid.id}
+                                                                onClick={() => handleReject(bid.id)}
+                                                            >
+                                                                {rejecting === bid.id ? 'Rejecting...' : 'Reject'}
                                                             </Button>
                                                         </>
                                                     )}
