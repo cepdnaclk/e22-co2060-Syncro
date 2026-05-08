@@ -56,12 +56,12 @@ This is the safest way to develop locally. It runs the database in Docker, but r
    ```
    *The API will be available at `http://localhost:8000`.*
 
-### Option 2: Full Docker Setup (Hands-off)
-If you just want the backend running in the background and do not need live-reloading, run the entire stack via Docker.
+### Option 2: Full Stack Docker Setup (Hands-off)
+If you just want the full application (frontend, backend, database) running in the background and do not need live-reloading, run the entire stack via Docker.
 
 From the root directory (`SYNCRO-2YP`), run:
 ```bash
-docker-compose up -d --build backend db
+docker-compose up -d --build
 ```
 *(⚠️ **Important**: Do not run this at the same time as local `uvicorn`, or you will experience port 8000 conflicts!)*
 

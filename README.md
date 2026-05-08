@@ -68,3 +68,20 @@ Real-Time:
 - code: Contains the source code for the FastAPI backend and React/Next.js frontend.
 - database: Holds the PostgreSQL schema designs, ER diagrams, and initialization scripts.
 - docs: Stores project documentation, including the proposal and design specifications.
+
+---
+
+## 6. How to Run Locally
+
+To run the entire full-stack application (Frontend, Backend, and Database) at once, ensure Docker Desktop is running on your machine.
+
+From the root repository directory (`SYNCRO-2YP`), run the following command:
+
+```bash
+docker-compose up -d --build
+```
+
+Once the containers are built and running, you can access the application at:
+- **Frontend UI:** http://localhost:5173
+- **Backend API Docs:** http://localhost:8000/docs
+- **Database:** Connect via `localhost:5433` (User: `postgres`, Password: `syncro123`)
