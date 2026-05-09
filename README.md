@@ -75,13 +75,17 @@ Real-Time:
 
 To run the entire full-stack application (Frontend, Backend, and Database) at once, ensure Docker Desktop is running on your machine.
 
-From the root repository directory (`SYNCRO-2YP`), run the following command:
+1. **Environment Setup:** From the root repository directory (`SYNCRO-2YP`), copy the template environment file to a new `.env` file:
+   ```bash
+   cp .env.example .env
+   ```
 
-```bash
-docker-compose up -d --build
-```
+2. **Start Docker Containers:** Run the following command:
+   ```bash
+   docker-compose up -d --build
+   ```
 
 Once the containers are built and running, you can access the application at:
 - **Frontend UI:** http://localhost:5173
 - **Backend API Docs:** http://localhost:8000/docs
-- **Database:** Connect via `localhost:5433` (User: `postgres`, Password: `syncro123`)
+- **Database:** Connect via `localhost:5433` (Use the credentials defined in your `.env` file)
