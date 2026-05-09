@@ -53,6 +53,8 @@ class BidResponse(BidBase):
     id: int
     bid_request_id: int
     seller_id: int
+    seller_name: Optional[str] = None
+    seller_logo: Optional[str] = None
     status: str
     created_at: datetime
 
@@ -114,6 +116,8 @@ class OrderResponse(OrderBase):
     id: int
     buyer_id: int
     seller_id: int
+    buyer_name: Optional[str] = None
+    seller_name: Optional[str] = None
     listing_id: Optional[int]
     status: str
     has_review: bool

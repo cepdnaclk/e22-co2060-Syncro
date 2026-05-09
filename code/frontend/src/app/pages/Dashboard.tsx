@@ -305,7 +305,7 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
                     <tr key={order.id} className="border-b border-border last:border-0 hover:bg-muted/50">
                       <td className="py-3 px-4 text-sm font-medium">#{order.id}</td>
                       <td className="py-3 px-4 text-sm">{order.service_name}</td>
-                      <td className="py-3 px-4 text-sm text-muted-foreground">Seller {order.seller_id}</td>
+                      <td className="py-3 px-4 text-sm text-muted-foreground">{order.seller_name || `Seller ${order.seller_id}`}</td>
                       <td className="py-3 px-4">
                         <Badge variant={statusVariant(order.status as any)}>
                           {order.status}
@@ -520,7 +520,7 @@ function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboa
                     <tr key={order.id} className="border-b border-border last:border-0 hover:bg-muted/50">
                       <td className="py-3 px-4 text-sm font-medium">#{order.id}</td>
                       <td className="py-3 px-4 text-sm">{order.service_name}</td>
-                      <td className="py-3 px-4 text-sm text-muted-foreground">Buyer {order.buyer_id}</td>
+                      <td className="py-3 px-4 text-sm text-muted-foreground">{order.buyer_name || `Buyer ${order.buyer_id}`}</td>
                       <td className="py-3 px-4">
                         <Badge variant={statusVariant(order.status as any)}>
                           {order.status}
