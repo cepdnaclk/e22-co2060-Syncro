@@ -117,7 +117,18 @@ sequenceDiagram
 
 ---
 
-## 7. Repository Structure
+## 7. AI Integration
+
+Syncro leverages an advanced AI Agent chatbot to radically simplify the user experience for clients posting service requests.
+
+- **Intelligent Requirements Gathering:** Instead of filling out complex, multi-page forms, clients engage in a natural conversation with the Syncro AI Assistant. The AI asks clarifying questions to deeply understand the client's needs.
+- **Automated RFP Generation:** Once the AI has gathered sufficient context, it automatically synthesizes the conversation into a highly structured Request for Proposal (RFP), including auto-generating the title, budget estimates, required skills, and project timeline.
+- **Powered by Groq API:** The backend integrates with high-performance LLMs via Groq API, allowing for ultra-fast conversational responses. The backend uses a robust prompt-engineering pipeline to ensure the LLM strictly adheres to gathering project data.
+- **Seamless State Transition:** The React frontend manages the chat state gracefully, auto-redirecting the user straight to their live "Bids" dashboard the moment the AI successfully finalizes and publishes the RFP.
+
+---
+
+## 8. Repository Structure
 
 - `code/`: Contains the source code for the FastAPI backend and React frontend.
 - `database/`: Holds the PostgreSQL schema designs, ER diagrams, and initialization scripts.
@@ -125,7 +136,7 @@ sequenceDiagram
 
 ---
 
-## 8. How to Run Locally
+## 9. How to Run Locally
 
 To run the entire full-stack application (Frontend, Backend, and Database) at once, ensure Docker Desktop is running on your machine.
 
