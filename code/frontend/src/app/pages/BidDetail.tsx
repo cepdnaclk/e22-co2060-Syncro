@@ -217,31 +217,36 @@ export function BidDetail() {
                                             <div className="flex flex-col md:flex-row gap-6">
                                                 <div className="flex-1 space-y-4">
                                                     <div className="flex items-center justify-between">
-                                                        <div className="flex items-center gap-3">
+                                                        <Link
+                                                            to={`/seller/${bid.seller_id}`}
+                                                            className="flex items-center gap-3 group/seller hover:opacity-80 transition-opacity"
+                                                            title="View seller profile"
+                                                        >
                                                             {bid.seller_logo ? (
                                                                 <img
                                                                     src={bid.seller_logo}
                                                                     alt={bid.seller_name || 'Seller'}
-                                                                    className="w-10 h-10 rounded-lg object-cover border border-border shrink-0"
+                                                                    className="w-10 h-10 rounded-lg object-cover border border-border shrink-0 group-hover/seller:ring-2 group-hover/seller:ring-primary transition-all"
                                                                 />
                                                             ) : (
-                                                                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center shrink-0 border border-border">
+                                                                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center shrink-0 border border-border group-hover/seller:ring-2 group-hover/seller:ring-primary transition-all">
                                                                     <span className="text-sm font-bold text-primary">
                                                                         {(bid.seller_name || `S${bid.seller_id}`).substring(0, 2).toUpperCase()}
                                                                     </span>
                                                                 </div>
                                                             )}
                                                             <div>
-                                                                <h3 className="font-bold text-lg">
+                                                                <h3 className="font-bold text-lg group-hover/seller:text-primary transition-colors">
                                                                     {bid.seller_name || `Seller ${bid.seller_id}`}
                                                                 </h3>
                                                                 <div className="flex items-center gap-1 mt-1">
                                                                     <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
                                                                     <span className="text-sm font-medium">--</span>
                                                                     <span className="text-xs text-muted-foreground ml-1">Rating</span>
+                                                                    <span className="text-xs text-primary ml-1 underline underline-offset-2">View Profile →</span>
                                                                 </div>
                                                             </div>
-                                                        </div>
+                                                        </Link>
                                                         <div className="text-right">
                                                             <p className="text-2xl font-bold text-primary">Rs. {bid.price.toLocaleString()}</p>
                                                             <p className="text-sm text-muted-foreground">for {bid.quantity} units</p>

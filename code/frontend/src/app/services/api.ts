@@ -313,3 +313,30 @@ export const bidsApi = {
         return handleResponse<Bid>(res);
     },
 };
+
+// ---------- Public Seller Profile ----------
+export interface SellerPublicProfile {
+    profile: Profile;
+    listings: Listing[];
+    reviews: any[];
+    avgRating: number;
+    reviewCount: number;
+}
+
+export const sellerProfileApi = {
+    /** Fetches profile, listings, and reviews for any seller by their user_id. */
+    async getPublicProfile(userId: number): Promise<SellerPublicProfile> {
+        const [profile, listings, reviews] = await Promise.all([
+            fetch(`${BASE_URL}/profiles/${userId}`).then(r =>
+                r.ok ? r.json() : Promise.reject(new Error('Profile not found'))),
+            fetch(`${BASE_URL}/listings/seller/${userId}`).then(r =>
+                r.ok ? r.json() : []),
+            fetch(`${BASE_URL}/reviews/user/${userId}`).then(r =>
+                r.ok ? r.json() : []),
+        ]);
+        const avgRating = reviews.length
+            ? reviews.reduce((sum: number, r: any) => sum + (r.rating ?? 0), 0) / reviews.length
+            : 0;
+        return { profile, listings, reviews, avgRating, reviewCount: reviews.length };
+    },
+};
