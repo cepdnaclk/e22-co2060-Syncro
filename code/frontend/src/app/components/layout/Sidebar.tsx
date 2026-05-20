@@ -17,7 +17,7 @@ import {
 import { useApp } from '../../context/AppContext';
 
 export function Sidebar() {
-  const { role, businessProfile, hasSellerProfile } = useApp();
+  const { role, businessProfile, hasSellerProfile, authUser } = useApp();
   const location = useLocation();
 
   const buyerNavItems = [
@@ -113,7 +113,7 @@ export function Sidebar() {
             {/* Fixed: now links to the seller preview page, not settings */}
             <div className="flex flex-col gap-1.5">
               <Link
-                to="/seller/preview"
+                to={`/seller/${authUser?.userId}`}
                 className="flex items-center gap-2 text-xs text-primary hover:text-primary/80 transition-colors"
               >
                 <ExternalLink className="w-3 h-3" />

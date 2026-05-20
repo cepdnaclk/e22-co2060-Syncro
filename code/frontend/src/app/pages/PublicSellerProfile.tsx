@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
 import { motion } from 'motion/react';
 import {
-    Star, MapPin, Globe, Mail, Phone, ArrowLeft,
-    Package, Loader2, AlertCircle, Clock, ShoppingBag
+    Star, MapPin, Globe, Phone, ArrowLeft,
+    Package, Loader2, AlertCircle, Clock, ShoppingBag, Pencil
 } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { sellerProfileApi, SellerPublicProfile } from '../services/api';
+import { useApp } from '../context/AppContext';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Public Seller Profile — fetches real data by seller user_id from the backend
@@ -18,6 +19,10 @@ import { sellerProfileApi, SellerPublicProfile } from '../services/api';
 export function PublicSellerProfile() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const { authUser } = useApp();
+
+    // True when the logged-in seller is viewing their own profile
+    const isOwnProfile = authUser?.userId !== undefined && Number(id) === authUser.userId;
 
     const [data, setData] = useState<SellerPublicProfile | null>(null);
     const [loading, setLoading] = useState(true);
@@ -65,14 +70,44 @@ export function PublicSellerProfile() {
     return (
         <div className="max-w-6xl mx-auto space-y-8 pb-12">
 
-            {/* ── Back button ── */}
-            <button
-                onClick={() => navigate(-1)}
-                className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-            >
-                <ArrowLeft className="w-4 h-4" />
-                Back
-            </button>
+            {/* ── Top bar: Back + Edit (own profile only) ── */}
+            <div className="flex items-center justify-between">
+                <button
+                    onClick={() => navigate(-1)}
+                    className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+                >
+                    <ArrowLeft className="w-4 h-4" />
+                    Back
+                </button>
+
+                {isOwnProfile && (
+                    <Link to="/settings?tab=business">
+                        <Button variant="outline" size="sm" className="gap-2 border-primary/40 text-primary hover:bg-primary/5">
+                            <Pencil className="w-3.5 h-3.5" />
+                            Edit Business Profile
+                        </Button>
+                    </Link>
+                )}
+            </div>
+
+            {/* ── "Your public profile" info banner (own profile only) ── */}
+            {isOwnProfile && (
+                <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-3 px-4 py-3 bg-primary/5 border border-primary/20 rounded-xl text-sm"
+                >
+                    <span className="text-primary font-medium">
+                        👁 This is how buyers see your public profile.
+                    </span>
+                    <Link
+                        to="/settings?tab=business"
+                        className="ml-auto text-primary underline underline-offset-2 hover:opacity-80 shrink-0 font-medium"
+                    >
+                        Edit Profile →
+                    </Link>
+                </motion.div>
+            )}
 
             {/* ── Hero / Header card ── */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
