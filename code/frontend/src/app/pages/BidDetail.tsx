@@ -33,7 +33,7 @@ const fadeInUp = {
 
 export function BidDetail() {
     const { id } = useParams();
-    const { role } = useApp();
+    const { role, socketOn } = useApp();
     const [acceptedBidId, setAcceptedBidId] = useState<number | null>(null);
     const [bidAmount, setBidAmount] = useState('');
     const [deliveryTime, setDeliveryTime] = useState('');
@@ -53,6 +53,20 @@ export function BidDetail() {
             bidsApi.getMyBids().then(setMyBids).catch(console.error);
         }
     }, [id, role]);
+
+    // ── Real-time: re-fetch bids when a new proposal arrives for this request ──
+    // The backend emits new_notification{type:'new_bid', reference_id: bid_request_id}
+    // to the buyer's room every time a seller submits a bid.
+    useEffect(() => {
+        if (!id || role !== 'buyer') return;
+        const unsubscribe = socketOn('new_notification', (data: any) => {
+            if (data.type === 'new_bid' && Number(data.reference_id) === Number(id)) {
+                // A new proposal just arrived for this request — refresh the list
+                bidsApi.getBidsForRequest(Number(id)).then(setBids).catch(console.error);
+            }
+        });
+        return unsubscribe;
+    }, [id, role, socketOn]);
 
     const hasPlacedActiveBid = myBids.some(b => b.bid_request_id === Number(id) && b.status.toLowerCase() !== 'rejected');
 
@@ -101,6 +115,8 @@ export function BidDetail() {
             setBidAmount('');
             setDeliveryTime('');
             setProposal('');
+            // Refresh seller's own bids so hasPlacedActiveBid updates immediately
+            bidsApi.getMyBids().then(setMyBids).catch(console.error);
         } catch (e: any) {
             toast.error(e.message || "Failed to submit bid");
         } finally {
