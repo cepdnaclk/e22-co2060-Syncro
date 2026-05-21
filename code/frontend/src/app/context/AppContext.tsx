@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { authApi } from '../services/api';
 import { io, Socket } from 'socket.io-client';
 import { toast } from 'sonner';
@@ -76,6 +76,9 @@ interface AppContextType {
   setIsChatOpen: (open: boolean) => void;
   notifications: any[];
   markNotificationRead: (id: number) => Promise<void>;
+  // Subscribe to a socket event from any page component.
+  // Returns an unsubscribe function — call it in useEffect cleanup.
+  socketOn: (event: string, handler: (data: any) => void) => () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -147,6 +150,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
+
+  // Holds the live socket so pages can subscribe without creating their own connection
+  const socketRef = useRef<Socket | null>(null);
+
+  // Pages call socketOn(event, handler) in a useEffect and return the unsubscribe fn.
+  // This forwards directly to the shared socket — no second connection needed.
+  const socketOn = (event: string, handler: (data: any) => void) => {
+    const socket = socketRef.current;
+    if (socket) socket.on(event, handler);
+    return () => {
+      if (socketRef.current) socketRef.current.off(event, handler);
+    };
+  };
 
   const isAuthenticated = authUser !== null;
 
@@ -256,7 +272,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setAuthUser(updatedUser);
   };
 
-  // Side effects
+  // ── Effect 1: Fetch notification history whenever auth state changes ─────────
+  // Re-runs on login and on role toggle (new token) to always show latest list.
   useEffect(() => {
     if (!authUser) return;
 
@@ -265,45 +282,58 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const { notificationsApi } = await import('../services/api');
         const data = await notificationsApi.getAll();
         setNotifications(data);
-        
-        // Show toasts for missed notifications
-        const unread = data.filter((n: any) => !n.is_read);
-        unread.forEach((n: any) => {
-          toast.success(n.title, {
-            description: n.message,
-            duration: 5000,
-          });
-        });
+        // Do NOT toast pre-existing unread notifications here — that would
+        // spam the user with old alerts on every login or role switch.
+        // Real-time toasts are handled by the socket listener below.
       } catch (e) {
-        console.error("Failed to fetch notifications", e);
+        console.error('Failed to fetch notifications', e);
       }
     };
     fetchNotifs();
+  }, [authUser]);
+
+  // ── Effect 2: Socket.IO connection — only reconnect when userId changes ──────
+  // Keyed on userId so a role toggle (which changes authUser but NOT userId)
+  // does NOT tear down and rebuild the connection unnecessarily.
+  useEffect(() => {
+    const userId = authUser?.userId;
+    if (!userId) return;
 
     const socket: Socket = io(import.meta.env.VITE_API_URL || 'http://localhost:8000');
-    
+    socketRef.current = socket; // expose to pages via socketOn()
+
     socket.on('connect', () => {
-      socket.emit('identify', { userId: authUser.userId });
+      // Join the personal room so the backend can target this user
+      socket.emit('identify', { userId });
+      console.log(`🔔 Socket connected and identified as user ${userId}`);
+    });
+
+    socket.on('connect_error', (err) => {
+      console.error('Socket connection error:', err.message);
     });
 
     socket.on('new_notification', (data) => {
+      // Show an instant toast for truly real-time notifications
       toast.success(data.title, {
         description: data.text,
         duration: 5000,
       });
+      // Prepend to the notification list so the bell badge updates immediately
       setNotifications(prev => [{
-        id: data.id, 
-        title: data.title, 
-        message: data.text, 
-        is_read: false, 
-        created_at: new Date().toISOString()
+        id: data.id,
+        title: data.title,
+        message: data.text,
+        is_read: false,
+        reference_id: data.reference_id ?? null,
+        created_at: new Date().toISOString(),
       }, ...prev]);
     });
 
     return () => {
       socket.disconnect();
+      socketRef.current = null;
     };
-  }, [authUser]);
+  }, [authUser?.userId]);
 
   const markNotificationRead = async (id: number) => {
     try {
@@ -362,6 +392,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setIsChatOpen,
       notifications,
       markNotificationRead,
+      socketOn,
     }}>
       {children}
     </AppContext.Provider>

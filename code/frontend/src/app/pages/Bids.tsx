@@ -25,7 +25,7 @@ const fadeInUp = {
 // ──────────────────────────────────────────────────────────────
 
 export function Bids() {
-    const { role, setIsChatOpen } = useApp();
+    const { role, setIsChatOpen, socketOn } = useApp();
     const [activeTab, setActiveTab] = useState<'requests' | 'my-bids'>(role === 'buyer' ? 'requests' : 'requests');
     const [myRequests, setMyRequests] = useState<BidRequest[]>([]);
     const [availableJobs, setAvailableJobs] = useState<BidRequest[]>([]);
@@ -39,6 +39,25 @@ export function Bids() {
             bidsApi.getMyBids().then(data => setMyBids(data)).catch(console.error);
         }
     }, [role]);
+
+    // ── Real-time updates via shared socket ───────────────────────────────────
+    useEffect(() => {
+        const unsubscribe = socketOn('new_notification', (data: any) => {
+            if (data.type === 'new_request') {
+                // A buyer just posted a new request that matches this seller’s profile.
+                // Re-fetch the matching jobs list so it appears instantly.
+                bidsApi.getMatchingRequests().then(setAvailableJobs).catch(console.error);
+            }
+            if (data.type === 'new_bid') {
+                // Seller submitted a bid — refresh the buyer’s own request list
+                // so bid counts stay accurate on the Bids page.
+                if (role === 'buyer') {
+                    bidsApi.getMyRequests().then(setMyRequests).catch(console.error);
+                }
+            }
+        });
+        return unsubscribe;
+    }, [role, socketOn]);
 
     const openRequests = myRequests.filter(req => req.status.toLowerCase() === 'open');
     const historyRequests = myRequests.filter(req => req.status.toLowerCase() !== 'open');

@@ -47,3 +47,9 @@ async def create_listing_with_image(
 async def get_listings(db: Session = Depends(get_db)):
     listings = db.query(Listing).all()
     return listings
+
+@router.get("/listings/seller/{user_id}", response_model=List[ListingResponse])
+async def get_listings_by_seller(user_id: int, db: Session = Depends(get_db)):
+    """Return all listings for a specific seller — used by the public profile page."""
+    listings = db.query(Listing).filter(Listing.seller_id == user_id).all()
+    return listings
