@@ -69,7 +69,7 @@ interface AppContextType {
   authUser: AuthUser | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
+  register: (email: string, password: string, firstName: string, lastName: string, location: string) => Promise<void>;
   logout: () => void;
   toggleRole: () => Promise<void>;
   isChatOpen: boolean;
@@ -231,8 +231,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Real register — calls backend
-  const register = async (email: string, password: string, firstName: string, lastName: string) => {
-    const data = await authApi.register({ email, password, first_name: firstName, last_name: lastName });
+  const register = async (email: string, password: string, firstName: string, lastName: string, location: string) => {
+    const data = await authApi.register({ email, password, first_name: firstName, last_name: lastName, location });
     const user: AuthUser = {
       userId: data.user_id,
       email,

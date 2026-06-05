@@ -80,6 +80,7 @@ export const authApi = {
         password: string;
         first_name: string;
         last_name: string;
+        location: string;
     }): Promise<AuthResponse> {
         const res = await fetch(`${BASE_URL}/auth/register`, {
             method: 'POST',
