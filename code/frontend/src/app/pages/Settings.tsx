@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
-import { User, Bell, Shield, Moon, Sun, Monitor, Building2, AlertTriangle } from 'lucide-react';
+import { User, Bell, Shield, Moon, Sun, Monitor, Building2, AlertTriangle, MapPin } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -9,6 +9,21 @@ import { useApp } from '../context/AppContext';
 import { SellerProfileSettings } from '../components/SellerProfileSettings';
 import { useSearchParams, useNavigate } from 'react-router';
 import { authApi, profilesApi } from '../services/api';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
+
+const SRI_LANKA_DISTRICTS = [
+  'Ampara', 'Anuradhapura', 'Badulla', 'Batticaloa', 'Colombo',
+  'Galle', 'Gampaha', 'Hambantota', 'Jaffna', 'Kalutara',
+  'Kandy', 'Kegalle', 'Kilinochchi', 'Kurunegala', 'Mannar',
+  'Matale', 'Matara', 'Monaragala', 'Mullaitivu', 'Nuwara Eliya',
+  'Polonnaruwa', 'Puttalam', 'Ratnapura', 'Trincomalee', 'Vavuniya',
+];
 
 type Tab = 'profile' | 'notifications' | 'appearance' | 'privacy' | 'business';
 
@@ -183,6 +198,31 @@ export function Settings() {
                       label="Phone Number"
                       placeholder="+94 77 123 4567"
                     />
+
+                  {/* District / Location */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
+                      District
+                    </label>
+                    <Select
+                      value={userProfile.location || ''}
+                      onValueChange={(val) =>
+                        setUserProfile({ ...userProfile, location: val })
+                      }
+                    >
+                      <SelectTrigger id="settings-district-select">
+                        <SelectValue placeholder="Select your district" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-56">
+                        {SRI_LANKA_DISTRICTS.map((district) => (
+                          <SelectItem key={district} value={district}>
+                            {district}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
                   <div>
                     <label className="block text-sm font-medium mb-2">Bio</label>

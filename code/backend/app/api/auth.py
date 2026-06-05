@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from datetime import timedelta
 from ..database import get_db
 from ..models.models import User
-from ..schemas.schemas import UserCreate, UserLogin, Token
+from ..schemas.schemas import UserCreate, UserLogin, Token, UserResponse
 from ..core.security import get_password_hash, verify_password, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 
 router = APIRouter()
@@ -110,6 +110,10 @@ async def toggle_role(current_user: User = Depends(get_current_user_from_token),
         "user_id": current_user.id,
         "first_name": current_user.first_name
     }
+
+@router.get("/auth/me", response_model=UserResponse)
+def get_current_user_profile(current_user: User = Depends(get_current_user_from_token)):
+    return current_user
 
 
 @router.delete("/auth/me")

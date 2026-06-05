@@ -114,6 +114,13 @@ export const authApi = {
         });
         return handleResponse(res);
     },
+
+    async getMe(): Promise<{ id: number; email: string; first_name: string | null; last_name: string | null; location: string | null; active_role: string }> {
+        const res = await fetch(`${BASE_URL}/auth/me`, {
+            headers: headers(true),
+        });
+        return handleResponse(res);
+    },
 };
 
 // ---------- Listings ----------
