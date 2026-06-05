@@ -224,9 +224,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const { profilesApi } = await import('../services/api');
       const profile = await profilesApi.get(data.user_id);
       
-      // A user is only considered to have a seller account if they completed onboarding
-      // The default profile created on registration has an empty description
-      if (profile && profile.description && profile.description.trim() !== '') {
+      // A user is only considered to have a seller account if they completed onboarding.
+      // We require BOTH a non-empty description AND a profile name that differs from the
+      // user's personal "First Last" name — onboarding always sets a distinct business name.
+      // This prevents a buyer's personal bio (stored only in localStorage) from ever
+      // triggering seller mode if it accidentally ends up in profile.description.
+      const personalName = `${data.first_name || ''} ${profile?.name?.split(' ')[1] || ''}`.trim().toLowerCase();
+      const profileName  = (profile?.name || '').trim().toLowerCase();
+      const hasCustomBusinessName = profileName !== '' && profileName !== personalName;
+
+      if (profile && profile.description && profile.description.trim() !== '' && hasCustomBusinessName) {
         setHasSellerAccount(true);
         setBusinessProfileState({
           name: profile.name,

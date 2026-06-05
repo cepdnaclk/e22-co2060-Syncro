@@ -35,6 +35,11 @@ class UserResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class UserUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    location: Optional[str] = None
+
 # --- Bids & Bid Requests ---
 class BidRequestBase(BaseModel):
     description: str

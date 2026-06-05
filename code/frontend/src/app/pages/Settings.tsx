@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
-import { User, Bell, Shield, Moon, Sun, Monitor, Building2, AlertTriangle, MapPin } from 'lucide-react';
+import { User, Bell, Shield, Moon, Sun, Monitor, Building2, AlertTriangle, MapPin, CheckCircle2 } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -42,6 +42,65 @@ export function Settings() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Controlled profile form state ─────────────────────────────────────────
+  const [firstName, setFirstName] = useState(userProfile.firstName || '');
+  const [lastName, setLastName]   = useState(userProfile.lastName  || '');
+  const [phone, setPhone]         = useState(userProfile.phone     || '');
+  const [bio, setBio]             = useState(userProfile.bio       || '');
+  const [district, setDistrict]   = useState(userProfile.location  || '');
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError]     = useState('');
+
+  // Keep local state in sync if userProfile hydrates after mount (e.g. getMe() resolves)
+  useEffect(() => {
+    setFirstName(userProfile.firstName || '');
+    setLastName(userProfile.lastName   || '');
+    setPhone(userProfile.phone         || '');
+    setBio(userProfile.bio             || '');
+    setDistrict(userProfile.location   || '');
+  }, [userProfile.firstName, userProfile.lastName, userProfile.phone, userProfile.bio, userProfile.location]);
+
+  const handleSaveProfile = async () => {
+    setSaveLoading(true);
+    setSaveSuccess(false);
+    setSaveError('');
+    try {
+      // Update user table fields (name + district) via PATCH /auth/me
+      await authApi.updateMe({
+        first_name: firstName.trim(),
+        last_name:  lastName.trim(),
+        location:   district,
+      });
+
+      // Update profile table fields (phone only) via PUT /profiles/me
+      // NOTE: We intentionally do NOT write bio to profile.description here.
+      // profile.description is reserved for seller onboarding (business description).
+      // Writing buyer bio there falsely triggers the seller-account detection on login.
+      await profilesApi.update({
+        name:  `${firstName.trim()} ${lastName.trim()}`.trim(),
+        phone: phone.trim() || undefined,
+      });
+
+      // Sync global context + localStorage
+      setUserProfile({
+        ...userProfile,
+        firstName: firstName.trim(),
+        lastName:  lastName.trim(),
+        phone:     phone.trim(),
+        bio:       bio.trim(),
+        location:  district,
+      });
+
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err: any) {
+      setSaveError(err.message || 'Failed to save profile. Please try again.');
+    } finally {
+      setSaveLoading(false);
+    }
+  };
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -181,23 +240,28 @@ export function Settings() {
                   <div className="grid md:grid-cols-2 gap-4">
                     <Input
                       label="First Name"
-                      defaultValue={userProfile.firstName}
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
                     />
                     <Input
                       label="Last Name"
-                      defaultValue={userProfile.lastName}
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
                     />
                   </div>
                   <Input
                     type="email"
                     label="Email"
-                    defaultValue={userProfile.email}
+                    value={userProfile.email}
+                    disabled
                   />
-                    <Input
-                      type="tel"
-                      label="Phone Number"
-                      placeholder="+94 77 123 4567"
-                    />
+                  <Input
+                    type="tel"
+                    label="Phone Number"
+                    placeholder="+94 77 123 4567"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                  />
 
                   {/* District / Location */}
                   <div className="flex flex-col gap-1.5">
@@ -206,19 +270,15 @@ export function Settings() {
                       District
                     </label>
                     <Select
-                      value={userProfile.location || ''}
-                      onValueChange={(val) =>
-                        setUserProfile({ ...userProfile, location: val })
-                      }
+                      value={district}
+                      onValueChange={(val) => setDistrict(val)}
                     >
                       <SelectTrigger id="settings-district-select">
                         <SelectValue placeholder="Select your district" />
                       </SelectTrigger>
                       <SelectContent className="max-h-56">
-                        {SRI_LANKA_DISTRICTS.map((district) => (
-                          <SelectItem key={district} value={district}>
-                            {district}
-                          </SelectItem>
+                        {SRI_LANKA_DISTRICTS.map((d) => (
+                          <SelectItem key={d} value={d}>{d}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -228,13 +288,29 @@ export function Settings() {
                     <label className="block text-sm font-medium mb-2">Bio</label>
                     <textarea
                       rows={3}
-                      defaultValue={userProfile.bio}
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value)}
                       className="w-full px-4 py-3 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                       placeholder="Tell us about yourself..."
                     />
                   </div>
 
-                  <Button>Save Profile</Button>
+                  {/* Feedback messages */}
+                  {saveSuccess && (
+                    <div className="flex items-center gap-2 px-4 py-3 bg-green-500/10 border border-green-500/30 rounded-lg text-sm text-green-600 dark:text-green-400">
+                      <CheckCircle2 className="w-4 h-4 shrink-0" />
+                      Profile saved successfully!
+                    </div>
+                  )}
+                  {saveError && (
+                    <div className="px-4 py-3 bg-destructive/10 border border-destructive/30 rounded-lg text-sm text-destructive">
+                      {saveError}
+                    </div>
+                  )}
+
+                  <Button onClick={handleSaveProfile} disabled={saveLoading}>
+                    {saveLoading ? 'Saving...' : 'Save Profile'}
+                  </Button>
                 </CardContent>
               </Card>
             )}
