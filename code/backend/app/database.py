@@ -4,7 +4,8 @@ from sqlalchemy.orm import sessionmaker
 import os
 from dotenv import load_dotenv, find_dotenv
 
-load_dotenv(find_dotenv(), override=True)
+# Use environment variables if present (e.g. from Docker), otherwise load from .env
+load_dotenv(find_dotenv())
 DEFAULT_DATABASE_URL = "postgresql://postgres:password@localhost/syncro_db"
 
 # Ensure this matches your .env file, mapping fallback if .env is missing or empty
