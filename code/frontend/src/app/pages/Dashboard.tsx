@@ -196,7 +196,7 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
           <motion.div key={stat.label} {...fadeInUp} transition={{ delay: index * 0.1 }}>
             <Card hover className="border border-border/60 shadow-sm rounded-xl overflow-hidden">
               <CardContent className="p-6">
-                <div className="flex items-start justify-between">
+                <div className="flex items-center justify-between">
                   <div className="flex flex-col h-full justify-between gap-4">
                     <p className="text-[13px] text-gray-500">{stat.label}</p>
                     <p className="text-[32px] font-bold text-gray-900 leading-none">{stat.value}</p>
@@ -212,7 +212,62 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
       </div>
 
 
-      {/* Charts */}
+{/* Recent Orders */}
+<motion.div {...fadeInUp} transition={{ delay: 0.4 }}>
+  <Card>
+    <CardHeader>
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">Recent Orders</h3>
+        <Link to="/orders">
+          <Button variant="ghost" size="sm">View All</Button>
+        </Link>
+      </div>
+    </CardHeader>
+    <CardContent>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-border">
+              <th className="text-left py-3 px-4 text-sm font-semibold">Order ID</th>
+              <th className="text-left py-3 px-4 text-sm font-semibold">Service</th>
+              <th className="text-left py-3 px-4 text-sm font-semibold">Seller</th>
+              <th className="text-left py-3 px-4 text-sm font-semibold">Status</th>
+              <th className="text-right py-3 px-4 text-sm font-semibold">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                  Loading orders...
+                </td>
+              </tr>
+            ) : orders.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                  No orders yet. Browse services to place your first order.
+                </td>
+              </tr>
+            ) : orders.map((order) => (
+              <tr key={order.id} className="border-b border-border last:border-0 hover:bg-muted/50">
+                <td className="py-3 px-4 text-sm font-medium">#{order.id}</td>
+                <td className="py-3 px-4 text-sm">{order.service_name}</td>
+                <td className="py-3 px-4 text-sm text-muted-foreground">{order.seller_name || `Seller ${order.seller_id}`}</td>
+                <td className="py-3 px-4">
+                  <Badge variant={statusVariant(order.status as any)}>
+                    {order.status}
+                  </Badge>
+                </td>
+                <td className="py-3 px-4 text-sm font-semibold text-right">LKR {order.amount}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </CardContent>
+  </Card>
+</motion.div>
+{/* Charts */}
       <div className="grid lg:grid-cols-2 gap-6">
         <motion.div {...fadeInUp} transition={{ delay: 0.4 }}>
           <Card>
@@ -265,61 +320,7 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
         </motion.div>
       </div>
 
-      {/* Recent Orders */}
-      <motion.div {...fadeInUp} transition={{ delay: 0.6 }}>
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Recent Orders</h3>
-              <Link to="/orders">
-                <Button variant="ghost" size="sm">View All</Button>
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left py-3 px-4 text-sm font-semibold">Order ID</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold">Service</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold">Seller</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold">Status</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold">Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr>
-                      <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
-                        Loading orders...
-                      </td>
-                    </tr>
-                  ) : orders.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
-                        No orders yet. Browse services to place your first order.
-                      </td>
-                    </tr>
-                  ) : orders.map((order) => (
-                    <tr key={order.id} className="border-b border-border last:border-0 hover:bg-muted/50">
-                      <td className="py-3 px-4 text-sm font-medium">#{order.id}</td>
-                      <td className="py-3 px-4 text-sm">{order.service_name}</td>
-                      <td className="py-3 px-4 text-sm text-muted-foreground">{order.seller_name || `Seller ${order.seller_id}`}</td>
-                      <td className="py-3 px-4">
-                        <Badge variant={statusVariant(order.status as any)}>
-                          {order.status}
-                        </Badge>
-                      </td>
-                      <td className="py-3 px-4 text-sm font-semibold text-right">LKR {order.amount}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+
     </div>
   );
 }
@@ -427,61 +428,8 @@ function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboa
         ))}
       </div>
 
-      {/* Charts */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        <motion.div {...fadeInUp} transition={{ delay: 0.4 }}>
-          <Card>
-            <CardHeader>
-              <h3 className="text-lg font-semibold">Revenue Overview</h3>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={revenueData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis dataKey="month" stroke="var(--muted-foreground)" />
-                  <YAxis stroke="var(--muted-foreground)" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'var(--card)',
-                      border: '1px solid var(--border)',
-                      borderRadius: '8px',
-                    }}
-                  />
-                  <Bar dataKey="revenue" fill="var(--primary)" radius={[8, 8, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div {...fadeInUp} transition={{ delay: 0.5 }}>
-          <Card>
-            <CardHeader>
-              <h3 className="text-lg font-semibold">Orders Trend</h3>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={orderData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis dataKey="month" stroke="var(--muted-foreground)" />
-                  <YAxis stroke="var(--muted-foreground)" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'var(--card)',
-                      border: '1px solid var(--border)',
-                      borderRadius: '8px',
-                    }}
-                  />
-                  <Line type="monotone" dataKey="orders" stroke="var(--accent)" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
-
       {/* Recent Orders */}
-      <motion.div {...fadeInUp} transition={{ delay: 0.6 }}>
+      <motion.div {...fadeInUp} transition={{ delay: 0.4 }}>
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -535,6 +483,59 @@ function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboa
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Charts */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        <motion.div {...fadeInUp} transition={{ delay: 0.5 }}>
+          <Card>
+            <CardHeader>
+              <h3 className="text-lg font-semibold">Revenue Overview</h3>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={revenueData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="month" stroke="var(--muted-foreground)" />
+                  <YAxis stroke="var(--muted-foreground)" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'var(--card)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '8px',
+                    }}
+                  />
+                  <Bar dataKey="revenue" fill="var(--primary)" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div {...fadeInUp} transition={{ delay: 0.6 }}>
+          <Card>
+            <CardHeader>
+              <h3 className="text-lg font-semibold">Orders Trend</h3>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={250}>
+                <LineChart data={orderData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="month" stroke="var(--muted-foreground)" />
+                  <YAxis stroke="var(--muted-foreground)" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'var(--card)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '8px',
+                    }}
+                  />
+                  <Line type="monotone" dataKey="orders" stroke="var(--accent)" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
     </div>
   );
 }

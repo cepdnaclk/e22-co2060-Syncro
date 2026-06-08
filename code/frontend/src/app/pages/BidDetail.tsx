@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import {
     ChevronLeft, Clock, Gavel, DollarSign, Package,
     CheckCircle2, AlertCircle, MessageSquare, Send,
-    User, Star, ShieldCheck
+    User, Star, ShieldCheck, Percent
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
@@ -310,19 +310,69 @@ export function BidDetail() {
                 {/* Sidebar - Bid Form (Seller View) */}
                 <div className="space-y-6">
                     {role === 'seller' ? (
-                        hasPlacedActiveBid ? (
-                            <Card className="border-dashed border-2 bg-muted/20 sticky top-24">
-                                <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                                    <div className="w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-4">
-                                        <CheckCircle2 className="w-8 h-8 text-blue-500" />
-                                    </div>
-                                    <h3 className="text-xl font-semibold mb-2">Proposal Submitted</h3>
-                                    <p className="text-sm text-muted-foreground leading-relaxed">
-                                        You have already submitted a proposal for this request. Check the "My Bids" tab to track its status.
-                                    </p>
-                                </CardContent>
-                            </Card>
-                        ) : (
+                        hasPlacedActiveBid ? (() => {
+                            const activeBid = myBids.find(b => b.bid_request_id === Number(id) && b.status.toLowerCase() !== 'rejected');
+                            return (
+                                <Card className="border-primary/20 shadow-lg shadow-primary/5 sticky top-24 overflow-hidden">
+                                    <CardHeader className="bg-green-500/5 p-6 border-b border-green-500/10 text-center">
+                                        <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-3">
+                                            <CheckCircle2 className="w-6 h-6 text-green-500" />
+                                        </div>
+                                        <h3 className="text-lg font-bold text-green-700">Proposal Submitted</h3>
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            Your offer is active and visible to the buyer.
+                                        </p>
+                                    </CardHeader>
+                                    <CardContent className="p-6 space-y-5">
+                                        {activeBid && (
+                                            <>
+                                                <div className="space-y-3 bg-muted/30 p-4 rounded-xl border border-border/50">
+                                                    <div className="flex justify-between items-center text-sm">
+                                                        <span className="text-muted-foreground">Total Bid Price</span>
+                                                        <span className="font-semibold text-foreground">
+                                                            Rs. {activeBid.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center text-sm">
+                                                        <span className="text-muted-foreground flex items-center gap-1">
+                                                            Platform Fee (5%)
+                                                        </span>
+                                                        <span className="font-semibold text-destructive/80">
+                                                            - Rs. {(activeBid.price * 0.05).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center text-sm pt-2.5 border-t border-border/40">
+                                                        <span className="font-semibold text-green-600 flex items-center gap-1">
+                                                            Profit
+                                                        </span>
+                                                        <span className="font-bold text-green-600 text-base">
+                                                            Rs. {(activeBid.price * 0.95).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-1.5 text-sm">
+                                                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Delivery Time</span>
+                                                    <p className="font-medium text-foreground">{activeBid.delivery_time || 'Not specified'}</p>
+                                                </div>
+
+                                                {activeBid.message && (
+                                                    <div className="space-y-1.5 text-sm">
+                                                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Your Proposal Message</span>
+                                                        <p className="text-muted-foreground bg-muted/20 p-3 rounded-lg border border-border/30 italic text-xs leading-relaxed">
+                                                            "{activeBid.message}"
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                        <p className="text-xs text-muted-foreground text-center pt-2 leading-relaxed">
+                                            Check the "My Bids" tab to track its status.
+                                        </p>
+                                    </CardContent>
+                                </Card>
+                            );
+                        })() : (
                             <motion.div
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
@@ -337,14 +387,27 @@ export function BidDetail() {
                                 </CardHeader>
                                 <CardContent className="p-6 space-y-6">
                                     <div className="space-y-4">
-                                        <div className="space-y-2">
+                                        <div className="space-y-2 relative">
                                             <label className="text-sm font-semibold">Total Price (Rs.)</label>
-                                            <Input
-                                                type="number"
-                                                placeholder="e.g. 1500"
-                                                value={bidAmount}
-                                                onChange={(e) => setBidAmount(e.target.value)}
-                                            />
+                                            <div className="relative">
+                                                <Input
+                                                    type="number"
+                                                    placeholder="e.g. 1500"
+                                                    value={bidAmount}
+                                                    onChange={(e) => setBidAmount(e.target.value)}
+                                                />
+                                                {parseFloat(bidAmount) > 0 && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                        className="absolute z-20 bottom-full right-0 mb-2 bg-gradient-to-r from-primary to-primary/80 text-white px-3 py-1.5 rounded-xl shadow-lg border border-primary/20 backdrop-blur-md flex items-center justify-center text-xs font-semibold"
+                                                    >
+                                                        <span>Profit: Rs. {(parseFloat(bidAmount) * 0.95).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                        {/* Tooltip pointer */}
+                                                        <div className="absolute top-full right-6 -mt-1 border-4 border-transparent border-t-primary"></div>
+                                                    </motion.div>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-sm font-semibold">Delivery Time</label>

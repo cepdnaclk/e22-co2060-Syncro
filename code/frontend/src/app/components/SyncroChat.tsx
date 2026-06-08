@@ -159,6 +159,23 @@ export function SyncroChat({
         }
     }, [isOpen]);
 
+    useEffect(() => {
+        if (!isOpen && isDone) {
+            setIsDone(false);
+            setAiHistory([]);
+            setMessages([
+                {
+                    id: 'welcome',
+                    role: 'bot',
+                    text: "👋 Hi! I'm **Syncro Assistant**.\n\nDescribe what you need and I'll help you find the right local service or product.",
+                    timestamp: new Date(),
+                },
+            ]);
+            setInputValue('');
+            setIsTyping(false);
+        }
+    }, [isOpen, isDone]);
+
     const sendMessage = useCallback(async () => {
         const text = inputValue.trim();
         if (!text || isTyping || isDone) return;
