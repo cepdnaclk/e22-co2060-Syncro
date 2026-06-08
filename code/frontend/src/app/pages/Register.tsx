@@ -1,11 +1,26 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { Moon, Sun, Loader2 } from 'lucide-react';
+import { Moon, Sun, Loader2, MapPin } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
 import { useApp } from '../context/AppContext';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
+
+const SRI_LANKA_DISTRICTS = [
+  'Ampara', 'Anuradhapura', 'Badulla', 'Batticaloa', 'Colombo',
+  'Galle', 'Gampaha', 'Hambantota', 'Jaffna', 'Kalutara',
+  'Kandy', 'Kegalle', 'Kilinochchi', 'Kurunegala', 'Mannar',
+  'Matale', 'Matara', 'Monaragala', 'Mullaitivu', 'Nuwara Eliya',
+  'Polonnaruwa', 'Puttalam', 'Ratnapura', 'Trincomalee', 'Vavuniya',
+];
 
 export function Register() {
   const navigate = useNavigate();
@@ -16,6 +31,7 @@ export function Register() {
     email: '',
     password: '',
     confirmPassword: '',
+    location: '',
   });
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const [apiError, setApiError] = useState('');
@@ -35,6 +51,8 @@ export function Register() {
       errors.confirmPassword = 'Passwords do not match';
     }
 
+    if (!formData.location) errors.location = 'Please select your district';
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -47,7 +65,7 @@ export function Register() {
 
     setLoading(true);
     try {
-      await register(formData.email, formData.password, formData.firstName, formData.lastName);
+      await register(formData.email, formData.password, formData.firstName, formData.lastName, formData.location);
       navigate('/dashboard');
     } catch (err: unknown) {
       setApiError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
@@ -169,6 +187,38 @@ export function Register() {
                 }}
                 required
               />
+
+              {/* District / Location */}
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
+                  District <span className="text-destructive">*</span>
+                </label>
+                <Select
+                  value={formData.location}
+                  onValueChange={(val) => {
+                    setFormData({ ...formData, location: val });
+                    if (formErrors.location) setFormErrors({ ...formErrors, location: '' });
+                  }}
+                >
+                  <SelectTrigger
+                    id="district-select"
+                    className={formErrors.location ? 'border-destructive ring-destructive/20 ring-[3px]' : ''}
+                  >
+                    <SelectValue placeholder="Select your district" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-56">
+                    {SRI_LANKA_DISTRICTS.map((district) => (
+                      <SelectItem key={district} value={district}>
+                        {district}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {formErrors.location && (
+                  <p className="text-xs text-destructive mt-0.5">{formErrors.location}</p>
+                )}
+              </div>
 
               {apiError && (
                 <div className="px-4 py-3 bg-destructive/10 border border-destructive/30 rounded-lg text-sm text-destructive">

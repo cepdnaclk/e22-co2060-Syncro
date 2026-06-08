@@ -41,6 +41,7 @@ interface UserProfile {
   phone?: string;
   bio?: string;
   avatar?: string;
+  location?: string;
 }
 
 // Authenticated user info from JWT response
@@ -69,7 +70,7 @@ interface AppContextType {
   authUser: AuthUser | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
+  register: (email: string, password: string, firstName: string, lastName: string, location: string) => Promise<void>;
   logout: () => void;
   toggleRole: () => Promise<void>;
   isChatOpen: boolean;
@@ -201,6 +202,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // Seed the user profile from backend response
     setUserProfileState(prev => ({ ...prev, firstName: data.first_name, email }));
 
+    // Fetch full user details (including location) after token is set
+    try {
+      const me = await authApi.getMe();
+      setUserProfileState(prev => ({
+        ...prev,
+        firstName: me.first_name || data.first_name,
+        lastName: me.last_name || '',
+        email: me.email,
+        location: me.location || '',
+      }));
+    } catch { /* ignore — profile still usable without location */ }
+
     if (data.role === 'seller') {
       setHasSellerAccount(true);
     }
@@ -211,9 +224,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const { profilesApi } = await import('../services/api');
       const profile = await profilesApi.get(data.user_id);
       
-      // A user is only considered to have a seller account if they completed onboarding
-      // The default profile created on registration has an empty description
-      if (profile && profile.description && profile.description.trim() !== '') {
+      // A user is only considered to have a seller account if they completed onboarding.
+      // We require BOTH a non-empty description AND a profile name that differs from the
+      // user's personal "First Last" name — onboarding always sets a distinct business name.
+      // This prevents a buyer's personal bio (stored only in localStorage) from ever
+      // triggering seller mode if it accidentally ends up in profile.description.
+      const personalName = `${data.first_name || ''} ${profile?.name?.split(' ')[1] || ''}`.trim().toLowerCase();
+      const profileName  = (profile?.name || '').trim().toLowerCase();
+      const hasCustomBusinessName = profileName !== '' && profileName !== personalName;
+
+      if (profile && profile.description && profile.description.trim() !== '' && hasCustomBusinessName) {
         setHasSellerAccount(true);
         setBusinessProfileState({
           name: profile.name,
@@ -231,8 +251,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Real register — calls backend
-  const register = async (email: string, password: string, firstName: string, lastName: string) => {
-    const data = await authApi.register({ email, password, first_name: firstName, last_name: lastName });
+  const register = async (email: string, password: string, firstName: string, lastName: string, location: string) => {
+    const data = await authApi.register({ email, password, first_name: firstName, last_name: lastName, location });
     const user: AuthUser = {
       userId: data.user_id,
       email,
@@ -243,7 +263,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setAuthUser(user);
     localStorage.setItem('syncro_role', 'buyer');
     setRoleState('buyer');
-    setUserProfileState({ firstName, lastName, email });
+    setUserProfileState({ firstName, lastName, email, location });
   };
 
   // Logout — clear all auth state
@@ -291,6 +311,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
     fetchNotifs();
   }, [authUser]);
+
+  // ── Effect 1b: Hydrate location from backend on every session start ───────────
+  // When a session is restored from localStorage the userProfile may not have
+  // a location (e.g. sessions that pre-date the location feature, or the field
+  // was not yet persisted). We always re-fetch /auth/me so the district the user
+  // selected at sign-up is reliably shown in their profile settings.
+  useEffect(() => {
+    if (!authUser) return;
+    const syncLocation = async () => {
+      try {
+        const me = await authApi.getMe();
+        if (me.location) {
+          setUserProfileState(prev => ({
+            ...prev,
+            location: me.location ?? prev.location,
+          }));
+        }
+      } catch { /* silent — UI still functional without location */ }
+    };
+    syncLocation();
+  }, [authUser?.userId]);
 
   // ── Effect 2: Socket.IO connection — only reconnect when userId changes ──────
   // Keyed on userId so a role toggle (which changes authUser but NOT userId)

@@ -45,6 +45,7 @@ class User(Base):
     active_role = Column(Enum(UserRole), default=UserRole.CLIENT)
     first_name = Column(String, nullable=True)
     last_name = Column(String, nullable=True)
+    location = Column(String, nullable=True)  # Sri Lanka district
 
     profile = relationship("Profile", back_populates="user", uselist=False, cascade="all, delete-orphan")
     listings = relationship("Listing", back_populates="owner", cascade="all, delete-orphan")

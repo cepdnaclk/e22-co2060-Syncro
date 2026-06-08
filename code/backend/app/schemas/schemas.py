@@ -8,6 +8,7 @@ class UserCreate(BaseModel):
     password: str = Field(..., min_length=6)
     first_name: str
     last_name: str
+    location: str
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -22,6 +23,22 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     email: Optional[str] = None
+
+class UserResponse(BaseModel):
+    id: int
+    email: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    location: Optional[str] = None
+    active_role: str
+
+    class Config:
+        from_attributes = True
+
+class UserUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    location: Optional[str] = None
 
 # --- Bids & Bid Requests ---
 class BidRequestBase(BaseModel):
