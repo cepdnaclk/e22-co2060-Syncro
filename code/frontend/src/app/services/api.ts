@@ -331,11 +331,66 @@ export const bidsApi = {
     },
 };
 
+// ---------- Reviews ----------
+export interface Review {
+    id: number;
+    rating: number;
+    comment?: string;
+    order_id?: number | null;
+    reviewer_id: number;
+    reviewee_id: number;
+    reviewer_name?: string;
+    timestamp: string;
+}
+
+export const reviewsApi = {
+    /** Submit a rating + comment for a completed order. */
+    async create(orderId: number, data: { rating: number; comment?: string }): Promise<Review> {
+        const res = await fetch(`${BASE_URL}/reviews/order/${orderId}`, {
+            method: 'POST',
+            headers: headers(true),
+            body: JSON.stringify(data),
+        });
+        return handleResponse<Review>(res);
+    },
+
+    /** Fetch all reviews received by a seller (by their user_id). */
+    async getForUser(userId: number): Promise<Review[]> {
+        const res = await fetch(`${BASE_URL}/reviews/user/${userId}`, {
+            headers: headers(),
+        });
+        return handleResponse<Review[]>(res);
+    },
+
+    /** Compute average rating for a seller without loading full profile. */
+    async getAvgRating(userId: number): Promise<{ avg: number; count: number }> {
+        try {
+            const reviews = await reviewsApi.getForUser(userId);
+            const count = reviews.length;
+            const avg = count
+                ? reviews.reduce((s, r) => s + r.rating, 0) / count
+                : 0;
+            return { avg, count };
+        } catch {
+            return { avg: 0, count: 0 };
+        }
+    },
+    /** Submit a rating + comment directly for a seller (no order required). */
+    async createForSeller(sellerId: number, data: { rating: number; comment?: string }): Promise<Review> {
+        const res = await fetch(`${BASE_URL}/reviews/seller/${sellerId}`, {
+            method: 'POST',
+            headers: headers(true),
+            body: JSON.stringify(data),
+        });
+        return handleResponse<Review>(res);
+    },
+};
+
 // ---------- Public Seller Profile ----------
 export interface SellerPublicProfile {
     profile: Profile;
     listings: Listing[];
-    reviews: any[];
+    reviews: Review[];
     avgRating: number;
     reviewCount: number;
 }

@@ -118,13 +118,14 @@ class Review(Base):
     comment = Column(Text, nullable=True)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
-    order_id = Column(Integer, ForeignKey("orders.id"), unique=True)
+    order_id = Column(Integer, ForeignKey("orders.id"), unique=True, nullable=True)
     reviewer_id = Column(Integer, ForeignKey("users.id"))
     reviewee_id = Column(Integer, ForeignKey("users.id"))
 
     order = relationship("Order", back_populates="review")
     reviewer = relationship("User", back_populates="reviews_given", foreign_keys=[reviewer_id])
     reviewee = relationship("User", back_populates="reviews_received", foreign_keys=[reviewee_id])
+
 
 class BidRequest(Base):
     __tablename__ = "bid_requests"
