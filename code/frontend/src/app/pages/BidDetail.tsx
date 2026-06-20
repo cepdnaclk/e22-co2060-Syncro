@@ -12,7 +12,7 @@ import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
 import { Textarea } from '../components/ui/textarea';
 import { Link, useParams } from 'react-router';
-import { bidsApi, BidRequest, Bid } from '../services/api';
+import { bidsApi, BidRequest, Bid, reviewsApi } from '../services/api';
 import { toast } from 'sonner';
 
 // ──────────────────────────────────────────────────────────────
@@ -43,12 +43,27 @@ export function BidDetail() {
     const [myBids, setMyBids] = useState<Bid[]>([]);
     const [submitting, setSubmitting] = useState(false);
     const [rejecting, setRejecting] = useState<number | null>(null);
+    // Map of seller_id -> { avg, count } fetched from reviews API
+    const [sellerRatings, setSellerRatings] = useState<Record<number, { avg: number; count: number }>>({});
 
     useEffect(() => {
         if (!id) return;
         bidsApi.getRequestById(Number(id)).then(setRequest).catch(console.error);
         if (role === 'buyer') {
-            bidsApi.getBidsForRequest(Number(id)).then(setBids).catch(console.error);
+            bidsApi.getBidsForRequest(Number(id)).then((fetchedBids) => {
+                setBids(fetchedBids);
+                // Fetch ratings for every unique seller in this bid list
+                const uniqueSellers = [...new Set(fetchedBids.map(b => b.seller_id))];
+                Promise.all(
+                    uniqueSellers.map(sid =>
+                        reviewsApi.getAvgRating(sid).then(r => ({ sid, r }))
+                    )
+                ).then(results => {
+                    const map: Record<number, { avg: number; count: number }> = {};
+                    results.forEach(({ sid, r }) => { map[sid] = r; });
+                    setSellerRatings(map);
+                }).catch(console.error);
+            }).catch(console.error);
         } else if (role === 'seller') {
             bidsApi.getMyBids().then(setMyBids).catch(console.error);
         }
@@ -61,8 +76,19 @@ export function BidDetail() {
         if (!id || role !== 'buyer') return;
         const unsubscribe = socketOn('new_notification', (data: any) => {
             if (data.type === 'new_bid' && Number(data.reference_id) === Number(id)) {
-                // A new proposal just arrived for this request — refresh the list
-                bidsApi.getBidsForRequest(Number(id)).then(setBids).catch(console.error);
+                bidsApi.getBidsForRequest(Number(id)).then((fetchedBids) => {
+                    setBids(fetchedBids);
+                    const uniqueSellers = [...new Set(fetchedBids.map(b => b.seller_id))];
+                    Promise.all(
+                        uniqueSellers.map(sid =>
+                            reviewsApi.getAvgRating(sid).then(r => ({ sid, r }))
+                        )
+                    ).then(results => {
+                        const map: Record<number, { avg: number; count: number }> = {};
+                        results.forEach(({ sid, r }) => { map[sid] = r; });
+                        setSellerRatings(map);
+                    }).catch(console.error);
+                }).catch(console.error);
             }
         });
         return unsubscribe;
@@ -240,10 +266,25 @@ export function BidDetail() {
                                                                     {bid.seller_name || `Seller ${bid.seller_id}`}
                                                                 </h3>
                                                                 <div className="flex items-center gap-1 mt-1">
-                                                                    <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
-                                                                    <span className="text-sm font-medium">--</span>
-                                                                    <span className="text-xs text-muted-foreground ml-1">Rating</span>
-                                                                    <span className="text-xs text-primary ml-1 underline underline-offset-2">View Profile →</span>
+                                                                    {(() => {
+                                                                        const sr = sellerRatings[bid.seller_id];
+                                                                        const avg = sr?.avg ?? 0;
+                                                                        const count = sr?.count ?? 0;
+                                                                        return (
+                                                                            <>
+                                                                                {[1,2,3,4,5].map(i => (
+                                                                                    <Star key={i} className={`w-3 h-3 ${i <= Math.round(avg) ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'}`} />
+                                                                                ))}
+                                                                                <span className="text-sm font-medium ml-1">
+                                                                                    {count > 0 ? avg.toFixed(1) : 'No ratings'}
+                                                                                </span>
+                                                                                {count > 0 && (
+                                                                                    <span className="text-xs text-muted-foreground">({count})</span>
+                                                                                )}
+                                                                                <span className="text-xs text-primary ml-1 underline underline-offset-2">View Profile →</span>
+                                                                            </>
+                                                                        );
+                                                                    })()}
                                                                 </div>
                                                             </div>
                                                         </Link>

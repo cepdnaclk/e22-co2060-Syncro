@@ -1,41 +1,54 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Star, CheckCircle } from 'lucide-react';
+import { X, Star, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from './ui/Button';
+import { reviewsApi } from '../services/api';
 
 interface ReviewModalProps {
   isOpen: boolean;
   onClose: () => void;
+  orderId: number;
   orderService: string;
   sellerName: string;
-  onSubmit: (rating: number, comment: string) => void;
+  /** Called after a successful submission so parent can update UI */
+  onSuccess?: () => void;
 }
 
-export function ReviewModal({ isOpen, onClose, orderService, sellerName, onSubmit }: ReviewModalProps) {
+export function ReviewModal({ isOpen, onClose, orderId, orderService, sellerName, onSuccess }: ReviewModalProps) {
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = () => {
-    if (rating > 0) {
-      onSubmit(rating, comment);
+  const handleSubmit = async () => {
+    if (rating === 0 || isSubmitting) return;
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await reviewsApi.create(orderId, { rating, comment: comment.trim() || undefined });
       setIsSubmitted(true);
+      onSuccess?.();
       setTimeout(() => {
-        onClose();
-        setIsSubmitted(false);
-        setRating(0);
-        setComment('');
+        handleClose();
       }, 2000);
+    } catch (e: any) {
+      setError(e.message || 'Failed to submit review. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleClose = () => {
     onClose();
-    setIsSubmitted(false);
-    setRating(0);
-    setComment('');
-    setHoverRating(0);
+    setTimeout(() => {
+      setIsSubmitted(false);
+      setRating(0);
+      setComment('');
+      setHoverRating(0);
+      setError(null);
+    }, 300);
   };
 
   if (!isOpen) return null;
@@ -51,7 +64,7 @@ export function ReviewModal({ isOpen, onClose, orderService, sellerName, onSubmi
           className="absolute inset-0 bg-black/50"
           onClick={handleClose}
         />
-        
+
         {/* Modal */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -132,6 +145,7 @@ export function ReviewModal({ isOpen, onClose, orderService, sellerName, onSubmi
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
                     rows={4}
+                    maxLength={500}
                     placeholder="Tell others about your experience working with this seller..."
                     className="w-full px-4 py-3 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                   />
@@ -139,19 +153,34 @@ export function ReviewModal({ isOpen, onClose, orderService, sellerName, onSubmi
                     {comment.length}/500 characters
                   </p>
                 </div>
+
+                {/* Error */}
+                {error && (
+                  <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    {error}
+                  </div>
+                )}
               </div>
 
               {/* Footer */}
               <div className="px-6 py-4 bg-accent/30 border-t border-border flex gap-3 justify-end">
-                <Button variant="outline" onClick={handleClose}>
+                <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
                   Cancel
                 </Button>
-                <Button 
+                <Button
                   onClick={handleSubmit}
-                  disabled={rating === 0}
-                  className="min-w-32"
+                  disabled={rating === 0 || isSubmitting}
+                  className="min-w-36 gap-2"
                 >
-                  Submit Review
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Submitting…
+                    </>
+                  ) : (
+                    'Submit Review'
+                  )}
                 </Button>
               </div>
             </>
@@ -167,7 +196,7 @@ export function ReviewModal({ isOpen, onClose, orderService, sellerName, onSubmi
               </motion.div>
               <h3 className="text-2xl font-bold mb-2">Thank You!</h3>
               <p className="text-muted-foreground">
-                Your review has been submitted successfully
+                Your review has been saved successfully
               </p>
             </div>
           )}
