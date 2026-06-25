@@ -431,7 +431,7 @@ function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboa
               disabled={statusLoading}
               className={`relative flex items-center gap-3 px-4 py-2.5 rounded-2xl border-2 font-semibold text-sm transition-all duration-300 select-none ${
                 isActive
-                  ? 'bg-emerald-50 border-emerald-400 text-emerald-700 dark:bg-emerald-950/40 dark:border-emerald-500 dark:text-emerald-300'
+                  ? 'bg-[#E1F2F7] border-[#0089BA] text-[#0057B8] dark:bg-[#0089BA]/20 dark:border-[#38BDF8] dark:text-[#38BDF8]'
                   : 'bg-muted/60 border-border text-muted-foreground'
               } ${statusLoading ? 'opacity-60 cursor-wait' : 'cursor-pointer hover:scale-[1.02] active:scale-[0.98]'}`}
               whileTap={{ scale: 0.97 }}
@@ -444,11 +444,11 @@ function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboa
                   <>
                     <span
                       className={`absolute inset-0 rounded-full transition-all duration-300 ${
-                        isActive ? 'bg-emerald-400 scale-100' : 'bg-muted-foreground/40 scale-75'
+                        isActive ? 'bg-[#0089BA] scale-100' : 'bg-muted-foreground/40 scale-75'
                       }`}
                     />
                     {isActive && (
-                      <span className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-60" />
+                      <span className="absolute inset-0 rounded-full bg-[#0089BA] animate-ping opacity-60" />
                     )}
                   </>
                 )}
@@ -462,13 +462,12 @@ function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboa
               {/* Pill toggle track */}
               <span
                 className={`relative w-10 h-5 rounded-full transition-colors duration-300 ${
-                  isActive ? 'bg-emerald-400' : 'bg-muted-foreground/30'
+                  isActive ? 'bg-[#0089BA]' : 'bg-muted-foreground/30'
                 }`}
               >
                 <motion.span
-                  layout
-                  className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm"
-                  animate={{ x: isActive ? 22 : 2 }}
+                  className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm"
+                  animate={{ x: isActive ? 18 : 0 }}
                   transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                 />
               </span>
