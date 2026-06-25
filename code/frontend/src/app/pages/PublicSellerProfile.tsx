@@ -124,11 +124,10 @@ function ReviewForm({ sellerId, onReviewSubmitted }: ReviewFormProps) {
                             className="transition-transform hover:scale-110 focus:outline-none"
                         >
                             <Star
-                                className={`w-8 h-8 transition-colors ${
-                                    star <= (hoverRating || rating)
+                                className={`w-8 h-8 transition-colors ${star <= (hoverRating || rating)
                                         ? 'fill-yellow-400 text-yellow-400'
                                         : 'text-muted-foreground'
-                                }`}
+                                    }`}
                             />
                         </button>
                     ))}
