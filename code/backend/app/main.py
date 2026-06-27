@@ -4,9 +4,10 @@ import sys
 import traceback
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import listings, auth, profiles, orders, reviews, bids, chat, notifications  # Import your API routers
-from app.database import engine # Import the database engine and Base for table creation
+from app.api import listings, auth, profiles, orders, reviews, bids, chat, notifications, messages  # Import your API routers
+from app.database import engine, SessionLocal # Import the database engine and Base for table creation
 from app.models import models  # Import the models so SQLAlchemy knows which tables to create
+from app.models import chat as chat_model  # Ensure Message table is registered with Base
 
 try:
     # Get the URL
@@ -51,6 +52,7 @@ fastapi_app.include_router(reviews.router)
 fastapi_app.include_router(bids.router)
 fastapi_app.include_router(chat.router)
 fastapi_app.include_router(notifications.router)
+fastapi_app.include_router(messages.router)
 
 
 @fastapi_app.get("/")
@@ -65,6 +67,11 @@ sio = socketio.AsyncServer(cors_allowed_origins="*", async_mode="asgi")
 # request.app.state.sio  (request.app resolves to fastapi_app at runtime)
 fastapi_app.state.sio = sio
 
+# ── sid → user_id mapping ────────────────────────────────────────────────────
+# Populated when the client emits "identify" after connecting.
+# Cleaned up on disconnect to prevent stale entries.
+_sid_to_user: dict[str, int] = {}
+
 
 @sio.on("connect")
 async def connect(sid, environ):
@@ -73,6 +80,7 @@ async def connect(sid, environ):
 
 @sio.on("disconnect")
 async def disconnect(sid):
+    _sid_to_user.pop(sid, None)
     print(f"❌ Socket disconnected: {sid}")
 
 
@@ -81,8 +89,72 @@ async def on_identify(sid, data):
     """Called by the client right after connecting to join their personal room."""
     user_id = data.get("userId")
     if user_id:
-        sio.enter_room(sid, f"user_{user_id}")
+        await sio.enter_room(sid, f"user_{user_id}")
+        _sid_to_user[sid] = int(user_id)
         print(f"🔔 User {user_id} joined room user_{user_id}")
+
+
+@sio.on("send_message")
+async def on_send_message(sid, data):
+    """
+    Real-time message delivery.
+
+    Expected payload:
+        { "receiver_id": int, "content": str, "order_id": int | null }
+
+    Flow:
+      1. Look up sender via sid → user mapping (set during "identify").
+      2. Persist the message to PostgreSQL.
+      3. Emit "new_message" to the receiver's personal room AND the sender's
+         room so all open tabs stay in sync.
+    """
+    sender_id = _sid_to_user.get(sid)
+    if not sender_id:
+        # Client hasn't identified yet — ignore silently
+        return
+
+    receiver_id = data.get("receiver_id")
+    content = (data.get("content") or "").strip()
+    order_id = data.get("order_id")  # optional
+
+    if not receiver_id or not content:
+        return
+
+    db = SessionLocal()
+    try:
+        from app.models.chat import Message
+
+        msg = Message(
+            sender_id=sender_id,
+            receiver_id=receiver_id,
+            content=content,
+            order_id=order_id if order_id else None,
+        )
+        db.add(msg)
+        db.commit()
+        db.refresh(msg)
+
+        payload = {
+            "id": msg.id,
+            "sender_id": msg.sender_id,
+            "receiver_id": msg.receiver_id,
+            "order_id": msg.order_id,
+            "content": msg.content,
+            "timestamp": msg.timestamp.isoformat(),
+            "is_read": msg.is_read,
+        }
+
+        # Deliver to receiver instantly
+        await sio.emit("new_message", payload, room=f"user_{receiver_id}")
+        # Echo back to sender so all their open tabs update too
+        await sio.emit("new_message", payload, room=f"user_{sender_id}")
+
+        print(f"💬 Message {msg.id}: user_{sender_id} → user_{receiver_id}")
+
+    except Exception as e:
+        print(f"❌ send_message error: {e}")
+    finally:
+        db.close()
 
 
 # ── Combined ASGI app (served by uvicorn) ────────────────────────────────────

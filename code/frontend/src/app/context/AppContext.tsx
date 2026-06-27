@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { authApi } from '../services/api';
 import { io, Socket } from 'socket.io-client';
 import { toast } from 'sonner';
@@ -77,9 +77,14 @@ interface AppContextType {
   setIsChatOpen: (open: boolean) => void;
   notifications: any[];
   markNotificationRead: (id: number) => Promise<void>;
+  // Global unread message count — shown as badge on Messages nav / floating button
+  unreadMessageCount: number;
+  clearUnreadMessages: () => void;
   // Subscribe to a socket event from any page component.
   // Returns an unsubscribe function — call it in useEffect cleanup.
   socketOn: (event: string, handler: (data: any) => void) => () => void;
+  // Emit a socket event from any page component.
+  socketEmit: (event: string, data?: any) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -151,19 +156,43 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
+  // Global unread message badge — incremented by socket, cleared when user opens /messages
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
+  const clearUnreadMessages = useCallback(() => setUnreadMessageCount(0), []);
 
   // Holds the live socket so pages can subscribe without creating their own connection
   const socketRef = useRef<Socket | null>(null);
 
+  // Persistent handler registry: event -> Set<handler>
+  // Handlers registered via socketOn() are stored here and re-attached on every
+  // socket reconnect, so real-time messages are never silently dropped.
+  const handlersRef = useRef<Map<string, Set<(data: any) => void>>>(new Map());
+
   // Pages call socketOn(event, handler) in a useEffect and return the unsubscribe fn.
-  // This forwards directly to the shared socket — no second connection needed.
-  const socketOn = (event: string, handler: (data: any) => void) => {
-    const socket = socketRef.current;
-    if (socket) socket.on(event, handler);
+  // Handlers survive socket reconnects because they're stored in handlersRef and
+  // re-attached on every 'connect' event inside the socket useEffect below.
+  const socketOn = useCallback((event: string, handler: (data: any) => void) => {
+    // Register in persistent map
+    if (!handlersRef.current.has(event)) {
+      handlersRef.current.set(event, new Set());
+    }
+    handlersRef.current.get(event)!.add(handler);
+
+    // Attach to socket if it's already connected
+    if (socketRef.current) socketRef.current.on(event, handler);
+
     return () => {
+      // Detach from socket
       if (socketRef.current) socketRef.current.off(event, handler);
+      // Remove from persistent map
+      handlersRef.current.get(event)?.delete(handler);
     };
-  };
+  }, []); // stable — handlersRef and socketRef are refs
+
+  // Emit an event on the shared socket.
+  const socketEmit = useCallback((event: string, data?: any) => {
+    if (socketRef.current) socketRef.current.emit(event, data);
+  }, []);
 
   const isAuthenticated = authUser !== null;
 
@@ -340,17 +369,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const userId = authUser?.userId;
     if (!userId) return;
 
-    const socket: Socket = io(import.meta.env.VITE_API_URL || 'http://localhost:8000');
+    const socket: Socket = io(import.meta.env.VITE_API_URL || 'http://localhost:8000', {
+      transports: ['websocket']
+    });
     socketRef.current = socket; // expose to pages via socketOn()
 
     socket.on('connect', () => {
       // Join the personal room so the backend can target this user
       socket.emit('identify', { userId });
-      console.log(`🔔 Socket connected and identified as user ${userId}`);
+      console.log(`[Socket] Connected and identified as user ${userId}`);
+
+      // Re-attach all handlers registered via socketOn() so they survive reconnects.
+      // This is the critical fix: without this, any handler registered before a
+      // disconnect event is silently lost and messages stop appearing in real time.
+      handlersRef.current.forEach((handlers, event) => {
+        handlers.forEach(handler => {
+          socket.off(event, handler); // prevent duplicate listeners
+          socket.on(event, handler);
+        });
+      });
     });
 
     socket.on('connect_error', (err) => {
       console.error('Socket connection error:', err.message);
+    });
+
+    // Track unread messages globally so Sidebar badge works on any page
+    socket.on('new_message', (data) => {
+      const currentUserId = authUser?.userId;
+      // Only count messages FROM others (not echoes of our own sends)
+      if (data.sender_id !== currentUserId) {
+        setUnreadMessageCount(prev => prev + 1);
+      }
     });
 
     socket.on('new_notification', (data) => {
@@ -433,7 +483,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setIsChatOpen,
       notifications,
       markNotificationRead,
+      unreadMessageCount,
+      clearUnreadMessages,
       socketOn,
+      socketEmit,
     }}>
       {children}
     </AppContext.Provider>

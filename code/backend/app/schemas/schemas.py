@@ -162,6 +162,11 @@ class ReviewResponse(ReviewBase):
         from_attributes = True
 
 # --- Messages ---
+class MessageCreate(BaseModel):
+    receiver_id: int
+    content: str
+    order_id: Optional[int] = None
+
 class MessageResponse(BaseModel):
     id: int
     sender_id: int
@@ -170,6 +175,15 @@ class MessageResponse(BaseModel):
     content: str
     timestamp: datetime
     is_read: bool
+    sender_name: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+class ConversationSummary(BaseModel):
+    other_user_id: int
+    other_user_name: str
+    other_user_initials: str
+    last_message: str
+    last_message_time: datetime
+    unread_count: int

@@ -209,7 +209,21 @@ export const profilesApi = {
         });
         return handleResponse(res);
     },
+
+    async listSellers(): Promise<SellerSummary[]> {
+        const res = await fetch(`${BASE_URL}/profiles/`);
+        return handleResponse<SellerSummary[]>(res);
+    },
 };
+
+// ---------- Seller Summary (for New Message picker) ----------
+export interface SellerSummary {
+    user_id: number;
+    name: string;
+    description?: string;
+    logo?: string;
+    display_name: string;
+}
 
 // ---------- Notifications ----------
 export interface Notification {
@@ -412,3 +426,59 @@ export const sellerProfileApi = {
         return { profile, listings, reviews, avgRating, reviewCount: reviews.length };
     },
 };
+
+// ---------- Messages ----------
+export interface Message {
+    id: number;
+    sender_id: number;
+    receiver_id: number;
+    order_id?: number | null;
+    content: string;
+    timestamp: string;
+    is_read: boolean;
+    sender_name?: string;
+}
+
+export interface ConversationSummary {
+    other_user_id: number;
+    other_user_name: string;
+    other_user_initials: string;
+    last_message: string;
+    last_message_time: string;
+    unread_count: number;
+}
+
+export const messagesApi = {
+    async getConversations(): Promise<ConversationSummary[]> {
+        const res = await fetch(`${BASE_URL}/messages/conversations`, {
+            headers: headers(true),
+        });
+        return handleResponse<ConversationSummary[]>(res);
+    },
+
+    async getHistory(otherUserId: number): Promise<Message[]> {
+        const res = await fetch(`${BASE_URL}/messages/${otherUserId}?t=${Date.now()}`, {
+            headers: headers(true),
+            cache: 'no-store',
+        });
+        return handleResponse<Message[]>(res);
+    },
+
+    async markRead(otherUserId: number): Promise<void> {
+        await fetch(`${BASE_URL}/messages/${otherUserId}/read`, {
+            method: 'PUT',
+            headers: headers(true),
+        });
+    },
+
+    /** Send a message via the reliable REST endpoint (server pushes socket event). */
+    async send(receiverId: number, content: string): Promise<Message> {
+        const res = await fetch(`${BASE_URL}/messages/`, {
+            method: 'POST',
+            headers: headers(true),
+            body: JSON.stringify({ receiver_id: receiverId, content }),
+        });
+        return handleResponse<Message>(res);
+    },
+};
+
