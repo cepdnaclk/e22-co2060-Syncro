@@ -91,12 +91,17 @@ class ProfileCreate(ProfileBase):
 
 class ProfileUpdate(ProfileBase):
     name: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class ActiveStatusUpdate(BaseModel):
+    is_active: bool
 
 class ProfileResponse(ProfileBase):
     id: int
     user_id: int
     logo: Optional[str] = None
     cover_image: Optional[str] = None
+    is_active: Optional[bool] = True
 
     class Config:
         from_attributes = True

@@ -4,7 +4,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 from ..database import get_db
 from ..models.models import Profile, User
-from ..schemas.schemas import ProfileResponse, ProfileCreate, ProfileUpdate
+from ..schemas.schemas import ProfileResponse, ProfileCreate, ProfileUpdate, ActiveStatusUpdate
 from ..api.auth import get_current_user_from_token
 from ..utils.media import upload_image
 
@@ -92,6 +92,24 @@ def update_profile(profile_data: ProfileUpdate, db: Session = Depends(get_db), c
     for key, value in profile_data.dict(exclude_unset=True).items():
         setattr(profile, key, value)
         
+    db.commit()
+    db.refresh(profile)
+    return profile
+
+@router.patch("/me/active", response_model=ProfileResponse)
+def set_active_status(
+    status_data: ActiveStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_from_token)
+):
+    """Toggle the seller's active-today status."""
+    user_id = current_user.id
+    profile = db.query(Profile).filter(Profile.user_id == user_id).first()
+    
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found. Please create a seller profile first.")
+    
+    profile.is_active = status_data.is_active
     db.commit()
     db.refresh(profile)
     return profile

@@ -168,4 +168,4 @@ class PasswordResetOTP(Base):
     otp = Column(String(6), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     expires_at = Column(DateTime, nullable=False)
-    used = Column(Boolean, default=False)
+    used = Column(Boolean, default=False)
