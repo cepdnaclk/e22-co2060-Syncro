@@ -127,7 +127,7 @@ export function SyncroChat({
     showFloatingButton?: boolean;
     showInlineTrigger?: boolean;
 }) {
-    const { isChatOpen: isOpen, setIsChatOpen: setIsOpen, authUser } = useApp();
+    const { isChatOpen: isOpen, setIsChatOpen: setIsOpen, authUser, unreadMessageCount, clearUnreadMessages } = useApp();
     const navigate = useNavigate();
     // conversation history sent to the AI (excludes the welcome message)
     const [aiHistory, setAiHistory] = useState<{ role: string; content: string }[]>([]);
@@ -310,6 +310,12 @@ export function SyncroChat({
                         >
                             <MessageCircle className="w-6 h-6" />
                             <div className="absolute top-0 right-0 w-3.5 h-3.5 bg-[#00D084] border-2 border-white rounded-full transform translate-x-1 -translate-y-0.5" />
+                            {/* Unread message badge */}
+                            {unreadMessageCount > 0 && (
+                              <span className="absolute -top-1.5 -left-1.5 min-w-[20px] h-5 px-1 rounded-full bg-red-500 border-2 border-white text-white text-[10px] font-bold flex items-center justify-center leading-none">
+                                {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
+                              </span>
+                            )}
                         </button>
                     </motion.div>
                 )}

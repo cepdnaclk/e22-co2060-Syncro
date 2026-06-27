@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import {
     Star, MapPin, Globe, Phone, ArrowLeft,
-    Package, Loader2, AlertCircle, Clock, ShoppingBag, Pencil, Send, CheckCircle
+    Package, Loader2, AlertCircle, Clock, ShoppingBag, Pencil, Send, CheckCircle, MessageSquare
 } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -307,7 +307,21 @@ export function PublicSellerProfile() {
 
                             {/* Info */}
                             <div className="flex-grow pt-10 md:pt-0">
-                                <h1 className="text-3xl font-bold mb-2">{profile.name}</h1>
+                                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-2">
+                                    <h1 className="text-3xl font-bold">{profile.name}</h1>
+
+                                    {/* Message Seller button — only for buyers who aren't the seller */}
+                                    {isBuyer && !isOwnProfile && (
+                                        <Button
+                                            id="message-seller-btn"
+                                            onClick={() => navigate(`/messages?userId=${profile.user_id}&name=${encodeURIComponent(profile.name)}`)}
+                                            className="gap-2 shrink-0"
+                                        >
+                                            <MessageSquare className="w-4 h-4" />
+                                            Message Seller
+                                        </Button>
+                                    )}
+                                </div>
 
                                 {/* Active status badge */}
                                 <div className="mb-3">

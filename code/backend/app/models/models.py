@@ -3,6 +3,7 @@ import enum
 from datetime import datetime
 from sqlalchemy.orm import relationship
 from ..database import Base
+from .chat import Message
 
 class Notification(Base):
     __tablename__ = "notifications"
@@ -56,6 +57,8 @@ class User(Base):
     reviews_given = relationship("Review", back_populates="reviewer", foreign_keys="Review.reviewer_id", cascade="all, delete-orphan")
     reviews_received = relationship("Review", back_populates="reviewee", foreign_keys="Review.reviewee_id", cascade="all, delete-orphan")
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
+    messages_sent = relationship("Message", foreign_keys="Message.sender_id", back_populates="sender", cascade="all, delete-orphan")
+    messages_received = relationship("Message", foreign_keys="Message.receiver_id", back_populates="receiver", cascade="all, delete-orphan")
 
 class Profile(Base):
     __tablename__ = "profiles"
@@ -68,7 +71,6 @@ class Profile(Base):
     address = Column(String, nullable=True)
     phone = Column(String, nullable=True)
     website = Column(String, nullable=True)
-    is_active = Column(Boolean, default=True, nullable=False, server_default="1")  # seller availability toggle
     
     user = relationship("User", back_populates="profile")
 
@@ -154,3 +156,16 @@ class Bid(Base):
 
     seller = relationship("User", back_populates="bids")
     bid_request = relationship("BidRequest", back_populates="bids")
+
+
+class PasswordResetOTP(Base):
+    """Stores the 6-digit OTP for password reset. OTPs expire after 10 minutes
+    and can only be used once (used=True marks them consumed)."""
+    __tablename__ = "password_reset_otps"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, nullable=False, index=True)
+    otp = Column(String(6), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=False)
+    used = Column(Boolean, default=False)

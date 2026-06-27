@@ -11,7 +11,7 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
 import { Textarea } from '../components/ui/textarea';
-import { Link, useParams } from 'react-router';
+import { Link, useParams, useNavigate } from 'react-router';
 import { bidsApi, BidRequest, Bid, reviewsApi } from '../services/api';
 import { toast } from 'sonner';
 
@@ -34,6 +34,7 @@ const fadeInUp = {
 export function BidDetail() {
     const { id } = useParams();
     const { role, socketOn } = useApp();
+    const navigate = useNavigate();
     const [acceptedBidId, setAcceptedBidId] = useState<number | null>(null);
     const [bidAmount, setBidAmount] = useState('');
     const [deliveryTime, setDeliveryTime] = useState('');
@@ -338,6 +339,20 @@ export function BidDetail() {
                                                             </Button>
                                                         </>
                                                     )}
+                                                    {/* Message Seller — always visible to buyer */}
+                                                    <Button
+                                                        id={`message-seller-${bid.id}`}
+                                                        variant="outline"
+                                                        className="w-full flex items-center gap-2 mt-1"
+                                                        onClick={() =>
+                                                            navigate(
+                                                                `/messages?userId=${bid.seller_id}&name=${encodeURIComponent(bid.seller_name || `Seller ${bid.seller_id}`)}`
+                                                            )
+                                                        }
+                                                    >
+                                                        <MessageSquare className="w-4 h-4" />
+                                                        Message Seller
+                                                    </Button>
                                                 </div>
                                             </div>
                                         </CardContent>

@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { motion } from 'motion/react';
-import { Building2, Globe, MapPin, Upload, X, Star, Image as ImageIcon, Tag } from 'lucide-react';
+import { Building2, Globe, MapPin, Upload, X, Star, Image as ImageIcon, Tag, CheckCircle2 } from 'lucide-react';
 import { Card, CardHeader, CardContent } from './ui/Card';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
@@ -8,15 +8,7 @@ import { Badge } from './ui/Badge';
 import { useApp } from '../context/AppContext';
 import { serviceCategories } from '../services/mockData';
 import { useNavigate } from 'react-router';
-import { profilesApi } from '../services/api';
-
-// Demo gallery images for testing
-const demoGalleryImages = [
-  'https://images.unsplash.com/photo-1626785774573-4b799315345d?w=800&h=600&fit=crop',
-  'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&h=600&fit=crop',
-  'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=800&h=600&fit=crop',
-  'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=800&h=600&fit=crop',
-];
+import { profilesApi, authApi } from '../services/api';
 
 export function SellerProfileSettings() {
   const navigate = useNavigate();
@@ -29,6 +21,11 @@ export function SellerProfileSettings() {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+
+  // Save feedback state
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -76,12 +73,10 @@ export function SellerProfileSettings() {
   };
 
   const [formData, setFormData] = useState({
-    // Personal
     firstName: userProfile.firstName,
     lastName: userProfile.lastName,
     email: userProfile.email,
     phone: userProfile.phone || '',
-    // Business
     businessName: businessProfile?.name || '',
     businessEmail: businessProfile?.email || '',
     businessPhone: businessProfile?.phone || '',
@@ -97,112 +92,105 @@ export function SellerProfileSettings() {
   const [serviceTags, setServiceTags] = useState<string[]>(businessProfile?.serviceTags || []);
   const [newTag, setNewTag] = useState('');
 
-  const handleSave = () => {
-    // Update user profile
-    setUserProfile({
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: formData.email,
-      phone: formData.phone,
-    });
+  // ── Save handler: persists to backend then syncs local context ────────────
+  const handleSave = async () => {
+    setSaveLoading(true);
+    setSaveSuccess(false);
+    setSaveError('');
 
-    if (businessProfile) {
-      // Update business profile
-      setBusinessProfile({
-        ...businessProfile,
-        name: formData.businessName,
-        initials: formData.businessName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase(),
-        email: formData.businessEmail,
-        phone: formData.businessPhone,
-        description: formData.businessDescription,
-        website: formData.website,
-        address: formData.businessAddress,
-        category: formData.category,
-        coverImage,
-        gallery,
-        categories: selectedCategories,
-        serviceTags,
+    try {
+      // 1. Persist personal name to the users table
+      await authApi.updateMe({
+        first_name: formData.firstName.trim(),
+        last_name: formData.lastName.trim(),
       });
+
+      // 2. Persist business/profile fields to the profiles table
+      await profilesApi.update({
+        name: formData.businessName.trim() || `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim(),
+        description: formData.businessDescription.trim() || undefined,
+        phone: formData.businessPhone.trim() || formData.phone.trim() || undefined,
+        website: formData.website.trim() || undefined,
+        address: formData.businessAddress.trim() || undefined,
+      });
+
+      // 3. Sync local context so UI updates immediately without a page reload
+      setUserProfile({
+        ...userProfile,
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        phone: formData.phone.trim(),
+      });
+
+      if (businessProfile) {
+        setBusinessProfile({
+          ...businessProfile,
+          name: formData.businessName.trim(),
+          initials: formData.businessName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase(),
+          email: formData.businessEmail,
+          phone: formData.businessPhone,
+          description: formData.businessDescription,
+          website: formData.website,
+          address: formData.businessAddress,
+          category: formData.category,
+          coverImage,
+          gallery,
+          categories: selectedCategories,
+          serviceTags,
+        });
+      }
+
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err: any) {
+      setSaveError(err.message || 'Failed to save changes. Please try again.');
+    } finally {
+      setSaveLoading(false);
     }
-  };
-
-  const handleAddGalleryImage = () => {
-    galleryInputRef.current?.click();
-  };
-
-  const handleRemoveGalleryImage = (index: number) => {
-    setGallery(gallery.filter((_, i) => i !== index));
   };
 
   const toggleCategory = (category: string) => {
-    if (selectedCategories.includes(category)) {
-      setSelectedCategories(selectedCategories.filter(c => c !== category));
-    } else {
-      setSelectedCategories([...selectedCategories, category]);
-    }
+    setSelectedCategories(prev =>
+      prev.includes(category) ? prev.filter(c => c !== category) : [...prev, category]
+    );
   };
 
   const handleAddTag = () => {
     if (newTag.trim() && !serviceTags.includes(newTag.trim())) {
-      setServiceTags([...serviceTags, newTag.trim()]);
+      setServiceTags(prev => [...prev, newTag.trim()]);
       setNewTag('');
     }
   };
 
-  const handleRemoveTag = (tag: string) => {
-    setServiceTags(serviceTags.filter(t => t !== tag));
-  };
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-    >
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">Business Profile</h2>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => navigate('/seller/preview')}
-            >
+            <Button variant="outline" size="sm" onClick={() => navigate('/seller/preview')}>
               View Public Profile
             </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-8">
+
           {/* Cover Image */}
           <div>
             <label className="block mb-3 font-medium">Cover Image</label>
-            <input
-              ref={coverInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="hidden"
-              onChange={handleCoverUpload}
-            />
+            <input ref={coverInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleCoverUpload} />
             <div className="relative h-48 bg-gradient-to-br from-primary via-primary to-accent rounded-xl overflow-hidden">
               {coverImage ? (
                 <>
                   <img src={coverImage} alt="Cover" className="w-full h-full object-cover" />
-                  <button
-                    onClick={() => setCoverImage('')}
-                    className="absolute top-3 right-3 p-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 transition-colors"
-                  >
+                  <button onClick={() => setCoverImage('')} className="absolute top-3 right-3 p-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 transition-colors">
                     <X className="w-4 h-4" />
                   </button>
                 </>
               ) : (
-                <button
-                  onClick={() => coverInputRef.current?.click()}
-                  disabled={coverUploading}
-                  className="w-full h-full flex flex-col items-center justify-center gap-2 hover:bg-black/10 transition-colors"
-                >
+                <button onClick={() => coverInputRef.current?.click()} disabled={coverUploading} className="w-full h-full flex flex-col items-center justify-center gap-2 hover:bg-black/10 transition-colors">
                   <Upload className="w-8 h-8 text-white" />
-                  <span className="text-white font-medium">
-                    {coverUploading ? 'Uploading...' : 'Upload Cover Image'}
-                  </span>
+                  <span className="text-white font-medium">{coverUploading ? 'Uploading...' : 'Upload Cover Image'}</span>
                   <span className="text-white/80 text-sm">1200x400px recommended</span>
                 </button>
               )}
@@ -212,20 +200,10 @@ export function SellerProfileSettings() {
           {/* Business Logo */}
           <div>
             <label className="block mb-3 font-medium">Business Logo</label>
-            <input
-              ref={logoInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="hidden"
-              onChange={handleLogoUpload}
-            />
+            <input ref={logoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleLogoUpload} />
             <div className="flex items-center gap-6">
               {businessProfile?.logo ? (
-                <img
-                  src={businessProfile.logo}
-                  alt="Logo"
-                  className="w-32 h-32 rounded-xl object-cover shadow-lg"
-                />
+                <img src={businessProfile.logo} alt="Logo" className="w-32 h-32 rounded-xl object-cover shadow-lg" />
               ) : (
                 <div className="w-32 h-32 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center shadow-lg">
                   <span className="text-white font-bold text-4xl">
@@ -234,13 +212,7 @@ export function SellerProfileSettings() {
                 </div>
               )}
               <div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mb-2"
-                  onClick={() => logoInputRef.current?.click()}
-                  disabled={logoUploading}
-                >
+                <Button variant="outline" size="sm" className="mb-2" onClick={() => logoInputRef.current?.click()} disabled={logoUploading}>
                   <Upload className="w-4 h-4 mr-2" />
                   {logoUploading ? 'Uploading...' : 'Upload Logo'}
                 </Button>
@@ -257,35 +229,19 @@ export function SellerProfileSettings() {
                 Business Gallery ({gallery.length}/8)
               </label>
               <>
-                <input
-                  ref={galleryInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  className="hidden"
-                  onChange={handleGalleryUpload}
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAddGalleryImage}
-                  disabled={gallery.length >= 8 || galleryUploading}
-                >
+                <input ref={galleryInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleGalleryUpload} />
+                <Button variant="outline" size="sm" onClick={() => galleryInputRef.current?.click()} disabled={gallery.length >= 8 || galleryUploading}>
                   <Upload className="w-4 h-4 mr-2" />
                   {galleryUploading ? 'Uploading...' : 'Add Image'}
                 </Button>
               </>
             </div>
-            <p className="text-sm text-muted-foreground mb-4">
-              Showcase your work with 3-8 images
-            </p>
+            <p className="text-sm text-muted-foreground mb-4">Showcase your work with 3-8 images</p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {gallery.map((image, index) => (
                 <div key={index} className="relative aspect-square rounded-lg overflow-hidden group">
                   <img src={image} alt={`Gallery ${index + 1}`} className="w-full h-full object-cover" />
-                  <button
-                    onClick={() => handleRemoveGalleryImage(index)}
-                    className="absolute top-2 right-2 p-1.5 bg-destructive text-destructive-foreground rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
+                  <button onClick={() => setGallery(gallery.filter((_, i) => i !== index))} className="absolute top-2 right-2 p-1.5 bg-destructive text-destructive-foreground rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
@@ -303,22 +259,15 @@ export function SellerProfileSettings() {
           <div className="space-y-6">
             <div>
               <label className="block mb-3 font-medium flex items-center gap-2">
-                <Building2 className="w-4 h-4" />
-                Business Information
+                <Building2 className="w-4 h-4" /> Business Information
               </label>
               <div className="grid gap-6">
-                <Input
-                  label="Company Name"
-                  value={formData.businessName}
-                  onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
-                  placeholder="Your Business Name"
-                />
-                
+                <Input label="Company Name" value={formData.businessName} onChange={e => setFormData({ ...formData, businessName: e.target.value })} placeholder="Your Business Name" />
                 <div>
                   <label className="block mb-2 text-sm">Business Description</label>
                   <textarea
                     value={formData.businessDescription}
-                    onChange={(e) => setFormData({ ...formData, businessDescription: e.target.value })}
+                    onChange={e => setFormData({ ...formData, businessDescription: e.target.value })}
                     rows={4}
                     className="w-full px-4 py-3 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                     placeholder="Describe your business, services, and what makes you unique..."
@@ -327,26 +276,16 @@ export function SellerProfileSettings() {
               </div>
             </div>
 
-            {/* What We Sell - Categories */}
+            {/* Service Categories */}
             <div>
               <label className="block mb-3 font-medium flex items-center gap-2">
-                <Tag className="w-4 h-4" />
-                What We Sell - Service Categories
+                <Tag className="w-4 h-4" /> What We Sell - Service Categories
               </label>
-              <p className="text-sm text-muted-foreground mb-4">
-                Select all categories that apply to your business
-              </p>
+              <p className="text-sm text-muted-foreground mb-4">Select all categories that apply to your business</p>
               <div className="flex flex-wrap gap-2">
-                {serviceCategories.map((category) => (
-                  <button
-                    key={category}
-                    onClick={() => toggleCategory(category)}
-                    className={`px-4 py-2 rounded-lg border transition-all ${
-                      selectedCategories.includes(category)
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'bg-card border-border hover:border-primary'
-                    }`}
-                  >
+                {serviceCategories.map(category => (
+                  <button key={category} onClick={() => toggleCategory(category)}
+                    className={`px-4 py-2 rounded-lg border transition-all ${selectedCategories.includes(category) ? 'bg-primary text-primary-foreground border-primary' : 'bg-card border-border hover:border-primary'}`}>
                     {category}
                   </button>
                 ))}
@@ -355,9 +294,7 @@ export function SellerProfileSettings() {
                 <div className="mt-4 p-4 bg-accent/50 rounded-lg">
                   <p className="text-sm font-medium mb-2">Selected Categories:</p>
                   <div className="flex flex-wrap gap-2">
-                    {selectedCategories.map((cat) => (
-                      <Badge key={cat} variant="secondary">{cat}</Badge>
-                    ))}
+                    {selectedCategories.map(cat => <Badge key={cat} variant="secondary">{cat}</Badge>)}
                   </div>
                 </div>
               )}
@@ -366,50 +303,34 @@ export function SellerProfileSettings() {
             {/* Service Tags */}
             <div>
               <label className="block mb-3 font-medium">Service Tags</label>
-              <p className="text-sm text-muted-foreground mb-4">
-                Add specific services or skills (e.g., "Logo Design", "SEO", "React Development")
-              </p>
+              <p className="text-sm text-muted-foreground mb-4">Add specific services or skills (e.g., "Logo Design", "SEO", "React Development")</p>
               <div className="flex gap-2 mb-4">
-                <Input
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  placeholder="Add a service tag"
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
-                />
+                <Input value={newTag} onChange={e => setNewTag(e.target.value)} placeholder="Add a service tag"
+                  onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddTag())} />
                 <Button onClick={handleAddTag}>Add</Button>
               </div>
               {serviceTags.length > 0 && (
                 <div className="flex flex-wrap gap-2">
-                  {serviceTags.map((tag) => (
+                  {serviceTags.map(tag => (
                     <Badge key={tag} className="gap-2">
                       {tag}
-                      <button onClick={() => handleRemoveTag(tag)}>
-                        <X className="w-3 h-3" />
-                      </button>
+                      <button onClick={() => setServiceTags(serviceTags.filter(t => t !== tag))}><X className="w-3 h-3" /></button>
                     </Badge>
                   ))}
                 </div>
               )}
             </div>
 
-            {/* Ratings Display (Read-only) */}
+            {/* Ratings (read-only) */}
             <div className="p-6 bg-accent/30 rounded-lg border border-border">
               <label className="block mb-3 font-medium flex items-center gap-2">
-                <Star className="w-4 h-4" />
-                Your Ratings
+                <Star className="w-4 h-4" /> Your Ratings
               </label>
               <div className="flex items-center gap-6">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`w-5 h-5 ${
-                          i < Math.floor(businessProfile?.rating || 0)
-                            ? 'fill-yellow-400 text-yellow-400'
-                            : 'text-muted-foreground'
-                        }`}
-                      />
+                      <Star key={i} className={`w-5 h-5 ${i < Math.floor(businessProfile?.rating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'}`} />
                     ))}
                   </div>
                   <p className="text-2xl font-bold">{businessProfile?.rating.toFixed(1) || '0.0'}</p>
@@ -424,79 +345,57 @@ export function SellerProfileSettings() {
             {/* Contact Information */}
             <div>
               <label className="block mb-3 font-medium flex items-center gap-2">
-                <Globe className="w-4 h-4" />
-                Contact Information
+                <Globe className="w-4 h-4" /> Contact Information
               </label>
               <div className="grid md:grid-cols-2 gap-6">
-                <Input
-                  label="Business Email"
-                  type="email"
-                  value={formData.businessEmail}
-                  onChange={(e) => setFormData({ ...formData, businessEmail: e.target.value })}
-                  placeholder="contact@business.com"
-                />
-                <Input
-                  label="Business Phone"
-                  value={formData.businessPhone}
-                  onChange={(e) => setFormData({ ...formData, businessPhone: e.target.value })}
-                  placeholder="+94 77 123 4567"
-                />
-                <Input
-                  label="Website"
-                  value={formData.website}
-                  onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                  placeholder="https://yourbusiness.com"
-                />
+                <Input label="Business Email" type="email" value={formData.businessEmail} onChange={e => setFormData({ ...formData, businessEmail: e.target.value })} placeholder="contact@business.com" />
+                <Input label="Business Phone" value={formData.businessPhone} onChange={e => setFormData({ ...formData, businessPhone: e.target.value })} placeholder="+94 77 123 4567" />
+                <Input label="Website" value={formData.website} onChange={e => setFormData({ ...formData, website: e.target.value })} placeholder="https://yourbusiness.com" />
               </div>
             </div>
 
             {/* Business Address */}
             <div>
               <label className="block mb-3 font-medium flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
-                Business Address (Optional)
+                <MapPin className="w-4 h-4" /> Business Address (Optional)
               </label>
-              <Input
-                value={formData.businessAddress}
-                onChange={(e) => setFormData({ ...formData, businessAddress: e.target.value })}
-                placeholder="123 Business St, City, State, ZIP"
-              />
+              <Input value={formData.businessAddress} onChange={e => setFormData({ ...formData, businessAddress: e.target.value })} placeholder="123 Business St, City, State, ZIP" />
             </div>
           </div>
 
-          {/* Personal Account Info */}
+          {/* Account Owner Info */}
           <div className="pt-6 border-t border-border">
             <label className="block mb-4 font-medium">Account Owner Information</label>
             <div className="grid md:grid-cols-2 gap-6">
-              <Input
-                label="First Name"
-                value={formData.firstName}
-                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-              />
-              <Input
-                label="Last Name"
-                value={formData.lastName}
-                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-              />
-              <Input
-                label="Email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              />
-              <Input
-                label="Phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="+94 77 123 4567"
-              />
+              <Input label="First Name" value={formData.firstName} onChange={e => setFormData({ ...formData, firstName: e.target.value })} />
+              <Input label="Last Name" value={formData.lastName} onChange={e => setFormData({ ...formData, lastName: e.target.value })} />
+              <Input label="Email" type="email" value={formData.email} disabled />
+              <Input label="Phone" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} placeholder="+94 77 123 4567" />
             </div>
           </div>
 
+          {/* Save feedback */}
+          {saveSuccess && (
+            <div className="flex items-center gap-2 px-4 py-3 bg-green-500/10 border border-green-500/30 rounded-lg text-sm text-green-600 dark:text-green-400">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              Business profile saved successfully!
+            </div>
+          )}
+          {saveError && (
+            <div className="px-4 py-3 bg-destructive/10 border border-destructive/30 rounded-lg text-sm text-destructive">
+              {saveError}
+            </div>
+          )}
+
           <div className="flex gap-3">
-            <Button onClick={handleSave}>Save Changes</Button>
-            <Button variant="outline">Cancel</Button>
+            <Button id="seller-profile-save-btn" onClick={handleSave} disabled={saveLoading}>
+              {saveLoading ? 'Saving...' : 'Save Changes'}
+            </Button>
+            <Button variant="outline" onClick={() => navigate(-1)} disabled={saveLoading}>
+              Cancel
+            </Button>
           </div>
+
         </CardContent>
       </Card>
     </motion.div>

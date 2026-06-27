@@ -22,7 +22,8 @@ def get_current_user_from_token(token: str = Depends(oauth2_scheme), db: Session
         email: str = payload.get("sub")
         if email is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    except jwt.PyJWTError:
+    except jwt.PyJWTError as e:
+        print(f"Token decode failure: {e} (Secret key used: {SECRET_KEY})")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
     
     user = db.query(User).filter(User.email == email).first()
@@ -174,8 +175,132 @@ async def delete_account(current_user: User = Depends(get_current_user_from_toke
     # 8. Delete notifications
     db.execute(text("DELETE FROM notifications WHERE user_id = :uid"), {"uid": user_id})
 
+    # 9. Delete messages sent or received by this user
+    db.execute(text("DELETE FROM messages WHERE sender_id = :uid OR receiver_id = :uid"), {"uid": user_id})
+
     # 9. Finally delete the user
     db.execute(text("DELETE FROM users WHERE id = :uid"), {"uid": user_id})
     db.commit()
 
     return {"message": "Account deleted successfully"}
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# POST /auth/forgot-password
+# ──────────────────────────────────────────────────────────────────────────────
+
+from pydantic import BaseModel as PydanticBase
+
+class ForgotPasswordRequest(PydanticBase):
+    email: str
+
+class VerifyOTPRequest(PydanticBase):
+    email: str
+    otp: str
+    new_password: str
+
+
+@router.post("/auth/forgot-password")
+def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    """
+    Step 1: User submits their email.
+    - We ALWAYS return 200 to prevent email enumeration attacks.
+    - If the email exists, generate a 6-digit OTP, save it to the DB,
+      and send it to the user's inbox via Gmail SMTP.
+    """
+    import secrets
+    from datetime import datetime, timedelta
+    from ..models.models import PasswordResetOTP
+    from ..utils.email import send_otp_email
+
+    user = db.query(User).filter(User.email == payload.email).first()
+
+    if user:
+        # Invalidate any existing unused OTPs for this email
+        db.query(PasswordResetOTP).filter(
+            PasswordResetOTP.email == payload.email,
+            PasswordResetOTP.used == False,
+        ).update({"used": True})
+        db.commit()
+
+        otp = str(secrets.randbelow(900000) + 100000)  # 6-digit: 100000–999999
+        expires_at = datetime.utcnow() + timedelta(minutes=10)
+
+        otp_record = PasswordResetOTP(
+            email=payload.email,
+            otp=otp,
+            expires_at=expires_at,
+        )
+        db.add(otp_record)
+        db.commit()
+
+        try:
+            send_otp_email(to_email=payload.email, otp=otp)
+        except RuntimeError as e:
+            # Gmail not configured — give a clear actionable message
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "Email service not configured. "
+                    "Please set GMAIL_USER and GMAIL_APP_PASSWORD in backend/.env "
+                    "(generate an App Password at myaccount.google.com → Security → App passwords)."
+                )
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=503,
+                detail=f"Could not send email. Check your Gmail App Password in backend/.env. Error: {str(e)}"
+            )
+
+    # Always return 200 (prevents email enumeration)
+    return {"message": "If this email is registered, an OTP has been sent."}
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# POST /auth/reset-password
+# ──────────────────────────────────────────────────────────────────────────────
+
+@router.post("/auth/reset-password")
+def reset_password(payload: VerifyOTPRequest, db: Session = Depends(get_db)):
+    """
+    Step 2: User submits email + OTP + new password.
+    - Validates OTP (correct, not expired, not used).
+    - Hashes and saves the new password.
+    - Marks the OTP as used.
+    """
+    from datetime import datetime
+    from ..models.models import PasswordResetOTP
+
+    otp_record = (
+        db.query(PasswordResetOTP)
+        .filter(
+            PasswordResetOTP.email == payload.email,
+            PasswordResetOTP.otp == payload.otp,
+            PasswordResetOTP.used == False,
+        )
+        .order_by(PasswordResetOTP.created_at.desc())
+        .first()
+    )
+
+    if not otp_record:
+        raise HTTPException(status_code=400, detail="Invalid OTP. Please request a new one.")
+
+    if datetime.utcnow() > otp_record.expires_at:
+        otp_record.used = True
+        db.commit()
+        raise HTTPException(status_code=400, detail="OTP has expired. Please request a new one.")
+
+    if len(payload.new_password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters.")
+
+    user = db.query(User).filter(User.email == payload.email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    user.hashed_password = get_password_hash(payload.new_password)
+    otp_record.used = True
+    db.commit()
+
+    print(f"Password reset for {payload.email}")
+    return {"message": "Password reset successfully. You can now log in."}
+

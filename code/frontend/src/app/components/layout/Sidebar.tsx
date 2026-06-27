@@ -17,7 +17,7 @@ import {
 import { useApp } from '../../context/AppContext';
 
 export function Sidebar() {
-  const { role, businessProfile, hasSellerProfile, authUser } = useApp();
+  const { role, businessProfile, hasSellerProfile, authUser, unreadMessageCount, clearUnreadMessages } = useApp();
   const location = useLocation();
 
   const buyerNavItems = [
@@ -143,13 +143,21 @@ export function Sidebar() {
                   <Link
                     key={item.path}
                     to={item.path}
+                    onClick={() => {
+                      if (item.path === '/messages') clearUnreadMessages();
+                    }}
                     className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all ${isActive
                       ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-sm'
                       : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                       }`}
                   >
                     <Icon className="w-5 h-5" />
-                    <span className="text-sm">{item.name}</span>
+                    <span className="text-sm flex-1">{item.name}</span>
+                    {item.path === '/messages' && unreadMessageCount > 0 && (
+                      <span className="flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full bg-blue-500 text-white text-[10px] font-bold leading-none animate-pulse">
+                        {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
+                      </span>
+                    )}
                   </Link>
                 );
               })}
