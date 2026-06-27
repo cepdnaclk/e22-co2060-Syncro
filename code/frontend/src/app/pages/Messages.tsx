@@ -322,7 +322,7 @@ export function Messages() {
 
         // Auto-mark as read since the user is actively viewing this chat
         if (data.sender_id === selectedUserId) {
-          messagesApi.markRead(selectedUserId).catch(() => {});
+          messagesApi.markRead(selectedUserId).catch(() => { });
         }
       }
 
@@ -405,7 +405,7 @@ export function Messages() {
 
         // If new messages arrived, mark them read (user is actively in this conversation)
         if (hasFresh) {
-          messagesApi.markRead(selectedUserId).catch(() => {});
+          messagesApi.markRead(selectedUserId).catch(() => { });
           setConversations(prev =>
             prev.map(c =>
               c.other_user_id === selectedUserId ? { ...c, unread_count: 0 } : c
@@ -431,7 +431,7 @@ export function Messages() {
     try {
       const sent = await messagesApi.send(selectedUserId, text);
       const isInstantlyRead = (Date.now() - lastReadRef.current) < 5000;
-      
+
       // Optimistically insert — the socket echo from server will be deduplicated
       setMessages(prev => {
         if (prev.some(m => m.id === sent.id)) {
@@ -559,9 +559,8 @@ export function Messages() {
                     onClick={() => openConversation(conv.other_user_id, conv.other_user_name)}
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className={`w-full p-4 border-b border-border text-left flex items-start gap-3 transition-colors hover:bg-accent/60 ${
-                      selectedUserId === conv.other_user_id ? 'bg-accent/80 border-l-2 border-l-primary' : ''
-                    }`}
+                    className={`w-full p-4 border-b border-border text-left flex items-start gap-3 transition-colors hover:bg-accent/60 ${selectedUserId === conv.other_user_id ? 'bg-accent/80 border-l-2 border-l-primary' : ''
+                      }`}
                   >
                     {/* Avatar */}
                     <div className="relative shrink-0">
@@ -711,11 +710,10 @@ export function Messages() {
 
                               <div className={`max-w-[70%] group`}>
                                 <div
-                                  className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm ${
-                                    isMine
+                                  className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm ${isMine
                                       ? 'bg-primary text-primary-foreground rounded-br-sm'
                                       : 'bg-muted text-foreground rounded-bl-sm'
-                                  }`}
+                                    }`}
                                 >
                                   {msg.content}
                                 </div>
@@ -724,7 +722,11 @@ export function Messages() {
                                     {formatTime(msg.timestamp)}
                                   </span>
                                   {isMine && (
-                                    <CheckCheck className={`w-3.5 h-3.5 ${msg.is_read ? 'text-primary' : 'text-muted-foreground'}`} />
+                                    msg.is_read ? (
+                                      <CheckCheck className="w-3.5 h-3.5 text-primary" />
+                                    ) : (
+                                      <Check className="w-3.5 h-3.5 text-muted-foreground" />
+                                    )
                                   )}
                                 </div>
                               </div>
