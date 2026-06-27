@@ -724,11 +724,7 @@ export function Messages() {
                                     {formatTime(msg.timestamp)}
                                   </span>
                                   {isMine && (
-                                    msg.is_read ? (
-                                      <CheckCheck className="w-3.5 h-3.5 text-primary" />
-                                    ) : (
-                                      <Check className="w-3.5 h-3.5 text-muted-foreground" />
-                                    )
+                                    <CheckCheck className={`w-3.5 h-3.5 ${msg.is_read ? 'text-primary' : 'text-muted-foreground'}`} />
                                   )}
                                 </div>
                               </div>
