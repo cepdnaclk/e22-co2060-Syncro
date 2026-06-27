@@ -68,6 +68,7 @@ class Profile(Base):
     address = Column(String, nullable=True)
     phone = Column(String, nullable=True)
     website = Column(String, nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False, server_default="1")  # seller availability toggle
     
     user = relationship("User", back_populates="profile")
 

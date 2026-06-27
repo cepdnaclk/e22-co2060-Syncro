@@ -46,6 +46,7 @@ export interface Profile {
     website?: string;
     logo?: string;
     cover_image?: string;
+    is_active?: boolean;
 }
 
 export interface Listing {
@@ -208,6 +209,15 @@ export const profilesApi = {
             body: form,
         });
         return handleResponse(res);
+    },
+
+    async setActiveStatus(isActive: boolean): Promise<Profile> {
+        const res = await fetch(`${BASE_URL}/profiles/me/active`, {
+            method: 'PATCH',
+            headers: headers(true),
+            body: JSON.stringify({ is_active: isActive }),
+        });
+        return handleResponse<Profile>(res);
     },
 };
 

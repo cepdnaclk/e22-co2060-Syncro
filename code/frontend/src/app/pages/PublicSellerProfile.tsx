@@ -124,11 +124,10 @@ function ReviewForm({ sellerId, onReviewSubmitted }: ReviewFormProps) {
                             className="transition-transform hover:scale-110 focus:outline-none"
                         >
                             <Star
-                                className={`w-8 h-8 transition-colors ${
-                                    star <= (hoverRating || rating)
+                                className={`w-8 h-8 transition-colors ${star <= (hoverRating || rating)
                                         ? 'fill-yellow-400 text-yellow-400'
                                         : 'text-muted-foreground'
-                                }`}
+                                    }`}
                             />
                         </button>
                     ))}
@@ -309,6 +308,24 @@ export function PublicSellerProfile() {
                             {/* Info */}
                             <div className="flex-grow pt-10 md:pt-0">
                                 <h1 className="text-3xl font-bold mb-2">{profile.name}</h1>
+
+                                {/* Active status badge */}
+                                <div className="mb-3">
+                                    {profile.is_active !== false ? (
+                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-600">
+                                            <span className="relative flex h-2 w-2">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                                            </span>
+                                            Active Today
+                                        </span>
+                                    ) : (
+                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-muted text-muted-foreground border border-border">
+                                            <span className="w-2 h-2 rounded-full bg-muted-foreground/40" />
+                                            Unavailable
+                                        </span>
+                                    )}
+                                </div>
 
                                 {/* Rating summary */}
                                 <div className="flex items-center gap-3 mb-3 flex-wrap">

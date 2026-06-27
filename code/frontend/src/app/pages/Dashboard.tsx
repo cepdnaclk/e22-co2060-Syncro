@@ -21,7 +21,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { SellerOnboarding } from '../components/SellerOnboarding';
 import { buyerActivities, revenueData, orderData } from '../services/mockData';
 import type { Activity } from '../services/mockData';
-import { ordersApi, Order } from '../services/api';
+import { ordersApi, profilesApi, Order } from '../services/api';
 import { useEffect, useState } from 'react';
 
 // ────────────────────────── Types ──────────────────────────
@@ -354,6 +354,50 @@ function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboa
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // ── Active status toggle ────────────────────────────────────
+  const [isActive, setIsActive] = useState<boolean>(true);
+  const [statusLoading, setStatusLoading] = useState(false);
+  const [statusReady, setStatusReady] = useState(false);
+
+  // Load current active status from profile on mount
+  useEffect(() => {
+    async function loadProfile() {
+      if (!authUser?.userId) return;
+      try {
+        const profile = await profilesApi.get(authUser.userId);
+        setIsActive(profile.is_active !== false); // default to true if undefined
+      } catch {
+        // profile not found yet — default to active
+      } finally {
+        setStatusReady(true);
+      }
+    }
+    loadProfile();
+  }, [authUser?.userId]);
+
+  const handleToggleActive = async () => {
+    if (statusLoading) return;
+    const newVal = !isActive;
+    setIsActive(newVal); // optimistic update
+    setStatusLoading(true);
+    try {
+      await profilesApi.setActiveStatus(newVal);
+      const { toast } = await import('sonner');
+      toast.success(newVal ? 'You are now Active Today!' : 'You are now Unavailable', {
+        description: newVal
+          ? 'Buyers can see you are open for business.'
+          : 'Buyers will see you as unavailable.',
+      });
+    } catch (e: any) {
+      setIsActive(!newVal); // revert on error
+      const { toast } = await import('sonner');
+      toast.error('Failed to update status', { description: e.message });
+    } finally {
+      setStatusLoading(false);
+    }
+  };
+  // ───────────────────────────────────────────────────────────
+
   useEffect(() => {
     async function loadOrders() {
       if (authUser?.userId) {
@@ -372,14 +416,68 @@ function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboa
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold mb-2">{businessName} Dashboard</h1>
           <p className="text-muted-foreground">Manage your business and track your performance.</p>
         </div>
-        <Link to="/listings">
-          <Button>Create New Listing</Button>
-        </Link>
+
+        {/* Active/Inactive toggle */}
+        <div className="flex items-center gap-3">
+          {statusReady && (
+            <motion.button
+              id="seller-active-toggle"
+              onClick={handleToggleActive}
+              disabled={statusLoading}
+              className={`relative flex items-center gap-3 px-4 py-2.5 rounded-2xl border-2 font-semibold text-sm transition-all duration-300 select-none ${
+                isActive
+                  ? 'bg-[#E1F2F7] border-[#0089BA] text-[#0057B8] dark:bg-[#0089BA]/20 dark:border-[#38BDF8] dark:text-[#38BDF8]'
+                  : 'bg-muted/60 border-border text-muted-foreground'
+              } ${statusLoading ? 'opacity-60 cursor-wait' : 'cursor-pointer hover:scale-[1.02] active:scale-[0.98]'}`}
+              whileTap={{ scale: 0.97 }}
+            >
+              {/* Animated dot */}
+              <span className="relative flex items-center justify-center w-5 h-5">
+                {statusLoading ? (
+                  <span className={`w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin block`} />
+                ) : (
+                  <>
+                    <span
+                      className={`absolute inset-0 rounded-full transition-all duration-300 ${
+                        isActive ? 'bg-[#0089BA] scale-100' : 'bg-muted-foreground/40 scale-75'
+                      }`}
+                    />
+                    {isActive && (
+                      <span className="absolute inset-0 rounded-full bg-[#0089BA] animate-ping opacity-60" />
+                    )}
+                  </>
+                )}
+              </span>
+
+              {/* Label */}
+              <span className="transition-all duration-200">
+                {statusLoading ? 'Updating…' : isActive ? 'Active Today' : 'Unavailable'}
+              </span>
+
+              {/* Pill toggle track */}
+              <span
+                className={`relative w-10 h-5 rounded-full transition-colors duration-300 ${
+                  isActive ? 'bg-[#0089BA]' : 'bg-muted-foreground/30'
+                }`}
+              >
+                <motion.span
+                  className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm"
+                  animate={{ x: isActive ? 18 : 0 }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                />
+              </span>
+            </motion.button>
+          )}
+
+          <Link to="/listings">
+            <Button>Create New Listing</Button>
+          </Link>
+        </div>
       </div>
 
       {/* Profile Completion Banner */}
