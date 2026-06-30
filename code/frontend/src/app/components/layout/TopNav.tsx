@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 
 export function TopNav() {
   const navigate = useNavigate();
-  const { role, theme, setTheme, businessProfile, userProfile, authUser, logout, toggleRole, hasSellerAccount, notifications, markNotificationRead } = useApp();
+  const { role, theme, setTheme, businessProfile, userProfile, authUser, logout, toggleRole, hasSellerAccount, notifications, markNotificationRead, markAllNotificationsRead } = useApp();
   // hasSellerAccount (from AppContext) stays true even when role = 'buyer',
   // so the Buyer/Seller toggle persists after switching back to buyer.
   const [roleToggling, setRoleToggling] = React.useState(false);
@@ -131,8 +131,11 @@ export function TopNav() {
           <div className="relative" ref={notifRef}>
             <button
               onClick={() => {
-                setShowNotifications(!showNotifications);
+                const opening = !showNotifications;
+                setShowNotifications(opening);
                 setShowProfileMenu(false);
+                // Mark all unread as read the moment the panel is opened
+                if (opening) markAllNotificationsRead();
               }}
               className="relative p-2 hover:bg-accent rounded-lg transition-colors"
             >
