@@ -32,7 +32,7 @@ cur.execute("""
 exists = cur.fetchone()
 
 if not exists:
-    cur.execute("ALTER TABLE bid_requests ADD COLUMN location VARCHAR NULLABLE DEFAULT NULL")
+    cur.execute("ALTER TABLE bid_requests ADD COLUMN location VARCHAR NULL DEFAULT NULL")
     print("✅ Added 'location' column to bid_requests table.")
 else:
     print("ℹ️  Column 'location' already exists — no changes made.")
