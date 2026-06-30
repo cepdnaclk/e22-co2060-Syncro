@@ -19,7 +19,7 @@ def score_seller(seller_id: int, bid_request, db: Session) -> float:
     # 1. Average Rating (30 pts)
     # 30 * (avg_rating / 5)
     # If no reviews, mid-range (15 pts)
-    avg_rating = db.query(func.avg(Review.rating)).filter(Review.seller_id == seller_id).scalar()
+    avg_rating = db.query(func.avg(Review.rating)).filter(Review.reviewee_id == seller_id).scalar()
     if avg_rating is not None:
         score += float(avg_rating) / 5.0 * 30.0
     else:
