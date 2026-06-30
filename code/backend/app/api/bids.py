@@ -65,53 +65,13 @@ async def create_bid_request(
     db.commit()
     db.refresh(new_request)
 
-    # --- Notification Logic for Matching Sellers ---
-    from ..models.models import Category, Profile, Listing, Notification
-    import re
+    # ── Stage 1 Hard Filters: select only relevant, active, nearby sellers ──
+    from ..services.seller_filter import apply_hard_filters
+    from ..models.models import Category, Notification
 
-    def get_keywords(text):
-        if not text:
-            return set()
-        words = re.findall(r'\b\w+\b', text.lower())
-        stop_words = {"a", "an", "the", "and", "or", "but", "in", "on", "at", "to",
-                      "for", "with", "by", "of", "is", "are", "was", "were", "i", "we",
-                      "you", "they", "it", "this", "that", "want", "need", "looking",
-                      "buy", "sell", "get", "make", "some", "any"}
-        return {w for w in words if w not in stop_words and len(w) > 2}
+    matched_seller_ids = apply_hard_filters(current_user, new_request, db)
 
     category = db.query(Category).filter(Category.id == request.category_id).first() if request.category_id else None
-    cat_name = category.name if category else ""
-    request_text = f"{cat_name} {request.description or ''}"
-    req_keywords = get_keywords(request_text)
-
-    # Notify ALL users who have a seller profile (regardless of current active_role)
-    seller_user_ids = db.query(Profile.user_id).filter(
-        Profile.description != None,
-        Profile.description != "",
-        Profile.user_id != current_user.id
-    ).all()
-    seller_ids_list = [row[0] for row in seller_user_ids]
-    sellers = db.query(User).filter(User.id.in_(seller_ids_list)).all()
-
-    matched_seller_ids = set()
-
-    for seller in sellers:
-        if request.category_id:
-            has_listing = db.query(Listing).filter(
-                Listing.seller_id == seller.id,
-                Listing.category_id == request.category_id
-            ).first()
-            if has_listing:
-                matched_seller_ids.add(seller.id)
-                continue
-
-        profile = db.query(Profile).filter(Profile.user_id == seller.id).first()
-        profile_text = f"{profile.name or ''} {profile.description or ''}" if profile else ""
-        prof_keywords = get_keywords(profile_text)
-
-        if req_keywords.intersection(prof_keywords):
-            matched_seller_ids.add(seller.id)
-
     buyer_name = f"{current_user.first_name or ''} {current_user.last_name or ''}".strip() or "A buyer"
 
     for seller_id in matched_seller_ids:

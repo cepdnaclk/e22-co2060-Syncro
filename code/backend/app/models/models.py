@@ -71,7 +71,10 @@ class Profile(Base):
     address = Column(String, nullable=True)
     phone = Column(String, nullable=True)
     website = Column(String, nullable=True)
-    
+    # Added via migrate_add_is_active.py — declared here so SQLAlchemy can
+    # read/write it. NULL is treated as True (active) for backward compat.
+    is_active = Column(Boolean, nullable=True, default=True)
+
     user = relationship("User", back_populates="profile")
 
 class Category(Base):
