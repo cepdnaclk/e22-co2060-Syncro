@@ -121,15 +121,16 @@ def location_match(request_location: str | None, seller_location: str | None) ->
 
 # ── Master Pipeline Function ──────────────────────────────────────────────────
 
-def apply_hard_filters(buyer, bid_request, db: Session) -> list[int]:
+def apply_hard_filters(buyer, bid_request, db: Session, exclude_seller_ids: set[int] | None = None) -> list[int]:
     """
     Run all Stage 1 hard filters and return the list of seller_ids to notify.
 
     Parameters
     ----------
-    buyer       : User ORM object (the buyer who posted the request)
-    bid_request : BidRequest ORM object (newly created)
-    db          : SQLAlchemy database session
+    buyer              : User ORM object (the buyer who posted the request)
+    bid_request        : BidRequest ORM object (newly created)
+    db                 : SQLAlchemy database session
+    exclude_seller_ids : set of seller IDs to exclude (used for resend rounds)
 
     Returns
     -------
@@ -159,8 +160,12 @@ def apply_hard_filters(buyer, bid_request, db: Session) -> list[int]:
     )
 
     matched_seller_ids: list[int] = []
+    exclude_set = exclude_seller_ids or set()
 
     for profile in candidate_profiles:
+        if profile.user_id in exclude_set:
+            continue
+
         # ── Filter 2: Active status ───────────────────────────────────────────
         if not is_profile_active(profile):
             continue

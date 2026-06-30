@@ -54,6 +54,8 @@ class BidRequestResponse(BidRequestBase):
     id: int
     user_id: int
     status: str
+    bid_count: int
+    resend_round: int
     created_at: datetime
 
     class Config:

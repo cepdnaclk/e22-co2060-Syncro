@@ -30,8 +30,11 @@ class OrderStatus(str, enum.Enum):
 
 class BidRequestStatus(str, enum.Enum):
     OPEN = "open"
+    BIDDING = "bidding"
+    BID_LIMIT_REACHED = "bid_limit_reached"
     CLOSED = "closed"
     ACCEPTED = "accepted"
+    COMPLETED = "completed"
 
 class BidStatus(str, enum.Enum):
     PENDING = "pending"
@@ -143,10 +146,27 @@ class BidRequest(Base):
     # Stored as a Sri Lanka district/city name; used for Filter 3 seller matching.
     location = Column(String, nullable=True)
     status = Column(Enum(BidRequestStatus), default=BidRequestStatus.OPEN)
+    bid_count = Column(Integer, default=0)
+    resend_round = Column(Integer, default=1)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="bid_requests")
     bids = relationship("Bid", back_populates="bid_request", cascade="all, delete-orphan")
+    notified_sellers = relationship("NotifiedSeller", back_populates="bid_request", cascade="all, delete-orphan")
+
+
+class NotifiedSeller(Base):
+    __tablename__ = "notified_sellers"
+    id = Column(Integer, primary_key=True, index=True)
+    bid_request_id = Column(Integer, ForeignKey("bid_requests.id"))
+    seller_id = Column(Integer, ForeignKey("users.id"))
+    score = Column(Float, default=0.0)
+    selection_type = Column(String)  # "performance" or "fairness"
+    round_number = Column(Integer, default=1)
+    notified_at = Column(DateTime, default=datetime.utcnow)
+
+    bid_request = relationship("BidRequest", back_populates="notified_sellers")
+    seller = relationship("User")
 
 class Bid(Base):
     __tablename__ = "bids"

@@ -115,17 +115,26 @@ async def rfp_chat(
     db.commit()
     db.refresh(new_bid_request)
 
-    # ── Stage 1 Hard Filters: notify only relevant, active, nearby sellers ────
-    from ..services.seller_filter import apply_hard_filters
-    from ..models.models import Notification
+    # ── Full Pipeline: Filters + Ranking + Selection ────
+    from ..services.ranking import run_pipeline
+    from ..models.models import Notification, NotifiedSeller
 
-    matched_seller_ids = apply_hard_filters(current_user, new_bid_request, db)
+    selected_sellers = run_pipeline(current_user, new_bid_request, db)
 
     try:
         sio = fastapi_req.app.state.sio
         buyer_name = f"{current_user.first_name or ''} {current_user.last_name or ''}".strip() or "A buyer"
 
-        for seller_id in matched_seller_ids:
+        for seller_id, score, selection_type in selected_sellers:
+            ns = NotifiedSeller(
+                bid_request_id=new_bid_request.id,
+                seller_id=seller_id,
+                score=score,
+                selection_type=selection_type,
+                round_number=1
+            )
+            db.add(ns)
+
             new_notif = Notification(
                 user_id=seller_id,
                 title=f"New Lead: {category.name}",

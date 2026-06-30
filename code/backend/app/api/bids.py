@@ -66,16 +66,27 @@ async def create_bid_request(
     db.commit()
     db.refresh(new_request)
 
-    # ── Stage 1 Hard Filters: select only relevant, active, nearby sellers ──
-    from ..services.seller_filter import apply_hard_filters
-    from ..models.models import Category, Notification
+    # ── Full Pipeline: Filters + Ranking + Selection ──
+    from ..services.ranking import run_pipeline
+    from ..models.models import Category, Notification, NotifiedSeller
 
-    matched_seller_ids = apply_hard_filters(current_user, new_request, db)
+    selected_sellers = run_pipeline(current_user, new_request, db)
 
     category = db.query(Category).filter(Category.id == request.category_id).first() if request.category_id else None
     buyer_name = f"{current_user.first_name or ''} {current_user.last_name or ''}".strip() or "A buyer"
 
-    for seller_id in matched_seller_ids:
+    for seller_id, score, selection_type in selected_sellers:
+        # 1. Track in NotifiedSeller
+        ns = NotifiedSeller(
+            bid_request_id=new_request.id,
+            seller_id=seller_id,
+            score=score,
+            selection_type=selection_type,
+            round_number=1
+        )
+        db.add(ns)
+
+        # 2. Create Notification
         desc_snippet = request.description[:50] + ('...' if len(request.description) > 50 else '')
         new_notif = Notification(
             user_id=seller_id,
@@ -88,6 +99,7 @@ async def create_bid_request(
         db.commit()
         db.refresh(new_notif)
 
+        # 3. Emit WebSocket
         try:
             sio = fastapi_req.app.state.sio
             await sio.emit("new_notification", {
@@ -197,6 +209,18 @@ async def submit_bid(
     if not bid_request:
         raise HTTPException(status_code=404, detail="Bid request not found")
 
+    # State Machine: Reject if already full or closed
+    if bid_request.status in (BidRequestStatus.ACCEPTED, BidRequestStatus.COMPLETED, BidRequestStatus.BID_LIMIT_REACHED):
+        raise HTTPException(status_code=429, detail="This request is no longer accepting new bids in this round")
+
+    # State Machine: Update state and count
+    if bid_request.bid_count == 0 and bid_request.status == BidRequestStatus.OPEN:
+        bid_request.status = BidRequestStatus.BIDDING
+
+    bid_request.bid_count += 1
+    if bid_request.bid_count >= 15:
+        bid_request.status = BidRequestStatus.BID_LIMIT_REACHED
+
     new_bid = Bid(
         bid_request_id=bid.bid_request_id,
         seller_id=current_user.id,
@@ -246,6 +270,113 @@ async def submit_bid(
 
     # Return enriched single bid
     return _enrich_bids([new_bid], db)[0]
+
+
+@router.post("/requests/{request_id}/resend", response_model=dict)
+async def resend_bid_request(
+    request_id: int,
+    fastapi_req: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_from_token)
+):
+    """Resend a request to a new batch of 15 sellers if the buyer wants more options."""
+    bid_request = db.query(BidRequest).filter(BidRequest.id == request_id).first()
+    if not bid_request:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    if bid_request.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only the owner can resend this request")
+
+    if bid_request.status != BidRequestStatus.BID_LIMIT_REACHED:
+        raise HTTPException(status_code=400, detail="Can only resend when the current bid limit is reached")
+
+    from ..models.models import NotifiedSeller, Notification, Category
+    from ..services.ranking import run_pipeline
+
+    # Find previously notified sellers to exclude
+    past_notified = db.query(NotifiedSeller.seller_id).filter(NotifiedSeller.bid_request_id == request_id).all()
+    exclude_ids = {row[0] for row in past_notified}
+
+    # Get new sellers
+    selected_sellers = run_pipeline(current_user, bid_request, db, exclude_seller_ids=exclude_ids)
+    
+    if not selected_sellers:
+        raise HTTPException(status_code=404, detail="No more matching sellers found in your area")
+
+    # Reset state
+    bid_request.bid_count = 0
+    bid_request.resend_round += 1
+    bid_request.status = BidRequestStatus.OPEN
+    
+    category = db.query(Category).filter(Category.id == bid_request.category_id).first() if bid_request.category_id else None
+    buyer_name = f"{current_user.first_name or ''} {current_user.last_name or ''}".strip() or "A buyer"
+
+    # Notify new batch
+    for seller_id, score, selection_type in selected_sellers:
+        ns = NotifiedSeller(
+            bid_request_id=bid_request.id,
+            seller_id=seller_id,
+            score=score,
+            selection_type=selection_type,
+            round_number=bid_request.resend_round
+        )
+        db.add(ns)
+
+        desc_snippet = bid_request.description[:50] + ('...' if len(bid_request.description) > 50 else '')
+        new_notif = Notification(
+            user_id=seller_id,
+            title="New Matching Request",
+            message=f"{buyer_name} has posted a new request that matches your profile: '{desc_snippet}'",
+            type="new_request",
+            reference_id=bid_request.id
+        )
+        db.add(new_notif)
+        db.commit()
+        db.refresh(new_notif)
+
+        try:
+            sio = fastapi_req.app.state.sio
+            await sio.emit("new_notification", {
+                "id": new_notif.id,
+                "title": new_notif.title,
+                "text": new_notif.message,
+                "time": "Just now",
+                "unread": not new_notif.is_read,
+                "type": new_notif.type,
+                "reference_id": new_notif.reference_id
+            }, room=f"user_{seller_id}")
+        except Exception:
+            pass
+
+    db.commit()
+
+    return {
+        "message": f"Successfully notified {len(selected_sellers)} more sellers.",
+        "notified_count": len(selected_sellers),
+        "round": bid_request.resend_round
+    }
+
+
+@router.patch("/requests/{request_id}/complete", response_model=BidRequestResponse)
+def complete_bid_request(
+    request_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_from_token)
+):
+    bid_request = db.query(BidRequest).filter(BidRequest.id == request_id).first()
+    if not bid_request:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    if bid_request.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only the owner can complete this request")
+
+    if bid_request.status != BidRequestStatus.ACCEPTED:
+        raise HTTPException(status_code=400, detail="Only accepted requests can be completed")
+
+    bid_request.status = BidRequestStatus.COMPLETED
+    db.commit()
+    db.refresh(bid_request)
+    return bid_request
 
 
 @router.get("/request/{request_id}", response_model=List[BidResponse])
