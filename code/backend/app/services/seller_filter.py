@@ -97,22 +97,26 @@ def category_or_keyword_match(
     return bool(request_keywords & profile_keywords)
 
 
-def location_match(buyer_location: str | None, seller_location: str | None) -> bool:
+def location_match(request_location: str | None, seller_location: str | None) -> bool:
     """
     Hard Filter 3 — Sri Lanka district matching (strict mode).
 
-    Both locations are normalised and compared directly.
-    Returns False if either side has no location set, or if districts differ.
-    This ensures only sellers provably in the buyer's district are notified.
+    Compares the location the buyer specified through the AI assistant
+    (stored in BidRequest.location) against the seller's static stored location
+    (User.location set during registration / profile settings).
+
+    Both sides are normalised to lowercase and compared directly.
+    Returns False if either side has no location set, or if they differ.
+    This ensures only sellers provably in the buyer's requested district are notified.
     """
-    buyer = _normalise_location(buyer_location)
+    request = _normalise_location(request_location)
     seller = _normalise_location(seller_location)
 
     # Strict: both must be present and equal
-    if not buyer or not seller:
+    if not request or not seller:
         return False
 
-    return buyer == seller
+    return request == seller
 
 
 # ── Master Pipeline Function ──────────────────────────────────────────────────
@@ -172,12 +176,13 @@ def apply_hard_filters(buyer, bid_request, db: Session) -> list[int]:
             continue
 
         # ── Filter 3: Location (strict district match) ───────────────────────
-        # We must load the seller User row to get their stored location.
+        # Compare the AI-collected request location (bid_request.location)
+        # against the seller's static registered location (User.location).
         from ..models.models import User
         seller_user = db.query(User).filter(User.id == profile.user_id).first()
         seller_location = seller_user.location if seller_user else None
 
-        if not location_match(buyer.location, seller_location):
+        if not location_match(bid_request.location, seller_location):
             continue
 
         # Passed all filters

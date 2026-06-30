@@ -59,6 +59,7 @@ async def create_bid_request(
         user_id=current_user.id,
         description=request.description,
         category_id=request.category_id,
+        location=request.location,
         status=BidRequestStatus.OPEN
     )
     db.add(new_request)

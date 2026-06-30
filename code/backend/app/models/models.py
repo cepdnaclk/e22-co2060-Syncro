@@ -139,6 +139,9 @@ class BidRequest(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
     description = Column(Text, nullable=False)
+    # Location specified by the buyer (via AI assistant or manual form).
+    # Stored as a Sri Lanka district/city name; used for Filter 3 seller matching.
+    location = Column(String, nullable=True)
     status = Column(Enum(BidRequestStatus), default=BidRequestStatus.OPEN)
     created_at = Column(DateTime, default=datetime.utcnow)
 
