@@ -94,7 +94,18 @@ def category_or_keyword_match(
     # (b) Keyword overlap with seller's profile text
     profile_text = f"{profile.name or ''} {profile.description or ''}"
     profile_keywords = _get_keywords(profile_text)
-    return bool(request_keywords & profile_keywords)
+    
+    # Exact overlap
+    if request_keywords & profile_keywords:
+        return True
+        
+    # Substring / plural overlap
+    for r_kw in request_keywords:
+        for p_kw in profile_keywords:
+            if r_kw in p_kw or p_kw in r_kw:
+                return True
+                
+    return False
 
 
 def location_match(request_location: str | None, seller_location: str | None) -> bool:
