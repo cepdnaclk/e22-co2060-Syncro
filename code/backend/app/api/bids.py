@@ -133,52 +133,31 @@ def get_matching_requests(
     if current_user.active_role != UserRole.SELLER:
         raise HTTPException(status_code=403, detail="Only sellers can view matching requests")
 
-    from ..models.models import Category, Profile, Listing
-    import re
+    from ..models.models import NotifiedSeller
 
-    def get_keywords(text):
-        if not text:
-            return set()
-        words = re.findall(r'\b\w+\b', text.lower())
-        stop_words = {"a", "an", "the", "and", "or", "but", "in", "on", "at", "to",
-                      "for", "with", "by", "of", "is", "are", "was", "were", "i", "we",
-                      "you", "they", "it", "this", "that", "want", "need", "looking",
-                      "buy", "sell", "get", "make", "some", "any"}
-        return {w for w in words if w not in stop_words and len(w) > 2}
+    # Get requests where this seller was notified in the current active round
+    # and the request is still OPEN or BIDDING
+    matching_requests = (
+        db.query(BidRequest)
+        .join(NotifiedSeller, BidRequest.id == NotifiedSeller.bid_request_id)
+        .filter(
+            NotifiedSeller.seller_id == current_user.id,
+            NotifiedSeller.round_number == BidRequest.resend_round,
+            BidRequest.status.in_([BidRequestStatus.OPEN, BidRequestStatus.BIDDING])
+        )
+        .all()
+    )
 
-    profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
-    profile_text = f"{profile.name or ''} {profile.description or ''}" if profile else ""
-    prof_keywords = get_keywords(profile_text)
-
-    listing_categories = db.query(Listing.category_id).filter(Listing.seller_id == current_user.id).all()
-    category_ids = {c[0] for c in listing_categories}
-
-    open_requests = db.query(BidRequest).filter(
-        BidRequest.status == BidRequestStatus.OPEN,
-        BidRequest.user_id != current_user.id
-    ).all()
-
+    # Filter out requests they have already bid on
     existing_bids = db.query(Bid.bid_request_id).filter(
         Bid.seller_id == current_user.id,
         Bid.status != BidStatus.REJECTED
     ).all()
     bid_request_ids = {b[0] for b in existing_bids}
 
-    matching_requests = []
-    for req in open_requests:
-        if req.id in bid_request_ids:
-            continue
-        if req.category_id in category_ids:
-            matching_requests.append(req)
-            continue
-        category = db.query(Category).filter(Category.id == req.category_id).first() if req.category_id else None
-        cat_name = category.name if category else ""
-        request_text = f"{cat_name} {req.description or ''}"
-        req_keywords = get_keywords(request_text)
-        if req_keywords.intersection(prof_keywords):
-            matching_requests.append(req)
+    available_jobs = [req for req in matching_requests if req.id not in bid_request_ids]
 
-    return matching_requests
+    return available_jobs
 
 
 @router.get("/requests/{request_id}", response_model=BidRequestResponse)
