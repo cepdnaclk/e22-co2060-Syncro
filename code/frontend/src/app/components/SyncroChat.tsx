@@ -33,7 +33,11 @@ async function callAI(
         body: JSON.stringify({ conversation }),
     });
     if (!res.ok) throw new Error(`Server error: ${res.status}`);
-    return res.json();
+    const data = await res.json();
+    // Surface AI service errors (e.g. Groq unreachable) as thrown exceptions
+    // so the catch block below can show the real message to the user.
+    if (data.status === 'error') throw new Error(data.message || 'AI service error');
+    return data;
 }
 
 function formatTime(date: Date): string {
@@ -224,9 +228,14 @@ export function SyncroChat({
                 }, 2000);
             }
         } catch (error: any) {
-            let errorMsg = '⚠️ Could not reach the AI server. Make sure the SSH tunnel is running.';
-            if (error instanceof Error && error.message.includes('401')) {
-                errorMsg = '⚠️ Your session has expired or is invalid. Please log out and log back in.';
+            let errorMsg = '⚠️ Could not reach the AI service. Please check your connection and try again.';
+            if (error instanceof Error) {
+                if (error.message.includes('401')) {
+                    errorMsg = '⚠️ Your session has expired. Please log out and log back in.';
+                } else if (error.message && !error.message.startsWith('Server error:')) {
+                    // Show the actual backend error message (e.g. from Groq timeout / API key issue)
+                    errorMsg = `⚠️ ${error.message}`;
+                }
             }
             setMessages((prev) => [...prev, {
                 id: `err-${Date.now()}`, role: 'bot',

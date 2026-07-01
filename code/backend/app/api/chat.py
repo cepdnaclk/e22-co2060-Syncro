@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List, Optional
 from ..database import get_db
-from ..models.models import BidRequest, BidRequestStatus, Category, User, Listing
+from ..models.models import BidRequest, BidRequestStatus, Category, User
 from ..api.auth import get_current_user_from_token
 from ..ai_service import chat_with_ai
 
@@ -107,62 +107,45 @@ async def rfp_chat(
         user_id=current_user.id,
         category_id=category.id,
         description=full_description,
+        # Store the AI-collected location separately for clean Filter 3 matching
+        location=order.get("location") or None,
         status=BidRequestStatus.OPEN
     )
     db.add(new_bid_request)
     db.commit()
     db.refresh(new_bid_request)
 
-    # ── Notify relevant sellers via WebSocket ─────────────────────────────────
-    from ..models.models import Notification, Profile
+    # ── Full Pipeline: Filters + Ranking + Selection ────
+    from ..services.ranking import run_pipeline
+    from ..models.models import Notification, NotifiedSeller
+
+    selected_sellers = run_pipeline(current_user, new_bid_request, db)
+
     try:
         sio = fastapi_req.app.state.sio
-        
-        seller_ids = set()
-        
-        # 1. Sellers who have a listing in this category
-        listing_sellers = db.query(Listing.seller_id).filter(
-            Listing.category_id == category.id
-        ).all()
-        for (s_id,) in listing_sellers:
-            seller_ids.add(s_id)
-            
-        # 2. Sellers whose profile bio or name shares keywords with the request
-        import re
-        def get_keywords(text):
-            if not text: return set()
-            words = re.findall(r'\b\w+\b', text.lower())
-            stop_words = {"a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for", "with", "by", "of", "is", "are", "was", "were", "i", "we", "you", "they", "it", "this", "that", "want", "need", "looking", "buy", "sell", "get", "make", "some", "any"}
-            return {w for w in words if w not in stop_words and len(w) > 2}
-            
-        request_text = f"{category.name} {order.get('description', '')}"
-        req_keywords = get_keywords(request_text)
-        
-        all_profiles = db.query(Profile).all()
-        for p in all_profiles:
-            prof_text = f"{p.name or ''} {p.description or ''}"
-            prof_keywords = get_keywords(prof_text)
-            if req_keywords.intersection(prof_keywords):
-                seller_ids.add(p.user_id)
-            
-        # Remove the buyer themselves
-        if current_user.id in seller_ids:
-            seller_ids.remove(current_user.id)
-        
-        for seller_id in seller_ids:
-            # Create a Notification in DB for persistence
+        buyer_name = f"{current_user.first_name or ''} {current_user.last_name or ''}".strip() or "A buyer"
+
+        for seller_id, score, selection_type in selected_sellers:
+            ns = NotifiedSeller(
+                bid_request_id=new_bid_request.id,
+                seller_id=seller_id,
+                score=score,
+                selection_type=selection_type,
+                round_number=1
+            )
+            db.add(ns)
+
             new_notif = Notification(
                 user_id=seller_id,
                 title=f"New Lead: {category.name}",
-                message=f"A buyer is looking for {category.name}. Check it out!",
+                message=f"{buyer_name} is looking for {category.name} in {new_bid_request.location or 'your area'}. Check it out!",
                 type="new_rfp",
                 reference_id=new_bid_request.id
             )
             db.add(new_notif)
             db.commit()
             db.refresh(new_notif)
-            
-            # Send real-time event
+
             await sio.emit("new_notification", {
                 "id": new_notif.id,
                 "title": new_notif.title,
@@ -172,7 +155,7 @@ async def rfp_chat(
                 "type": new_notif.type,
                 "reference_id": new_notif.reference_id
             }, room=f"user_{seller_id}")
-            
+
     except Exception as e:
         print(f"Failed to send notification: {e}")
 

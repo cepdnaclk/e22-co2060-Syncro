@@ -44,6 +44,8 @@ class UserUpdate(BaseModel):
 class BidRequestBase(BaseModel):
     description: str
     category_id: Optional[int] = None
+    # Buyer-specified delivery/service location (collected by AI assistant or manual form)
+    location: Optional[str] = None
 
 class BidRequestCreate(BidRequestBase):
     pass
@@ -52,6 +54,8 @@ class BidRequestResponse(BidRequestBase):
     id: int
     user_id: int
     status: str
+    bid_count: int
+    resend_round: int
     created_at: datetime
 
     class Config:

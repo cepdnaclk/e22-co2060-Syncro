@@ -52,6 +52,17 @@ async def chat_with_ai(conversation_history: list) -> dict:
         print("Groq status code:", response.status_code)
         print("Groq response:", response.text)
         response.raise_for_status()
+    except httpx.HTTPStatusError as e:
+        # Groq returned a non-2xx response (rate limit, invalid key, etc.)
+        try:
+            detail = e.response.json().get("error", {}).get("message", str(e))
+        except Exception:
+            detail = str(e)
+        print("GROQ HTTP ERROR:", detail)
+        return {
+            "status": "error",
+            "message": f"AI service error: {detail}"
+        }
     except Exception as e:
         print("FULL ERROR:", str(e))
         return {

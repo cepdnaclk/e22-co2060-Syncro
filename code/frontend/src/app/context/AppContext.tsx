@@ -77,6 +77,7 @@ interface AppContextType {
   setIsChatOpen: (open: boolean) => void;
   notifications: any[];
   markNotificationRead: (id: number) => Promise<void>;
+  markAllNotificationsRead: () => Promise<void>;
   // Global unread message count — shown as badge on Messages nav / floating button
   unreadMessageCount: number;
   clearUnreadMessages: () => void;
@@ -436,6 +437,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Optimistically mark all unread notifications as read in the UI immediately,
+  // then fire the API calls in the background so the red dot disappears instantly.
+  const markAllNotificationsRead = async () => {
+    const unread = notifications.filter(n => !n.is_read);
+    if (unread.length === 0) return;
+    // Optimistic update — clears the dot right away
+    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    try {
+      const { notificationsApi } = await import('../services/api');
+      await Promise.all(unread.map(n => notificationsApi.markRead(n.id)));
+    } catch (e) {
+      console.error("Failed to mark all notifications as read", e);
+    }
+  };
+
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove('light', 'dark');
@@ -483,6 +499,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setIsChatOpen,
       notifications,
       markNotificationRead,
+      markAllNotificationsRead,
       unreadMessageCount,
       clearUnreadMessages,
       socketOn,

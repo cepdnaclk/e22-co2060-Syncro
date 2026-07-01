@@ -30,8 +30,11 @@ class OrderStatus(str, enum.Enum):
 
 class BidRequestStatus(str, enum.Enum):
     OPEN = "open"
+    BIDDING = "bidding"
+    BID_LIMIT_REACHED = "bid_limit_reached"
     CLOSED = "closed"
     ACCEPTED = "accepted"
+    COMPLETED = "completed"
 
 class BidStatus(str, enum.Enum):
     PENDING = "pending"
@@ -71,7 +74,10 @@ class Profile(Base):
     address = Column(String, nullable=True)
     phone = Column(String, nullable=True)
     website = Column(String, nullable=True)
-    
+    # Added via migrate_add_is_active.py — declared here so SQLAlchemy can
+    # read/write it. NULL is treated as True (active) for backward compat.
+    is_active = Column(Boolean, nullable=True, default=True)
+
     user = relationship("User", back_populates="profile")
 
 class Category(Base):
@@ -136,11 +142,31 @@ class BidRequest(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
     description = Column(Text, nullable=False)
+    # Location specified by the buyer (via AI assistant or manual form).
+    # Stored as a Sri Lanka district/city name; used for Filter 3 seller matching.
+    location = Column(String, nullable=True)
     status = Column(Enum(BidRequestStatus), default=BidRequestStatus.OPEN)
+    bid_count = Column(Integer, default=0)
+    resend_round = Column(Integer, default=1)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="bid_requests")
     bids = relationship("Bid", back_populates="bid_request", cascade="all, delete-orphan")
+    notified_sellers = relationship("NotifiedSeller", back_populates="bid_request", cascade="all, delete-orphan")
+
+
+class NotifiedSeller(Base):
+    __tablename__ = "notified_sellers"
+    id = Column(Integer, primary_key=True, index=True)
+    bid_request_id = Column(Integer, ForeignKey("bid_requests.id"))
+    seller_id = Column(Integer, ForeignKey("users.id"))
+    score = Column(Float, default=0.0)
+    selection_type = Column(String)  # "performance" or "fairness"
+    round_number = Column(Integer, default=1)
+    notified_at = Column(DateTime, default=datetime.utcnow)
+
+    bid_request = relationship("BidRequest", back_populates="notified_sellers")
+    seller = relationship("User")
 
 class Bid(Base):
     __tablename__ = "bids"
