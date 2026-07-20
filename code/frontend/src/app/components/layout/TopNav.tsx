@@ -1,11 +1,9 @@
-﻿import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Search, Bell, Moon, Sun, LogOut, Settings, ChevronDown } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
-import { LanguageSwitcher } from '../LanguageSwitcher';
-
 export function TopNav() {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -108,7 +106,6 @@ export function TopNav() {
             </AnimatePresence>
           </div>
 
-          <LanguageSwitcher />
 
           <button onClick={toggleTheme} className="p-2 hover:bg-accent rounded-lg transition-colors">
             {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}

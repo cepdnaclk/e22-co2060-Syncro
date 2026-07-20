@@ -36,7 +36,7 @@ const baseTabs: { id: Tab; label: string; icon: React.ElementType }[] = [
 ];
 
 export function Settings() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { theme, setTheme, userProfile, setUserProfile, role, hasSellerProfile, logout } = useApp();
   const navigate = useNavigate();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -386,6 +386,32 @@ export function Settings() {
                           <span className="text-sm font-medium">{option.label}</span>
                           {isActive && (
                             <Badge variant="default" className="text-xs">Active</Badge>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  
+                  <h3 className="font-medium mt-8 mb-4">{t('settings.languageLabel') || 'Language'}</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    {[
+                      { value: 'en', label: 'English', native: 'English' },
+                      { value: 'si', label: 'Sinhala', native: 'සිංහල' },
+                    ].map((option) => {
+                      const isActive = i18n.language === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          onClick={() => i18n.changeLanguage(option.value)}
+                          className={`p-6 border-2 rounded-xl flex flex-col items-center gap-2 transition-all ${isActive
+                            ? 'border-primary bg-primary/5'
+                            : 'border-border hover:border-primary/50'
+                            }`}
+                        >
+                          <span className="text-lg font-medium">{option.native}</span>
+                          <span className="text-sm text-muted-foreground">{option.label}</span>
+                          {isActive && (
+                            <Badge variant="default" className="text-xs mt-1">Active</Badge>
                           )}
                         </button>
                       );
