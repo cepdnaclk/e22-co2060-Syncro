@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
 import { Search, Filter, Star, MapPin, Clock } from 'lucide-react';
 import { Card, CardContent, CardFooter } from '../components/ui/Card';
@@ -11,6 +12,7 @@ import { mockServices, serviceCategories } from '../services/mockData';
 const allCategories = ['All Categories', ...serviceCategories];
 
 export function Discovery() {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   // Fixed: initial value is 'all' and option values match
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -66,8 +68,8 @@ export function Discovery() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold mb-2">Discover Services</h1>
-        <p className="text-muted-foreground">Find the perfect service provider for your needs</p>
+        <h1 className="text-3xl font-bold mb-2">{t('discovery.title')}</h1>
+        <p className="text-muted-foreground">{t('discovery.subtitle')}</p>
       </div>
 
       {/* Search and Filters */}
@@ -80,7 +82,7 @@ export function Discovery() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <input
                   type="text"
-                  placeholder="Search services..."
+                  placeholder={t('discovery.searchPlaceholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
@@ -95,7 +97,7 @@ export function Discovery() {
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 className="w-full px-4 py-2 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
               >
-                <option value="all">All Categories</option>
+                <option value="all">{t('discovery.allCategories')}</option>
                 {serviceCategories.map((cat) => (
                   <option key={cat} value={cat}>
                     {cat}
@@ -111,11 +113,11 @@ export function Discovery() {
                 onChange={(e) => setSortBy(e.target.value)}
                 className="w-full px-4 py-2 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
               >
-                <option value="relevance">Most Relevant</option>
-                <option value="price-low">Price: Low to High</option>
-                <option value="price-high">Price: High to Low</option>
-                <option value="rating">Highest Rated</option>
-                <option value="reviews">Most Reviews</option>
+                <option value="relevance">{t('discovery.relevance')}</option>
+                <option value="price-low">{t('discovery.priceLow')}</option>
+                <option value="price-high">{t('discovery.priceHigh')}</option>
+                <option value="rating">{t('discovery.topRated')}</option>
+                <option value="reviews">{t('discovery.mostReviewed')}</option>
               </select>
             </div>
           </div>
@@ -131,8 +133,8 @@ export function Discovery() {
       {filteredServices.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <Filter className="w-12 h-12 mx-auto mb-4 opacity-30" />
-          <p className="text-lg font-semibold mb-1">No services found</p>
-          <p className="text-sm">Try adjusting your search or filters.</p>
+          <p className="text-lg font-semibold mb-1">{t('discovery.noResults')}</p>
+          <p className="text-sm">{t('discovery.noResultsDesc')}</p>
         </div>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -172,10 +174,10 @@ export function Discovery() {
                   </CardContent>
                   <CardFooter className="p-6 pt-0 flex items-center justify-between">
                     <div>
-                      <span className="text-sm text-muted-foreground">Starting at</span>
+                      <span className="text-sm text-muted-foreground">{t('discovery.from')}</span>
                       <div className="text-2xl font-bold text-primary">${service.price}</div>
                     </div>
-                    <Button variant="outline">View Details</Button>
+                    <Button variant="outline">{t('discovery.viewService')}</Button>
                   </CardFooter>
                 </Card>
               </Link>

@@ -1,0 +1,25 @@
+﻿/* Sinhala Unicode font */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Sinhala:wght@300;400;500;600;700&display=swap');
+
+/*
+  When the <html> element has lang="si", inject Noto Sans Sinhala as the
+  primary font so Sinhala glyphs render correctly.
+  line-height >= 1.75 is essential - Sinhala vowel marks extend above/below
+  the baseline and will be clipped at the default 1.5.
+*/
+:lang(si),
+[lang="si"] {
+  font-family: 'Noto Sans Sinhala', 'Noto Sans', sans-serif;
+  line-height: 1.75;
+  word-spacing: 0.02em;
+}
+
+/* Buttons and inputs also need the override so Sinhala text does not fall back */
+[lang="si"] button,
+[lang="si"] input,
+[lang="si"] textarea,
+[lang="si"] select,
+[lang="si"] label {
+  font-family: 'Noto Sans Sinhala', 'Noto Sans', sans-serif;
+  line-height: 1.75;
+}
