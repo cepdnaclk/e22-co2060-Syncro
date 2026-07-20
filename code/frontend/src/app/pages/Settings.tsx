@@ -393,10 +393,11 @@ export function Settings() {
                   </div>
                   
                   <h3 className="font-medium mt-8 mb-4">{t('settings.languageLabel') || 'Language'}</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-4">
                     {[
                       { value: 'en', label: 'English', native: 'English' },
                       { value: 'si', label: 'Sinhala', native: 'සිංහල' },
+                      { value: 'ta', label: 'Tamil', native: 'தமிழ்' },
                     ].map((option) => {
                       const isActive = i18n.language === option.value;
                       return (

@@ -3,11 +3,12 @@ import { initReactI18next } from 'react-i18next';
 
 import en from './locales/en.json';
 import si from './locales/si.json';
+import ta from './locales/ta.json';
 
 const LANG_STORAGE_KEY = 'syncro-lang';
 
 const savedLang = localStorage.getItem(LANG_STORAGE_KEY);
-const defaultLang = savedLang === 'si' ? 'si' : 'en';
+const defaultLang = ['en', 'si', 'ta'].includes(savedLang as string) ? savedLang! : 'en';
 
 i18n
   .use(initReactI18next)
@@ -15,6 +16,7 @@ i18n
     resources: {
       en: { translation: en },
       si: { translation: si },
+      ta: { translation: ta },
     },
     lng: defaultLang,
     fallbackLng: 'en',
