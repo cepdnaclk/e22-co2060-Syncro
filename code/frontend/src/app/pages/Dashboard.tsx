@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
 import {
   ShoppingCart,
@@ -90,19 +91,20 @@ import { MessageCircle } from 'lucide-react';
 // ────────────────────────── Buyer Dashboard ────────────────
 
 function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirstName }: BuyerDashboardProps) {
+  const { t } = useTranslation();
   const stats = [
-    { label: 'Active Orders', value: '0', icon: ShoppingCart, iconColor: 'text-[#0057B8] dark:text-[#60A5FA]', bgColor: 'bg-[#EBF3FC] dark:bg-[#2563EB]/20' },
-    { label: 'Completed', value: '0', icon: CheckCircle, iconColor: 'text-[#00D084] dark:text-[#34D399]', bgColor: 'bg-[#E6FAF0] dark:bg-[#10B981]/20' },
-    { label: 'Pending Payment', value: '0', icon: Clock, iconColor: 'text-[#F5A623] dark:text-[#FBBF24]', bgColor: 'bg-[#FEF6E9] dark:bg-[#D97706]/20' },
-    { label: 'Messages', value: '0', icon: MessageSquare, iconColor: 'text-[#B620E0] dark:text-[#E879F9]', bgColor: 'bg-[#F8E9FB] dark:bg-[#C026D3]/20' },
+    { label: t('dashboard.statActiveOrders'), value: '0', icon: ShoppingCart, iconColor: 'text-[#0057B8] dark:text-[#60A5FA]', bgColor: 'bg-[#EBF3FC] dark:bg-[#2563EB]/20' },
+    { label: t('dashboard.statCompleted'), value: '0', icon: CheckCircle, iconColor: 'text-[#00D084] dark:text-[#34D399]', bgColor: 'bg-[#E6FAF0] dark:bg-[#10B981]/20' },
+    { label: t('dashboard.statPendingPayment'), value: '0', icon: Clock, iconColor: 'text-[#F5A623] dark:text-[#FBBF24]', bgColor: 'bg-[#FEF6E9] dark:bg-[#D97706]/20' },
+    { label: t('dashboard.statMessages'), value: '0', icon: MessageSquare, iconColor: 'text-[#B620E0] dark:text-[#E879F9]', bgColor: 'bg-[#F8E9FB] dark:bg-[#C026D3]/20' },
   ];
 
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning';
-    if (hour < 18) return 'Good Afternoon';
-    return 'Good Evening';
+    if (hour < 12) return t('dashboard.greetingMorning');
+    if (hour < 18) return t('dashboard.greetingAfternoon');
+    return t('dashboard.greetingEvening');
   };
 
   const { authUser } = useApp();
@@ -129,7 +131,7 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold mb-2">{getGreeting()}, {userFirstName} 👋</h1>
-        <p className="text-muted-foreground">Here's what's happening with your orders.</p>
+        <p className="text-muted-foreground">{t('dashboard.buyerSubtitle')}</p>
       </div>
 
       {/* CTA Section (Start Selling & Syncro Assistant) */}
@@ -145,11 +147,11 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
                     <Sparkles className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Start Selling on Syncro</h3>
+                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{t('dashboard.startSellingTitle')}</h3>
                   </div>
                 </div>
                 <p className="text-gray-600 dark:text-slate-300 text-[15px] max-w-2xl leading-relaxed ml-16">
-                  Create a business profile and offer your products and services. Reach buyers, manage orders, and grow your business with our powerful tools.
+                  {t('dashboard.startSellingDesc')}
                 </p>
               </div>
               <div className="shrink-0 ml-16 md:ml-0">
@@ -157,7 +159,7 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
                   onClick={onStartSelling}
                   className="bg-[#0057B8] hover:bg-[#00479A] text-white px-6 py-6 font-semibold text-base rounded-lg shadow-sm w-full md:w-auto"
                 >
-                  Create Business Profile
+                  {t('dashboard.createBusinessProfile')}
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </div>
@@ -172,14 +174,14 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
                   <Bot className="w-6 h-6 text-[#0089BA] dark:text-[#38BDF8]" />
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
-                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Ask Syncro Assistant</h3>
+                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{t('dashboard.askAssistantTitle')}</h3>
                   <Badge className="bg-[#E1F2F7] hover:bg-[#D5EAF1] dark:bg-slate-700/50 dark:hover:bg-slate-600/50 text-[#0089BA] dark:text-[#38BDF8] border-none text-[10px] uppercase font-bold px-2 py-0.5 tracking-wider">
                     AI HELPER
                   </Badge>
                 </div>
               </div>
               <p className="text-gray-600 dark:text-slate-300 text-[15px] max-w-2xl leading-relaxed ml-16">
-                Need something done? Describe your needs here and Syncro Assistant will guide you to the best service.
+                {t('dashboard.askAssistantDesc')}
               </p>
             </div>
             <div className="shrink-0 ml-16 md:ml-0">
@@ -217,9 +219,9 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
   <Card>
     <CardHeader>
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Recent Orders</h3>
+        <h3 className="text-lg font-semibold">{t('dashboard.recentOrders')}</h3>
         <Link to="/orders">
-          <Button variant="ghost" size="sm">View All</Button>
+          <Button variant="ghost" size="sm">{t('common.viewAll')}</Button>
         </Link>
       </div>
     </CardHeader>
@@ -228,24 +230,24 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
         <table className="w-full">
           <thead>
             <tr className="border-b border-border">
-              <th className="text-left py-3 px-4 text-sm font-semibold">Order ID</th>
-              <th className="text-left py-3 px-4 text-sm font-semibold">Service</th>
-              <th className="text-left py-3 px-4 text-sm font-semibold">Seller</th>
-              <th className="text-left py-3 px-4 text-sm font-semibold">Status</th>
-              <th className="text-right py-3 px-4 text-sm font-semibold">Amount</th>
+              <th className="text-left py-3 px-4 text-sm font-semibold">{t('dashboard.orderId')}</th>
+              <th className="text-left py-3 px-4 text-sm font-semibold">{t('dashboard.service')}</th>
+              <th className="text-left py-3 px-4 text-sm font-semibold">{t('dashboard.sellerCol')}</th>
+              <th className="text-left py-3 px-4 text-sm font-semibold">{t('common.status')}</th>
+              <th className="text-right py-3 px-4 text-sm font-semibold">{t('common.amount')}</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
                 <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
-                  Loading orders...
+                  {t('dashboard.loadingOrders')}
                 </td>
               </tr>
             ) : orders.length === 0 ? (
               <tr>
                 <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
-                  No orders yet. Browse services to place your first order.
+                  {t('dashboard.noOrders')}
                 </td>
               </tr>
             ) : orders.map((order) => (
@@ -272,7 +274,7 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
         <motion.div {...fadeInUp} transition={{ delay: 0.4 }}>
           <Card>
             <CardHeader>
-              <h3 className="text-lg font-semibold">Order Activity</h3>
+              <h3 className="text-lg font-semibold">{t('dashboard.orderActivity')}</h3>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={250}>
@@ -297,12 +299,12 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
         <motion.div {...fadeInUp} transition={{ delay: 0.5 }}>
           <Card>
             <CardHeader>
-              <h3 className="text-lg font-semibold">Recent Activity</h3>
+              <h3 className="text-lg font-semibold">{t('dashboard.recentActivity')}</h3>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {buyerActivities.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-6">No recent activity yet.</p>
+                  <p className="text-sm text-muted-foreground text-center py-6">{t('dashboard.noRecentActivity')}</p>
                 ) : buyerActivities.map((activity: Activity, index: number) => (
                   <div key={index} className="flex items-start gap-3 pb-3 border-b border-border last:border-0">
                     <div className={`w-2 h-2 rounded-full mt-2 ${activity.type === 'success' ? 'bg-green-500' :
@@ -328,26 +330,29 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
 // ────────────────────────── Trigger Button Helper ────────
 function SyncroChatTriggerButton() {
   const { setIsChatOpen } = useApp();
+  const { t } = useTranslation();
   return (
-    <Button
+  <Button
       onClick={() => setIsChatOpen(true)}
       className="bg-[#0091C2] hover:bg-[#007EA8] text-white px-6 py-6 font-semibold text-base rounded-lg shadow-sm w-full md:w-auto"
     >
       <MessageCircle className="w-5 h-5 mr-3" />
-      Describe Your Need
+      {t('dashboard.describeYourNeed')}
       <ArrowRight className="w-4 h-4 ml-2" />
     </Button>
   );
 }
 
+
 // ────────────────────────── Seller Dashboard ───────────────
 
 function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboardProps) {
+  const { t } = useTranslation();
   const stats = [
-    { label: 'Total Earnings', value: '$0', icon: DollarSign, color: 'text-green-500' },
-    { label: 'Active Listings', value: '0', icon: Package, color: 'text-blue-500' },
-    { label: 'Orders Received', value: '0', icon: ShoppingCart, color: 'text-purple-500' },
-    { label: 'Growth', value: '0%', icon: TrendingUp, color: 'text-teal-500' },
+    { label: t('dashboard.statTotalEarnings'), value: '$0', icon: DollarSign, color: 'text-green-500' },
+    { label: t('dashboard.statActiveListings'), value: '0', icon: Package, color: 'text-blue-500' },
+    { label: t('dashboard.statOrdersReceived'), value: '0', icon: ShoppingCart, color: 'text-purple-500' },
+    { label: t('dashboard.statGrowth'), value: '0%', icon: TrendingUp, color: 'text-teal-500' },
   ];
 
   const { authUser } = useApp();
@@ -418,8 +423,8 @@ function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboa
     <div className="space-y-8">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold mb-2">{businessName} Dashboard</h1>
-          <p className="text-muted-foreground">Manage your business and track your performance.</p>
+          <h1 className="text-3xl font-bold mb-2">{businessName} {t('dashboard.sellerDashboardTitle')}</h1>
+          <p className="text-muted-foreground">{t('dashboard.sellerSubtitle')}</p>
         </div>
 
         {/* Active/Inactive toggle */}
@@ -456,7 +461,7 @@ function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboa
 
               {/* Label */}
               <span className="transition-all duration-200">
-                {statusLoading ? 'Updating…' : isActive ? 'Active Today' : 'Unavailable'}
+                {statusLoading ? t('dashboard.updating') : isActive ? t('dashboard.activeToday') : t('dashboard.unavailable')}
               </span>
 
               {/* Pill toggle track */}
@@ -475,7 +480,7 @@ function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboa
           )}
 
           <Link to="/listings">
-            <Button>Create New Listing</Button>
+            <Button>{t('dashboard.createNewListing')}</Button>
           </Link>
         </div>
       </div>
@@ -486,9 +491,9 @@ function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboa
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-semibold mb-2">Complete Your Profile</h3>
+                <h3 className="font-semibold mb-2">{t('dashboard.completeProfile')}</h3>
                 <p className="text-sm text-muted-foreground mb-3">
-                  Add more details to attract more customers
+                  {t('dashboard.completeProfileDesc')}
                 </p>
                 <div className="flex items-center gap-2">
                   <div className="flex-1 max-w-xs h-2 bg-muted rounded-full overflow-hidden">
@@ -498,7 +503,7 @@ function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboa
                 </div>
               </div>
               <Link to="/settings">
-                <Button variant="outline">Complete Profile</Button>
+                <Button variant="outline">{t('dashboard.completeProfileButton')}</Button>
               </Link>
             </div>
           </CardContent>
@@ -531,7 +536,7 @@ function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboa
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Recent Orders Received</h3>
+              <h3 className="text-lg font-semibold">{t('dashboard.recentOrdersReceived')}</h3>
               <Link to="/orders-received">
                 <Button variant="ghost" size="sm">View All</Button>
               </Link>
@@ -542,11 +547,11 @@ function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboa
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-left py-3 px-4 text-sm font-semibold">Order ID</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold">Service</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold">Buyer</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold">Status</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold">Amount</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold">{t('dashboard.orderId')}</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold">{t('dashboard.service')}</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold">{t('dashboard.buyerCol')}</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold">{t('common.status')}</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold">{t('common.amount')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -559,7 +564,7 @@ function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboa
                   ) : orders.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
-                        No orders received yet. Create listings to start getting orders.
+                        {t('dashboard.noOrdersReceived')}
                       </td>
                     </tr>
                   ) : orders.map((order) => (
@@ -587,7 +592,7 @@ function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboa
         <motion.div {...fadeInUp} transition={{ delay: 0.5 }}>
           <Card>
             <CardHeader>
-              <h3 className="text-lg font-semibold">Revenue Overview</h3>
+              <h3 className="text-lg font-semibold">{t('dashboard.revenueOverview')}</h3>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={250}>
@@ -612,7 +617,7 @@ function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboa
         <motion.div {...fadeInUp} transition={{ delay: 0.6 }}>
           <Card>
             <CardHeader>
-              <h3 className="text-lg font-semibold">Orders Trend</h3>
+              <h3 className="text-lg font-semibold">{t('dashboard.ordersTrend')}</h3>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={250}>

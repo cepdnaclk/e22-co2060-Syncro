@@ -183,6 +183,15 @@ export const ordersApi = {
     },
 };
 
+// ---------- Seller Summary (for New Message picker) ----------
+export interface SellerSummary {
+    user_id: number;
+    name: string;
+    description?: string;
+    logo?: string;
+    display_name: string;
+}
+
 // ---------- Profiles ----------
 export const profilesApi = {
     async get(userId: number): Promise<Profile> {
@@ -219,16 +228,14 @@ export const profilesApi = {
         });
         return handleResponse<Profile>(res);
     },
-};
 
-// ---------- Seller Summary (for New Message picker) ----------
-export interface SellerSummary {
-    user_id: number;
-    name: string;
-    description?: string;
-    logo?: string;
-    display_name: string;
-}
+    async listSellers(): Promise<SellerSummary[]> {
+        const res = await fetch(`${BASE_URL}/profiles/`, {
+            headers: headers(true),
+        });
+        return handleResponse<SellerSummary[]>(res);
+    },
+};
 
 // ---------- Notifications ----------
 export interface Notification {

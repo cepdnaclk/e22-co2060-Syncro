@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
 import { User, Bell, Shield, Moon, Sun, Monitor, Building2, AlertTriangle, MapPin, CheckCircle2 } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
@@ -28,13 +29,14 @@ const SRI_LANKA_DISTRICTS = [
 type Tab = 'profile' | 'notifications' | 'appearance' | 'privacy' | 'business';
 
 const baseTabs: { id: Tab; label: string; icon: React.ElementType }[] = [
-  { id: 'profile', label: 'Profile', icon: User },
-  { id: 'notifications', label: 'Notifications', icon: Bell },
-  { id: 'appearance', label: 'Appearance', icon: Moon },
-  { id: 'privacy', label: 'Privacy & Security', icon: Shield },
+  { id: 'profile', label: 'profile', icon: User },
+  { id: 'notifications', label: 'notifications', icon: Bell },
+  { id: 'appearance', label: 'appearance', icon: Moon },
+  { id: 'privacy', label: 'privacy', icon: Shield },
 ];
 
 export function Settings() {
+  const { t, i18n } = useTranslation();
   const { theme, setTheme, userProfile, setUserProfile, role, hasSellerProfile, logout } = useApp();
   const navigate = useNavigate();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -155,7 +157,7 @@ export function Settings() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-bold mb-2">Settings</h1>
+        <h1 className="text-3xl font-bold mb-2">{t('common.settings')}</h1>
         <p className="text-muted-foreground">Manage your account and preferences</p>
       </div>
 
@@ -176,7 +178,7 @@ export function Settings() {
                       }`}
                   >
                     <Icon className="w-4 h-4" />
-                    <span className="text-sm font-medium">{tab.label}</span>
+                    <span className="text-sm font-medium">{t(`settings.${tab.id}Tab`)}</span>
                   </button>
                 );
               })}
@@ -198,7 +200,7 @@ export function Settings() {
             {activeTab === 'profile' && (
               <Card>
                 <CardHeader>
-                  <h2 className="text-xl font-semibold">Profile Information</h2>
+                  <h2 className="text-xl font-semibold">{t('settings.profileTitle')}</h2>
                   <p className="text-sm text-muted-foreground">Update your personal details</p>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -239,25 +241,25 @@ export function Settings() {
 
                   <div className="grid md:grid-cols-2 gap-4">
                     <Input
-                      label="First Name"
+                      label={t('settings.firstNameLabel')}
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
                     />
                     <Input
-                      label="Last Name"
+                      label={t('settings.lastNameLabel')}
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
                     />
                   </div>
                   <Input
                     type="email"
-                    label="Email"
+                    label={t('settings.emailLabel')}
                     value={userProfile.email}
                     disabled
                   />
                   <Input
                     type="tel"
-                    label="Phone Number"
+                    label={t('settings.phoneLabel')}
                     placeholder="+94 77 123 4567"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
@@ -267,7 +269,7 @@ export function Settings() {
                   <div className="flex flex-col gap-1.5">
                     <label className="text-sm font-medium flex items-center gap-1.5">
                       <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
-                      District
+                      {t('settings.districtLabel')}
                     </label>
                     <Select
                       value={district}
@@ -285,13 +287,13 @@ export function Settings() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">Bio</label>
+                    <label className="block text-sm font-medium mb-2">{t('settings.bioLabel')}</label>
                     <textarea
                       rows={3}
                       value={bio}
                       onChange={(e) => setBio(e.target.value)}
                       className="w-full px-4 py-3 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-                      placeholder="Tell us about yourself..."
+                      placeholder={t('settings.bioPlaceholder')}
                     />
                   </div>
 
@@ -309,7 +311,7 @@ export function Settings() {
                   )}
 
                   <Button onClick={handleSaveProfile} disabled={saveLoading}>
-                    {saveLoading ? 'Saving...' : 'Save Profile'}
+                    {saveLoading ? t('common.saving') : t('settings.saveProfile')}
                   </Button>
                 </CardContent>
               </Card>
@@ -319,7 +321,7 @@ export function Settings() {
             {activeTab === 'notifications' && (
               <Card>
                 <CardHeader>
-                  <h2 className="text-xl font-semibold">Notification Preferences</h2>
+                  <h2 className="text-xl font-semibold">{t('settings.notificationsTitle')}</h2>
                   <p className="text-sm text-muted-foreground">
                     Choose what you want to be notified about
                   </p>
@@ -358,16 +360,16 @@ export function Settings() {
             {activeTab === 'appearance' && (
               <Card>
                 <CardHeader>
-                  <h2 className="text-xl font-semibold">Appearance</h2>
+                  <h2 className="text-xl font-semibold">{t('settings.appearanceTitle')}</h2>
                   <p className="text-sm text-muted-foreground">Personalise how Syncro looks for you</p>
                 </CardHeader>
                 <CardContent>
-                  <h3 className="font-medium mb-4">Theme</h3>
+                  <h3 className="font-medium mb-4">{t('settings.themeLabel')}</h3>
                   <div className="grid grid-cols-3 gap-4">
                     {[
-                      { value: 'light', icon: Sun, label: 'Light' },
-                      { value: 'dark', icon: Moon, label: 'Dark' },
-                      { value: 'system', icon: Monitor, label: 'System' },
+                      { value: 'light', icon: Sun, label: t('settings.lightTheme') },
+                      { value: 'dark', icon: Moon, label: t('settings.darkTheme') },
+                      { value: 'system', icon: Monitor, label: t('settings.systemTheme') },
                     ].map((option) => {
                       const Icon = option.icon;
                       const isActive = theme === option.value;
@@ -389,6 +391,33 @@ export function Settings() {
                       );
                     })}
                   </div>
+                  
+                  <h3 className="font-medium mt-8 mb-4">{t('settings.languageLabel') || 'Language'}</h3>
+                  <div className="grid grid-cols-3 gap-4">
+                    {[
+                      { value: 'en', label: 'English', native: 'English' },
+                      { value: 'si', label: 'Sinhala', native: 'සිංහල' },
+                      { value: 'ta', label: 'Tamil', native: 'தமிழ்' },
+                    ].map((option) => {
+                      const isActive = i18n.language === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          onClick={() => i18n.changeLanguage(option.value)}
+                          className={`p-6 border-2 rounded-xl flex flex-col items-center gap-2 transition-all ${isActive
+                            ? 'border-primary bg-primary/5'
+                            : 'border-border hover:border-primary/50'
+                            }`}
+                        >
+                          <span className="text-lg font-medium">{option.native}</span>
+                          <span className="text-sm text-muted-foreground">{option.label}</span>
+                          {isActive && (
+                            <Badge variant="default" className="text-xs mt-1">Active</Badge>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </CardContent>
               </Card>
             )}
@@ -397,12 +426,12 @@ export function Settings() {
             {activeTab === 'privacy' && (
               <Card>
                 <CardHeader>
-                  <h2 className="text-xl font-semibold">Privacy &amp; Security</h2>
+                  <h2 className="text-xl font-semibold">{t('settings.privacyTitle')}</h2>
                   <p className="text-sm text-muted-foreground">Keep your account safe</p>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div>
-                    <h3 className="font-medium mb-4">Change Password</h3>
+                    <h3 className="font-medium mb-4">{t('settings.changePassword')}</h3>
                     <div className="space-y-4">
                       <Input type="password" label="Current Password" placeholder="••••••••" />
                       <Input type="password" label="New Password" placeholder="••••••••" />
@@ -430,7 +459,7 @@ export function Settings() {
                         className="text-destructive hover:bg-destructive/10"
                         onClick={() => { setShowDeleteConfirm(true); setDeleteError(null); }}
                       >
-                        Delete Account
+                        {t('settings.deleteAccount')}
                       </Button>
                     ) : (
                       <div className="p-4 border border-destructive/40 rounded-lg bg-destructive/5 space-y-3">
@@ -459,7 +488,7 @@ export function Settings() {
                             onClick={handleDeleteAccount}
                             disabled={deleteLoading}
                           >
-                            {deleteLoading ? 'Deleting...' : 'Yes, delete my account'}
+                            {deleteLoading ? t('settings.deleting') : t('settings.confirmDelete')}
                           </Button>
                         </div>
                       </div>
