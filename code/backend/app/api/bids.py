@@ -52,17 +52,24 @@ def _enrich_bid_request(req: BidRequest, db: Session) -> dict:
     profile = db.query(ProfileModel).filter(ProfileModel.user_id == req.user_id).first() if user else None
 
     user_name = None
-    if profile and profile.name and profile.name.strip():
-        user_name = profile.name.strip()
-    elif user:
+    if user:
         full = f"{user.first_name or ''} {user.last_name or ''}".strip()
-        if full:
+        if full and not full.lower().startswith("user "):
             user_name = full
         elif user.email:
-            user_name = user.email.split("@")[0].capitalize()
+            email_prefix = user.email.split("@")[0]
+            clean_name = email_prefix.replace(".", " ").replace("_", " ").title()
+            if not clean_name.lower().startswith("user"):
+                user_name = clean_name
+            else:
+                user_name = f"User #{user.id}"
+
+    if not user_name and profile and profile.name and profile.name.strip():
+        if not profile.name.lower().startswith("user "):
+            user_name = profile.name.strip()
 
     if not user_name:
-        user_name = f"User {req.user_id}"
+        user_name = f"User #{req.user_id}"
 
     return {
         "id": req.id,

@@ -33,7 +33,7 @@ const fadeInUp = {
 
 export function BidDetail() {
     const { id } = useParams();
-    const { role, authUser, socketOn } = useApp();
+    const { role, authUser, userProfile, socketOn } = useApp();
     const navigate = useNavigate();
     const [acceptedBidId, setAcceptedBidId] = useState<number | null>(null);
     const [bidAmount, setBidAmount] = useState('');
@@ -204,11 +204,18 @@ export function BidDetail() {
                                             <p className="text-xs text-muted-foreground uppercase font-semibold">User</p>
                                             <p className="font-medium flex items-center gap-2">
                                                 <User className="w-4 h-4" />
-                                                {request.user_name && !request.user_name.startsWith('User ')
-                                                    ? request.user_name
-                                                    : (authUser && authUser.userId === request.user_id && authUser.firstName
-                                                        ? authUser.firstName
-                                                        : (request.user_name || `User ${request.user_id}`))}
+                                                {(() => {
+                                                    if (authUser && authUser.userId === request.user_id) {
+                                                        const profileName = `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim();
+                                                        if (profileName) return profileName;
+                                                        if (authUser.firstName) return authUser.firstName;
+                                                        if (authUser.email) return authUser.email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                                                    }
+                                                    if (request.user_name && !request.user_name.startsWith('User ')) {
+                                                        return request.user_name;
+                                                    }
+                                                    return request.user_name || `User #${request.user_id}`;
+                                                })()}
                                             </p>
                                         </div>
                                         <div className="space-y-1">
