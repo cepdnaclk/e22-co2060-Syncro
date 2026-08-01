@@ -133,6 +133,8 @@ class ListingResponse(ListingBase):
 class OrderBase(BaseModel):
     service_name: str
     amount: float
+    payment_method: Optional[str] = "card"
+    payment_slip_url: Optional[str] = None
 
 class OrderCreate(OrderBase):
     seller_id: int
@@ -146,6 +148,8 @@ class OrderResponse(OrderBase):
     seller_name: Optional[str] = None
     listing_id: Optional[int]
     status: str
+    payment_method: Optional[str] = None
+    payment_slip_url: Optional[str] = None
     has_review: bool
     created_at: datetime
 

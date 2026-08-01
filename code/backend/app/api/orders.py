@@ -43,6 +43,8 @@ def _enrich_orders(orders, db):
             "seller_name": seller_name,
             "listing_id": order.listing_id,
             "status": order.status,
+            "payment_method": getattr(order, "payment_method", "card"),
+            "payment_slip_url": getattr(order, "payment_slip_url", None),
             "has_review": order.has_review,
             "created_at": order.created_at,
         })

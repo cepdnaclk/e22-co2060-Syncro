@@ -108,6 +108,8 @@ class Order(Base):
     service_name = Column(String, nullable=False)
     status = Column(Enum(OrderStatus), default=OrderStatus.PENDING)
     amount = Column(Float, nullable=False)
+    payment_method = Column(String, nullable=True, default="card")
+    payment_slip_url = Column(String, nullable=True)
     has_review = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 

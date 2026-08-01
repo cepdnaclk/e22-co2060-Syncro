@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import { motion } from 'motion/react';
-import { CreditCard, Lock, CheckCircle } from 'lucide-react';
+import { CreditCard, Lock, CheckCircle, Building2, QrCode, Upload, FileCheck, AlertCircle } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -33,8 +33,31 @@ export function Payment() {
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [processing, setProcessing] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [slipFile, setSlipFile] = useState<File | null>(null);
+  const [slipPreview, setSlipPreview] = useState<string | null>(null);
+  const [slipError, setSlipError] = useState<string | null>(null);
+
+  const handleSlipChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setSlipFile(file);
+      setSlipError(null);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSlipPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handlePayment = (e: React.FormEvent | React.MouseEvent) => {
+    e.preventDefault();
+
+    if (paymentMethod === 'bank_transfer' && !slipFile) {
+      setSlipError(t('payment.slip_required'));
+      return;
+    }
+
     const transaction = {
       id: 'TXN-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
       orderId: 'ORD-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
@@ -44,9 +67,8 @@ export function Payment() {
       seller: 'Unknown',
       amount: total,
       paymentMethod: paymentMethod,
+      slipUrl: slipPreview,
     };
-    // Works for both FormEvent (card) and MouseEvent (PayPal button)
-    e.preventDefault();
     setProcessing(true);
 
     // Simulate payment processing
@@ -98,28 +120,42 @@ export function Payment() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Payment Method Selection */}
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid md:grid-cols-3 gap-4">
                   <button
                     onClick={() => setPaymentMethod('card')}
-                    className={`p-4 border-2 rounded-lg transition-all ${paymentMethod === 'card'
+                    className={`p-4 border-2 rounded-lg transition-all text-left ${paymentMethod === 'card'
                         ? 'border-primary bg-primary/5'
                         : 'border-border hover:border-primary/50'
                       }`}
                   >
-                    <CreditCard className="w-6 h-6 mb-2" />
-                    <div className="font-semibold">{t('payment.credit_debit')}</div>
-                    <div className="text-sm text-muted-foreground">{t('payment.card_desc')}</div>
+                    <CreditCard className="w-6 h-6 mb-2 text-primary" />
+                    <div className="font-semibold text-sm">{t('payment.credit_debit')}</div>
+                    <div className="text-xs text-muted-foreground">{t('payment.card_desc')}</div>
                   </button>
                   <button
                     onClick={() => setPaymentMethod('paypal')}
-                    className={`p-4 border-2 rounded-lg transition-all ${paymentMethod === 'paypal'
+                    className={`p-4 border-2 rounded-lg transition-all text-left ${paymentMethod === 'paypal'
                         ? 'border-primary bg-primary/5'
                         : 'border-border hover:border-primary/50'
                       }`}
                   >
-                    <div className="w-6 h-6 mb-2 font-bold text-primary">P</div>
-                    <div className="font-semibold">{t('payment.paypal')}</div>
-                    <div className="text-sm text-muted-foreground">{t('payment.paypal_desc')}</div>
+                    <div className="w-6 h-6 mb-2 font-bold text-primary text-xl">P</div>
+                    <div className="font-semibold text-sm">{t('payment.paypal')}</div>
+                    <div className="text-xs text-muted-foreground">{t('payment.paypal_desc')}</div>
+                  </button>
+                  <button
+                    onClick={() => setPaymentMethod('bank_transfer')}
+                    className={`p-4 border-2 rounded-lg transition-all text-left ${paymentMethod === 'bank_transfer'
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:border-primary/50'
+                      }`}
+                  >
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <Building2 className="w-5 h-5 text-primary" />
+                      <QrCode className="w-5 h-5 text-accent" />
+                    </div>
+                    <div className="font-semibold text-sm">{t('payment.bank_transfer')}</div>
+                    <div className="text-xs text-muted-foreground">{t('payment.bank_desc')}</div>
                   </button>
                 </div>
 
@@ -171,7 +207,7 @@ export function Payment() {
                   </form>
                 )}
 
-                {/* PayPal Flow — Fixed: uses onClick with MouseEvent, no form needed */}
+                {/* PayPal Flow */}
                 {paymentMethod === 'paypal' && (
                   <div className="text-center py-8">
                     <Button
@@ -182,6 +218,122 @@ export function Payment() {
                       {processing ? t('payment.processing') : `${t('payment.continue_paypal')} $${total}`}
                     </Button>
                   </div>
+                )}
+
+                {/* Bank Transfer & LankaQR Flow */}
+                {paymentMethod === 'bank_transfer' && (
+                  <form onSubmit={handlePayment} className="space-y-6">
+                    {/* Bank Details & LankaQR Container */}
+                    <div className="grid md:grid-cols-2 gap-6 bg-muted/30 p-5 rounded-xl border border-border">
+                      {/* Bank Details */}
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 font-semibold text-base border-b border-border pb-2">
+                          <Building2 className="w-5 h-5 text-primary" />
+                          {t('payment.bank_details_title')}
+                        </div>
+                        <div className="space-y-2 text-sm">
+                          <div>
+                            <span className="text-xs text-muted-foreground block">{t('payment.bank_name')}</span>
+                            <span className="font-medium">{t('payment.bank_name_val')}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground block">{t('payment.account_name')}</span>
+                            <span className="font-medium">{t('payment.account_name_val')}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground block">{t('payment.account_number')}</span>
+                            <span className="font-mono font-semibold text-primary">{t('payment.account_number_val')}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground block">{t('payment.branch')}</span>
+                            <span className="font-medium">{t('payment.branch_val')}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* LankaQR Code */}
+                      <div className="flex flex-col items-center justify-center p-4 bg-background rounded-lg border border-border text-center">
+                        <div className="flex items-center gap-1.5 font-semibold text-sm mb-2 text-primary">
+                          <QrCode className="w-4 h-4 text-accent" />
+                          {t('payment.lankaqr_title')}
+                        </div>
+                        {/* Sample LankaQR graphic */}
+                        <div className="w-32 h-32 bg-white p-2 rounded-lg border border-border shadow-sm flex items-center justify-center mb-2 relative">
+                          <div className="w-full h-full bg-slate-900 rounded p-1.5 flex flex-col justify-between">
+                            <div className="flex justify-between">
+                              <div className="w-6 h-6 border-2 border-white rounded-sm"></div>
+                              <div className="w-6 h-6 border-2 border-white rounded-sm"></div>
+                            </div>
+                            <div className="text-[10px] font-bold text-center text-amber-400 tracking-wider">LANKAQR</div>
+                            <div className="flex justify-between">
+                              <div className="w-6 h-6 border-2 border-white rounded-sm"></div>
+                              <div className="w-3 h-3 bg-white rounded-xs"></div>
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground max-w-[200px]">
+                          {t('payment.lankaqr_desc')}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Receipt Slip Upload Dropzone */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold flex items-center gap-2">
+                        <Upload className="w-4 h-4 text-primary" />
+                        {t('payment.upload_slip_title')}
+                      </label>
+
+                      {slipPreview ? (
+                        <div className="flex items-center justify-between p-4 border border-green-500/30 bg-green-500/5 rounded-xl">
+                          <div className="flex items-center gap-3">
+                            <img src={slipPreview} alt="Receipt preview" className="w-12 h-12 rounded-lg object-cover border border-border" />
+                            <div>
+                              <div className="flex items-center gap-1.5 text-sm font-semibold text-green-600 dark:text-green-400">
+                                <FileCheck className="w-4 h-4" />
+                                {t('payment.slip_uploaded')}
+                              </div>
+                              <p className="text-xs text-muted-foreground truncate max-w-[220px]">
+                                {slipFile?.name}
+                              </p>
+                            </div>
+                          </div>
+                          <label className="cursor-pointer text-xs font-medium px-3 py-1.5 bg-background border border-border rounded-lg hover:bg-accent transition">
+                            {t('payment.change_slip')}
+                            <input type="file" accept="image/*" className="hidden" onChange={handleSlipChange} />
+                          </label>
+                        </div>
+                      ) : (
+                        <label className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-primary/60 hover:bg-muted/30 transition text-center">
+                          <Upload className="w-8 h-8 text-muted-foreground opacity-60 mb-2" />
+                          <p className="text-sm font-medium">{t('payment.upload_slip_title')}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{t('payment.upload_slip_desc')}</p>
+                          <input type="file" accept="image/*" className="hidden" onChange={handleSlipChange} />
+                        </label>
+                      )}
+
+                      {slipError && (
+                        <div className="flex items-center gap-1.5 text-xs text-destructive mt-1 font-medium">
+                          <AlertCircle className="w-3.5 h-3.5" />
+                          {slipError}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Notice */}
+                    <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl flex items-start gap-3 text-xs text-amber-700 dark:text-amber-300">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                      <span>{t('payment.verification_notice')}</span>
+                    </div>
+
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={processing}
+                    >
+                      {processing ? t('payment.processing') : `${t('payment.submit_bank_payment')} $${total}`}
+                    </Button>
+                  </form>
                 )}
               </CardContent>
             </Card>
