@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, Send, MessageSquare, ArrowLeft, Check, CheckCheck, Plus, X, Users } from 'lucide-react';
 import { useSearchParams } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { useApp } from '../context/AppContext';
 import { messagesApi, profilesApi, ConversationSummary, Message, SellerSummary } from '../services/api';
 
@@ -78,7 +79,7 @@ function NewMessagePanel({ onSelectSeller, onClose }: NewMessagePanelProps) {
       <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30 shrink-0 rounded-t-xl">
         <div className="flex items-center gap-2">
           <Users className="w-4 h-4 text-primary" />
-          <h3 className="font-semibold text-sm">Start New Conversation</h3>
+          <h3 className="font-semibold text-sm">{t('messages.start_new_conversation', 'Start New Conversation')}</h3>
         </div>
         <button
           id="close-new-message-panel"
@@ -96,7 +97,7 @@ function NewMessagePanel({ onSelectSeller, onClose }: NewMessagePanelProps) {
           <input
             id="seller-search-input"
             type="text"
-            placeholder="Search sellers…"
+            placeholder={t('messages.search_sellers', 'Search sellers…')}
             value={search}
             onChange={e => setSearch(e.target.value)}
             autoFocus
@@ -123,10 +124,10 @@ function NewMessagePanel({ onSelectSeller, onClose }: NewMessagePanelProps) {
           <div className="flex flex-col items-center justify-center h-full py-12 text-center px-6">
             <Users className="w-8 h-8 text-muted-foreground opacity-30 mb-3" />
             <p className="text-sm font-medium">
-              {search ? 'No sellers found' : 'No sellers available'}
+              {search ? t('messages.no_sellers_found', 'No sellers found') : t('messages.no_sellers_available', 'No sellers available')}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              {search ? 'Try a different search term' : 'Visit a seller\'s profile to message them directly'}
+              {search ? t('messages.try_different_search', 'Try a different search term') : t('messages.visit_seller_profile', "Visit a seller's profile to message them directly")}
             </p>
           </div>
         ) : (
@@ -164,6 +165,7 @@ function NewMessagePanel({ onSelectSeller, onClose }: NewMessagePanelProps) {
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export function Messages() {
+  const { t } = useTranslation();
   const { authUser, socketOn, clearUnreadMessages } = useApp();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -474,14 +476,14 @@ export function Messages() {
       {/* Page header */}
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Messages</h1>
+          <h1 className="text-3xl font-bold">{t('messages.title', 'Messages')}</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Communicate with buyers and sellers in real time
+            {t('messages.subtitle', 'Communicate with buyers and sellers in real time')}
           </p>
         </div>
         {totalUnread > 0 && (
           <span className="bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-full">
-            {totalUnread} unread
+            {totalUnread} {t('messages.unread', 'unread')}
           </span>
         )}
       </div>
@@ -498,7 +500,7 @@ export function Messages() {
                 <input
                   type="text"
                   id="messages-search"
-                  placeholder="Search conversations…"
+                  placeholder={t('messages.search_conversations', 'Search conversations…')}
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   className="w-full pl-9 pr-4 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 transition"
@@ -536,9 +538,9 @@ export function Messages() {
                 <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
                   <MessageSquare className="w-8 h-8 text-muted-foreground opacity-50" />
                 </div>
-                <p className="font-semibold text-sm">No conversations yet</p>
+                <p className="font-semibold text-sm">{t('messages.no_conversations_yet', 'No conversations yet')}</p>
                 <p className="text-xs text-muted-foreground mt-1 mb-4">
-                  Click the <strong>+</strong> button above to message a seller, or visit a seller's profile.
+                  {t('messages.click_plus', "Click the + button above to message a seller, or visit a seller's profile.")}
                 </p>
                 <motion.button
                   whileHover={{ scale: 1.02 }}
@@ -547,7 +549,7 @@ export function Messages() {
                   className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium transition-colors hover:bg-primary/90"
                 >
                   <Plus className="w-4 h-4" />
-                  Start a Conversation
+                  {t('messages.start_conversation', 'Start a Conversation')}
                 </motion.button>
               </div>
             ) : (
@@ -617,9 +619,9 @@ export function Messages() {
               <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center mb-5">
                 <MessageSquare className="w-10 h-10 text-primary opacity-60" />
               </div>
-              <h3 className="text-lg font-semibold mb-1">Select a conversation</h3>
+              <h3 className="text-lg font-semibold mb-1">{t('messages.select_conversation', 'Select a conversation')}</h3>
               <p className="text-sm max-w-xs mb-5">
-                Choose a conversation from the list, or start a new one by clicking the <strong>+</strong> button.
+                {t('messages.choose_conversation', 'Choose a conversation from the list, or start a new one by clicking the + button.')}
               </p>
               <motion.button
                 whileHover={{ scale: 1.02 }}
@@ -628,7 +630,7 @@ export function Messages() {
                 className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors"
               >
                 <Plus className="w-4 h-4" />
-                New Message
+                {t('messages.new_message', 'New Message')}
               </motion.button>
             </div>
           ) : (
@@ -655,7 +657,7 @@ export function Messages() {
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-sm leading-tight">{selectedUserName}</h3>
-                  <p className="text-xs text-green-500 font-medium">Online</p>
+                  <p className="text-xs text-green-500 font-medium">{t('messages.online', 'Online')}</p>
                 </div>
               </div>
 
@@ -674,7 +676,7 @@ export function Messages() {
                     <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
                       <MessageSquare className="w-6 h-6 text-muted-foreground opacity-40" />
                     </div>
-                    <p className="text-sm text-muted-foreground">No messages yet — say hello! 👋</p>
+                    <p className="text-sm text-muted-foreground">{t('messages.no_messages_yet', 'No messages yet — say hello! 👋')}</p>
                   </div>
                 ) : (
                   groups.map(group => (
@@ -746,7 +748,7 @@ export function Messages() {
                   <input
                     id="message-input"
                     type="text"
-                    placeholder="Type a message…"
+                    placeholder={t('messages.type_message', 'Type a message…')}
                     value={input}
                     onChange={e => setInput(e.target.value)}
                     disabled={sending}
