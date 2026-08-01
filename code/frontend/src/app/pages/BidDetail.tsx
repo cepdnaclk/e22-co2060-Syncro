@@ -204,18 +204,7 @@ export function BidDetail() {
                                             <p className="text-xs text-muted-foreground uppercase font-semibold">User</p>
                                             <p className="font-medium flex items-center gap-2">
                                                 <User className="w-4 h-4" />
-                                                {(() => {
-                                                    if (authUser && authUser.userId === request.user_id) {
-                                                        const profileName = `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim();
-                                                        if (profileName) return profileName;
-                                                        if (authUser.firstName) return authUser.firstName;
-                                                        if (authUser.email) return authUser.email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-                                                    }
-                                                    if (request.user_name && !request.user_name.startsWith('User ')) {
-                                                        return request.user_name;
-                                                    }
-                                                    return request.user_name || `User #${request.user_id}`;
-                                                })()}
+                                                {request.user_name || `User #${request.user_id}`}
                                             </p>
                                         </div>
                                         <div className="space-y-1">
