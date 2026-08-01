@@ -1,4 +1,4 @@
-﻿{
+{
   "common": {
     "login": "Login",
     "logout": "Logout",
@@ -352,5 +352,50 @@
     "english": "EN",
     "sinhala": "සිං",
     "ariaLabel": "Select language"
+  },
+  "order_confirmation": {
+    "title": "Order Confirmed!",
+    "subtitle": "Your order has been placed successfully",
+    "summary": "Order Summary",
+    "status_confirmed": "Confirmed",
+    "order_id": "Order ID",
+    "service": "Service",
+    "package": "Package",
+    "seller": "Seller",
+    "cost_breakdown": "Cost Breakdown",
+    "service_price": "Service Price",
+    "platform_fee": "Platform Fee (5%)",
+    "total": "Total",
+    "whats_next": "What's Next?",
+    "step_1": "The seller will be notified of your order",
+    "step_2": "You'll receive a message to discuss requirements",
+    "step_3": "Payment will be held securely until completion",
+    "step_4": "Track your order status in your dashboard",
+    "proceed_to_payment": "Proceed to Payment",
+    "contact_seller": "Contact Seller",
+    "return_to_dashboard": "Return to Dashboard"
+  },
+  "payment_success": {
+    "title": "Payment Successful!",
+    "subtitle": "Your order has been confirmed and payment processed",
+    "transaction_id": "Transaction ID",
+    "receipt": "Receipt",
+    "order_id": "Order ID",
+    "service": "Service",
+    "package": "Package",
+    "seller": "Seller",
+    "payment_method": "Payment Method",
+    "amount_paid": "Amount Paid",
+    "whats_next": "What Happens Next?",
+    "step_1": "The seller has been notified and will start working on your order",
+    "step_2": "You'll receive a message to discuss project details",
+    "step_3": "Track your order progress in your dashboard",
+    "step_4": "Leave a review once the order is completed",
+    "dashboard": "Dashboard",
+    "contact_seller": "Contact Seller",
+    "download_receipt": "Download Receipt",
+    "need_help": "Need Help?",
+    "support_desc": "If you have any questions about your order or payment, our support team is here to help.",
+    "contact_support": "Contact Support"
   }
 }

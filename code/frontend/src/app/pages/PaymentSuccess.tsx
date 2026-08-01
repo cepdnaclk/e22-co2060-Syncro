@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
 import { CheckCircle, Download, MessageSquare, Home } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/Card';
@@ -8,6 +9,7 @@ import { Badge } from '../components/ui/Badge';
 
 export function PaymentSuccess() {
   const location = useLocation();
+  const { t } = useTranslation();
   const state = (location.state as { transaction: any }) ?? {};
 
   const transaction = state.transaction ?? {
@@ -37,12 +39,12 @@ export function PaymentSuccess() {
         >
           <CheckCircle className="w-16 h-16 text-green-500" />
         </motion.div>
-        <h1 className="text-4xl font-bold mb-3">Payment Successful!</h1>
+        <h1 className="text-4xl font-bold mb-3">{t('payment_success.title')}</h1>
         <p className="text-xl text-muted-foreground mb-2">
-          Your order has been confirmed and payment processed
+          {t('payment_success.subtitle')}
         </p>
         <Badge variant="success" className="text-sm py-1 px-3">
-          Transaction ID: {transaction.id}
+          {t('payment_success.transaction_id')}: {transaction.id}
         </Badge>
       </motion.div>
 
@@ -55,33 +57,33 @@ export function PaymentSuccess() {
         <Card>
           <CardContent className="p-8 space-y-6">
             <div className="text-center pb-6 border-b border-border">
-              <h2 className="text-2xl font-bold mb-2">Receipt</h2>
+              <h2 className="text-2xl font-bold mb-2">{t('payment_success.receipt')}</h2>
               <p className="text-sm text-muted-foreground">{transaction.date}</p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Order ID</p>
+                <p className="text-sm text-muted-foreground mb-1">{t('payment_success.order_id')}</p>
                 <p className="font-semibold">{transaction.orderId}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Service</p>
+                <p className="text-sm text-muted-foreground mb-1">{t('payment_success.service')}</p>
                 <p className="font-semibold">{transaction.service}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Package</p>
+                <p className="text-sm text-muted-foreground mb-1">{t('payment_success.package')}</p>
                 <p className="font-semibold">{transaction.package}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Seller</p>
+                <p className="text-sm text-muted-foreground mb-1">{t('payment_success.seller')}</p>
                 <p className="font-semibold">{transaction.seller}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Payment Method</p>
+                <p className="text-sm text-muted-foreground mb-1">{t('payment_success.payment_method')}</p>
                 <p className="font-semibold">{transaction.paymentMethod}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Amount Paid</p>
+                <p className="text-sm text-muted-foreground mb-1">{t('payment_success.amount_paid')}</p>
                 <p className="text-2xl font-bold text-primary">${transaction.amount}</p>
               </div>
             </div>
@@ -89,24 +91,24 @@ export function PaymentSuccess() {
             <div className="bg-primary/5 border border-primary/20 rounded-lg p-6">
               <h3 className="font-semibold mb-3 flex items-center gap-2">
                 <CheckCircle className="w-5 h-5 text-primary" />
-                What Happens Next?
+                {t('payment_success.whats_next')}
               </h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <span className="text-primary">1.</span>
-                  <span>The seller has been notified and will start working on your order</span>
+                  <span>{t('payment_success.step_1')}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary">2.</span>
-                  <span>You'll receive a message to discuss project details</span>
+                  <span>{t('payment_success.step_2')}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary">3.</span>
-                  <span>Track your order progress in your dashboard</span>
+                  <span>{t('payment_success.step_3')}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary">4.</span>
-                  <span>Leave a review once the order is completed</span>
+                  <span>{t('payment_success.step_4')}</span>
                 </li>
               </ul>
             </div>
@@ -115,18 +117,18 @@ export function PaymentSuccess() {
               <Link to="/dashboard" className="md:col-span-1">
                 <Button variant="outline" className="w-full">
                   <Home className="w-4 h-4 mr-2" />
-                  Dashboard
+                  {t('payment_success.dashboard')}
                 </Button>
               </Link>
               <Link to="/messages" className="md:col-span-1">
                 <Button variant="outline" className="w-full">
                   <MessageSquare className="w-4 h-4 mr-2" />
-                  Contact Seller
+                  {t('payment_success.contact_seller')}
                 </Button>
               </Link>
               <Button className="w-full md:col-span-1">
                 <Download className="w-4 h-4 mr-2" />
-                Download Receipt
+                {t('payment_success.download_receipt')}
               </Button>
             </div>
           </CardContent>
@@ -140,12 +142,12 @@ export function PaymentSuccess() {
         transition={{ delay: 0.5 }}
         className="bg-muted/50 rounded-lg p-6"
       >
-        <h3 className="font-semibold mb-3">Need Help?</h3>
+        <h3 className="font-semibold mb-3">{t('payment_success.need_help')}</h3>
         <p className="text-sm text-muted-foreground mb-4">
-          If you have any questions about your order or payment, our support team is here to help.
+          {t('payment_success.support_desc')}
         </p>
         <Link to="/support">
-          <Button variant="outline" size="sm">Contact Support</Button>
+          <Button variant="outline" size="sm">{t('payment_success.contact_support')}</Button>
         </Link>
       </motion.div>
     </div>
