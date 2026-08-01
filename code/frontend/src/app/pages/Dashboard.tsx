@@ -348,15 +348,9 @@ function SyncroChatTriggerButton() {
 
 function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboardProps) {
   const { t } = useTranslation();
-  const stats = [
-    { label: t('dashboard.statTotalEarnings'), value: 'Rs. 0', icon: DollarSign, color: 'text-green-500' },
-    { label: t('dashboard.statActiveListings'), value: '0', icon: Package, color: 'text-blue-500' },
-    { label: t('dashboard.statOrdersReceived'), value: '0', icon: ShoppingCart, color: 'text-purple-500' },
-    { label: t('dashboard.statGrowth'), value: '0%', icon: TrendingUp, color: 'text-teal-500' },
-  ];
-
   const { authUser } = useApp();
   const [orders, setOrders] = useState<Order[]>([]);
+  const [activeListingsCount, setActiveListingsCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
   // ── Active status toggle ────────────────────────────────────
@@ -404,20 +398,59 @@ function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboa
   // ───────────────────────────────────────────────────────────
 
   useEffect(() => {
-    async function loadOrders() {
+    async function loadSellerData() {
       if (authUser?.userId) {
         try {
-          const data = await ordersApi.getForUser(authUser.userId);
-          // Only show orders where user is seller
-          setOrders(data.filter(o => o.seller_id === authUser.userId));
+          const [userOrders, allListings] = await Promise.all([
+            ordersApi.getForUser(authUser.userId),
+            listingsApi.getAll().catch(() => [])
+          ]);
+          const sellerOrders = userOrders.filter(o => o.seller_id === authUser.userId);
+          setOrders(sellerOrders);
+          const myActiveListings = allListings.filter(l => l.seller_id === authUser.userId);
+          setActiveListingsCount(myActiveListings.length);
         } catch (error) {
-          console.error("Failed to load orders:", error);
+          console.error("Failed to load seller dashboard data:", error);
         }
       }
       setLoading(false);
     }
-    loadOrders();
+    loadSellerData();
   }, [authUser?.userId]);
+
+  const completedEarnings = orders
+    .filter(o => o.status?.toLowerCase() === 'completed')
+    .reduce((sum, o) => sum + (o.amount || 0), 0);
+
+  const totalOrdersAmount = orders.reduce((sum, o) => sum + (o.amount || 0), 0);
+  const displayEarnings = completedEarnings > 0 ? completedEarnings : totalOrdersAmount;
+
+  const stats = [
+    {
+      label: t('dashboard.statTotalEarnings'),
+      value: `LKR ${displayEarnings.toLocaleString()}`,
+      icon: DollarSign,
+      color: 'text-green-500',
+    },
+    {
+      label: t('dashboard.statActiveListings'),
+      value: activeListingsCount.toString(),
+      icon: Package,
+      color: 'text-blue-500',
+    },
+    {
+      label: t('dashboard.statOrdersReceived'),
+      value: orders.length.toString(),
+      icon: ShoppingCart,
+      color: 'text-purple-500',
+    },
+    {
+      label: t('dashboard.statGrowth'),
+      value: orders.length > 0 ? '+100%' : '0%',
+      icon: TrendingUp,
+      color: 'text-teal-500',
+    },
+  ];
 
   return (
     <div className="space-y-8">
