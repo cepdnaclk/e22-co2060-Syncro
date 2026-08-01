@@ -33,6 +33,7 @@ export function SellerProfileSettings() {
     setLogoUploading(true);
     try {
       const { url } = await profilesApi.uploadImage(file);
+      await profilesApi.update({ logo: url });
       setBusinessProfile({ ...businessProfile!, logo: url });
     } catch (err: any) {
       alert('Logo upload failed: ' + (err.message || 'Unknown error'));
@@ -48,7 +49,11 @@ export function SellerProfileSettings() {
     setCoverUploading(true);
     try {
       const { url } = await profilesApi.uploadImage(file);
+      await profilesApi.update({ cover_image: url });
       setCoverImage(url);
+      if (businessProfile) {
+        setBusinessProfile({ ...businessProfile, coverImage: url });
+      }
     } catch (err: any) {
       alert('Cover image upload failed: ' + (err.message || 'Unknown error'));
     } finally {
@@ -112,6 +117,8 @@ export function SellerProfileSettings() {
         phone: formData.businessPhone.trim() || formData.phone.trim() || undefined,
         website: formData.website.trim() || undefined,
         address: formData.businessAddress.trim() || undefined,
+        logo: businessProfile?.logo || undefined,
+        cover_image: coverImage || undefined,
       });
 
       // 3. Sync local context so UI updates immediately without a page reload

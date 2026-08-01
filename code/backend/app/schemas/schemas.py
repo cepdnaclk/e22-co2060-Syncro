@@ -90,6 +90,8 @@ class ProfileBase(BaseModel):
     address: Optional[str] = None
     phone: Optional[str] = None
     website: Optional[str] = None
+    logo: Optional[str] = None
+    cover_image: Optional[str] = None
 
 class ProfileCreate(ProfileBase):
     pass
@@ -97,6 +99,8 @@ class ProfileCreate(ProfileBase):
 class ProfileUpdate(ProfileBase):
     name: Optional[str] = None
     is_active: Optional[bool] = None
+    logo: Optional[str] = None
+    cover_image: Optional[str] = None
 
 class ActiveStatusUpdate(BaseModel):
     is_active: bool
