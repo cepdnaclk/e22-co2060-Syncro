@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { Moon, Sun, Loader2, MapPin } from 'lucide-react';
@@ -103,7 +103,11 @@ export function Register() {
                     <SelectValue placeholder={t('register.selectDistrict')} />
                   </SelectTrigger>
                   <SelectContent className="max-h-56">
-                    {SRI_LANKA_DISTRICTS.map((district) => (<SelectItem key={district} value={district}>{district}</SelectItem>))}
+                    {SRI_LANKA_DISTRICTS.map((district) => (
+                      <SelectItem key={district} value={district}>
+                        {t(`districts.${district}`, district)}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 {formErrors.location && <p className="text-xs text-destructive mt-0.5">{formErrors.location}</p>}

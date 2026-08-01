@@ -280,7 +280,7 @@ export function Settings() {
                       </SelectTrigger>
                       <SelectContent className="max-h-56">
                         {SRI_LANKA_DISTRICTS.map((d) => (
-                          <SelectItem key={d} value={d}>{d}</SelectItem>
+                          <SelectItem key={d} value={d}>{t(`districts.${d}`, d)}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
