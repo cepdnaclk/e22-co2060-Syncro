@@ -17,6 +17,13 @@ export default defineConfig({
     },
   },
 
+  // Enable polling so Vite in Docker on Windows host detects file edits
+  server: {
+    watch: {
+      usePolling: true,
+    },
+  },
+
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
 })
