@@ -57,6 +57,7 @@ class BidRequestResponse(BidRequestBase):
     bid_count: int
     resend_round: int
     created_at: datetime
+    user_name: Optional[str] = None
 
     class Config:
         from_attributes = True

@@ -33,7 +33,7 @@ const fadeInUp = {
 
 export function BidDetail() {
     const { id } = useParams();
-    const { role, socketOn } = useApp();
+    const { role, authUser, socketOn } = useApp();
     const navigate = useNavigate();
     const [acceptedBidId, setAcceptedBidId] = useState<number | null>(null);
     const [bidAmount, setBidAmount] = useState('');
@@ -204,7 +204,7 @@ export function BidDetail() {
                                             <p className="text-xs text-muted-foreground uppercase font-semibold">User</p>
                                             <p className="font-medium flex items-center gap-2">
                                                 <User className="w-4 h-4" />
-                                                User {request.user_id}
+                                                {request.user_name || (authUser && authUser.userId === request.user_id && authUser.first_name ? authUser.first_name : `User ${request.user_id}`)}
                                             </p>
                                         </div>
                                         <div className="space-y-1">

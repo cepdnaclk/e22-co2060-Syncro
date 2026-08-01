@@ -269,6 +269,7 @@ export const notificationsApi = {
 export interface BidRequest {
     id: number;
     user_id: number;
+    user_name?: string;
     category_id: number;
     description: string;
     status: string;

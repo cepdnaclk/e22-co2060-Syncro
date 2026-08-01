@@ -46,6 +46,27 @@ def _enrich_bids(bids, db):
     return results
 
 
+def _enrich_bid_request(req: BidRequest, db: Session) -> dict:
+    user = db.query(User).filter(User.id == req.user_id).first()
+    if user:
+        full = f"{user.first_name or ''} {user.last_name or ''}".strip()
+        user_name = full if full else f"User {req.user_id}"
+    else:
+        user_name = f"User {req.user_id}"
+    return {
+        "id": req.id,
+        "user_id": req.user_id,
+        "category_id": req.category_id,
+        "description": req.description,
+        "location": req.location,
+        "status": req.status,
+        "bid_count": req.bid_count,
+        "resend_round": req.resend_round,
+        "created_at": req.created_at,
+        "user_name": user_name,
+    }
+
+
 # ─── Bid Requests ────────────────────────────────────────────────────────────
 
 @router.post("/requests", response_model=BidRequestResponse)
@@ -114,7 +135,7 @@ async def create_bid_request(
         except Exception as e:
             print(f"Failed to send notification to seller {seller_id}: {e}")
 
-    return new_request
+    return _enrich_bid_request(new_request, db)
 
 
 @router.get("/requests", response_model=List[BidRequestResponse])
@@ -122,7 +143,8 @@ def get_my_bid_requests(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user_from_token)
 ):
-    return db.query(BidRequest).filter(BidRequest.user_id == current_user.id).all()
+    reqs = db.query(BidRequest).filter(BidRequest.user_id == current_user.id).all()
+    return [_enrich_bid_request(req, db) for req in reqs]
 
 
 @router.get("/requests/matches", response_model=List[BidRequestResponse])
@@ -157,7 +179,7 @@ def get_matching_requests(
 
     available_jobs = [req for req in matching_requests if req.id not in bid_request_ids]
 
-    return available_jobs
+    return [_enrich_bid_request(req, db) for req in available_jobs]
 
 
 @router.get("/requests/{request_id}", response_model=BidRequestResponse)
@@ -169,7 +191,7 @@ def get_bid_request_by_id(
     req = db.query(BidRequest).filter(BidRequest.id == request_id).first()
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
-    return req
+    return _enrich_bid_request(req, db)
 
 
 # ─── Bids ────────────────────────────────────────────────────────────────────
