@@ -8,6 +8,7 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 import { Link } from 'react-router';
+import { useTranslation } from 'react-i18next';
 
 // ──────────────────────────────────────────────────────────────
 // Mock Data
@@ -25,6 +26,7 @@ const fadeInUp = {
 // ──────────────────────────────────────────────────────────────
 
 export function Bids() {
+    const { t } = useTranslation();
     const { role, setIsChatOpen, socketOn } = useApp();
     const [activeTab, setActiveTab] = useState<'requests' | 'my-bids'>(role === 'buyer' ? 'requests' : 'requests');
     const [myRequests, setMyRequests] = useState<BidRequest[]>([]);
@@ -66,11 +68,11 @@ export function Bids() {
         <div className="space-y-8">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold mb-2">Bidding Portal</h1>
+                    <h1 className="text-3xl font-bold mb-2">{t('bids.title')}</h1>
                     <p className="text-muted-foreground">
                         {role === 'buyer'
-                            ? 'Manage your service requests and evaluate seller bids.'
-                            : 'Browse matching requests and manage your submitted bids.'}
+                            ? t('bids.buyer_subtitle')
+                            : t('bids.seller_subtitle')}
                     </p>
                 </div>
                 {role === 'buyer' && (
@@ -80,7 +82,7 @@ export function Bids() {
                         onClick={() => setIsChatOpen(true)}
                     >
                         <Plus className="w-5 h-5 mr-2" />
-                        Create Request
+                        {t('bids.create_request')}
                     </Button>
                 )}
             </div>
@@ -88,10 +90,10 @@ export function Bids() {
             <Tabs defaultValue="requests" className="w-full">
                 <TabsList className="bg-muted/50 p-1 rounded-xl mb-6">
                     <TabsTrigger value="requests" className="rounded-lg px-8 py-2.5">
-                        {role === 'buyer' ? 'My Requests' : 'Available Jobs'}
+                        {role === 'buyer' ? t('bids.my_requests') : t('bids.available_jobs')}
                     </TabsTrigger>
                     <TabsTrigger value="history" className="rounded-lg px-8 py-2.5">
-                        {role === 'buyer' ? 'Request History' : 'My Bids'}
+                        {role === 'buyer' ? t('bids.request_history') : t('bids.my_bids')}
                     </TabsTrigger>
                 </TabsList>
 
@@ -103,9 +105,9 @@ export function Bids() {
                                     <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
                                         <Gavel className="w-8 h-8 text-muted-foreground" />
                                     </div>
-                                    <h3 className="text-xl font-semibold mb-2">No Requests Yet</h3>
+                                    <h3 className="text-xl font-semibold mb-2">{t('bids.no_requests_yet')}</h3>
                                     <p className="text-muted-foreground max-w-xs">
-                                        Your open service requests will appear here once you create them.
+                                        {t('bids.no_requests_desc')}
                                     </p>
                                 </CardContent>
                             </Card>
@@ -118,7 +120,7 @@ export function Bids() {
                                                 <div className="flex-1 space-y-3">
                                                     <div className="flex items-center gap-2">
                                                         <Badge variant="info" className="bg-primary/5 text-primary border-primary/20 capitalize">
-                                                            Cat: {req.category_id}
+                                                            {t('bids.cat')}: {req.category_id}
                                                         </Badge>
                                                         <Badge className={req.status.toLowerCase() === 'open' ? 'bg-green-500/10 text-green-600 border-none' : 'bg-blue-500/10 text-blue-600 border-none'}>
                                                             {req.status.toUpperCase()}
@@ -134,13 +136,13 @@ export function Bids() {
                                                         </div>
                                                         <div className="flex items-center gap-1.5">
                                                             <Gavel className="w-4 h-4" />
-                                                            view bids
+                                                            {t('bids.view_bids')}
                                                         </div>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-4">
                                                     <Button variant="ghost" size="sm" className="hidden md:flex">
-                                                        View Details
+                                                        {t('bids.view_details')}
                                                         <ChevronRight className="w-4 h-4 ml-1" />
                                                     </Button>
                                                 </div>
@@ -157,9 +159,9 @@ export function Bids() {
                                     <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
                                         <Package className="w-8 h-8 text-muted-foreground" />
                                     </div>
-                                    <h3 className="text-xl font-semibold mb-2">No Available Jobs</h3>
+                                    <h3 className="text-xl font-semibold mb-2">{t('bids.no_available_jobs')}</h3>
                                     <p className="text-muted-foreground max-w-xs">
-                                        Check back later for new opportunities that match your skills.
+                                        {t('bids.no_available_jobs_desc')}
                                     </p>
                                 </CardContent>
                             </Card>
@@ -171,17 +173,17 @@ export function Bids() {
                                             <div className="flex-1 space-y-3">
                                                 <div className="flex items-center gap-2">
                                                     <Badge variant="info" className="bg-primary/5 text-primary border-primary/20">
-                                                        Cat: {job.category_id}
+                                                        {t('bids.cat')}: {job.category_id}
                                                     </Badge>
                                                     <Badge variant="secondary" className="bg-orange-500/10 text-orange-600 border-none">
-                                                        NEW JOB
+                                                        {t('bids.new_job')}
                                                     </Badge>
                                                 </div>
                                                 <h3 className="text-lg font-semibold">{job.description}</h3>
                                                 <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                                                     <div className="flex items-center gap-1.5">
                                                         <DollarSign className="w-4 h-4" />
-                                                        Open
+                                                        {t('bids.open')}
                                                     </div>
                                                     <div className="flex items-center gap-1.5">
                                                         <Clock className="w-4 h-4" />
@@ -190,7 +192,7 @@ export function Bids() {
                                                 </div>
                                             </div>
                                             <Button className="shrink-0" onClick={() => window.location.href = `/bids/${job.id}`}>
-                                                Submit Proposal
+                                                {t('bids.submit_proposal')}
                                             </Button>
                                         </div>
                                     </CardContent>
@@ -208,9 +210,9 @@ export function Bids() {
                                     <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
                                         <Clock className="w-8 h-8 text-muted-foreground" />
                                     </div>
-                                    <h3 className="text-xl font-semibold mb-2">No History Yet</h3>
+                                    <h3 className="text-xl font-semibold mb-2">{t('bids.no_history_yet')}</h3>
                                     <p className="text-muted-foreground max-w-xs">
-                                        Completed or closed requests will appear here.
+                                        {t('bids.no_history_desc')}
                                     </p>
                                 </CardContent>
                             </Card>
@@ -223,7 +225,7 @@ export function Bids() {
                                                 <div className="flex-1 space-y-3">
                                                     <div className="flex items-center gap-2">
                                                         <Badge variant="info" className="bg-primary/5 text-primary border-primary/20 capitalize">
-                                                            Cat: {req.category_id}
+                                                            {t('bids.cat')}: {req.category_id}
                                                         </Badge>
                                                         <Badge className={req.status.toLowerCase() === 'open' ? 'bg-green-500/10 text-green-600 border-none' : 'bg-blue-500/10 text-blue-600 border-none'}>
                                                             {req.status.toUpperCase()}
@@ -258,9 +260,9 @@ export function Bids() {
                                     <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
                                         <Gavel className="w-8 h-8 text-muted-foreground" />
                                     </div>
-                                    <h3 className="text-xl font-semibold mb-2">No Bids Placed</h3>
+                                    <h3 className="text-xl font-semibold mb-2">{t('bids.no_bids_placed')}</h3>
                                     <p className="text-muted-foreground max-w-xs">
-                                        You haven't submitted any proposals yet.
+                                        {t('bids.no_bids_desc')}
                                     </p>
                                 </CardContent>
                             </Card>
@@ -281,7 +283,7 @@ export function Bids() {
                                                         </Badge>
                                                     </div>
                                                     <h3 className="text-lg font-semibold line-clamp-2">
-                                                        Proposal: Rs. {bid.price.toLocaleString()} for {bid.quantity} unit(s)
+                                                        {t('bids.proposal')}: Rs. {bid.price.toLocaleString()} {t('bids.for')} {bid.quantity} {t('bids.units')}
                                                     </h3>
                                                     <p className="text-sm text-muted-foreground line-clamp-1 italic">
                                                         "{bid.message}"
@@ -289,13 +291,13 @@ export function Bids() {
                                                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                                         <div className="flex items-center gap-1.5">
                                                             <Clock className="w-4 h-4" />
-                                                            Submitted: {new Date(bid.created_at).toLocaleDateString()}
+                                                            {t('bids.submitted')}: {new Date(bid.created_at).toLocaleDateString()}
                                                         </div>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-4">
                                                     <Button variant="ghost" size="sm" className="hidden md:flex">
-                                                        View Request
+                                                        {t('bids.view_request')}
                                                         <ChevronRight className="w-4 h-4 ml-1" />
                                                     </Button>
                                                 </div>
