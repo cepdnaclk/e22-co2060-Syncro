@@ -212,7 +212,7 @@ export function Payment() {
                       className="w-full"
                       disabled={processing}
                     >
-                      {processing ? t('payment.processing') : `${t('payment.pay')} $${total}`}
+                      {processing ? t('payment.processing') : `${t('payment.pay')} Rs. ${total}`}
                     </Button>
                   </form>
                 )}
@@ -225,7 +225,7 @@ export function Payment() {
                       className="w-full max-w-md"
                       disabled={processing}
                     >
-                      {processing ? t('payment.processing') : `${t('payment.continue_paypal')} $${total}`}
+                      {processing ? t('payment.processing') : `${t('payment.continue_paypal')} Rs. ${total}`}
                     </Button>
                   </div>
                 )}
@@ -341,7 +341,7 @@ export function Payment() {
                       className="w-full"
                       disabled={processing}
                     >
-                      {processing ? t('payment.processing') : `${t('payment.submit_bank_payment')} $${total}`}
+                      {processing ? t('payment.processing') : `${t('payment.submit_bank_payment')} Rs. ${total}`}
                     </Button>
                   </form>
                 )}
@@ -370,17 +370,17 @@ export function Payment() {
                 <div className="space-y-3 py-4 border-y border-border">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">{t('payment.service_price')}</span>
-                    <span className="font-semibold">${price}</span>
+                    <span className="font-semibold">Rs. {price}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">{t('payment.platform_fee')}</span>
-                    <span className="font-semibold">${platformFee}</span>
+                    <span className="font-semibold">Rs. {platformFee}</span>
                   </div>
                 </div>
 
                 <div className="flex justify-between">
                   <span className="font-semibold">{t('payment.total')}</span>
-                  <span className="text-2xl font-bold text-primary">${total}</span>
+                  <span className="text-2xl font-bold text-primary">Rs. {total}</span>
                 </div>
 
                 <div className="bg-accent/50 p-3 rounded-lg text-sm">

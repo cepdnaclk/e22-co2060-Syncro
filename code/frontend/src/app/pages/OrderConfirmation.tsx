@@ -69,20 +69,20 @@ export function OrderConfirmation() {
 
             <div className="border-t border-border pt-6">
               <h3 className="font-semibold mb-4">{t('order_confirmation.cost_breakdown')}</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">{t('order_confirmation.service_price')}</span>
-                  <span className="font-semibold">${orderDetails.price}</span>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{t('order_confirmation.service_price')}</span>
+                    <span className="font-semibold">Rs. {orderDetails.price}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{t('order_confirmation.platform_fee')}</span>
+                    <span className="font-semibold">Rs. {orderDetails.platformFee}</span>
+                  </div>
+                  <div className="flex justify-between pt-2 border-t border-border text-base">
+                    <span className="font-bold">{t('order_confirmation.total')}</span>
+                    <span className="font-bold text-primary">Rs. {orderDetails.total}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">{t('order_confirmation.platform_fee')}</span>
-                  <span className="font-semibold">${orderDetails.platformFee}</span>
-                </div>
-                <div className="flex justify-between text-lg pt-3 border-t border-border">
-                  <span className="font-semibold">{t('order_confirmation.total')}</span>
-                  <span className="font-bold text-primary">${orderDetails.total}</span>
-                </div>
-              </div>
             </div>
 
             <div className="border-t border-border pt-6">

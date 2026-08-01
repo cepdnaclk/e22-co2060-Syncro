@@ -175,7 +175,7 @@ export function Discovery() {
                   <CardFooter className="p-6 pt-0 flex items-center justify-between">
                     <div>
                       <span className="text-sm text-muted-foreground">{t('discovery.from')}</span>
-                      <div className="text-2xl font-bold text-primary">${service.price}</div>
+                      <div className="text-2xl font-bold text-primary">Rs. {service.price}</div>
                     </div>
                     <Button variant="outline">{t('discovery.viewService')}</Button>
                   </CardFooter>

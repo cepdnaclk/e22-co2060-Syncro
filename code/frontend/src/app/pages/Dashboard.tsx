@@ -349,7 +349,7 @@ function SyncroChatTriggerButton() {
 function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboardProps) {
   const { t } = useTranslation();
   const stats = [
-    { label: t('dashboard.statTotalEarnings'), value: '$0', icon: DollarSign, color: 'text-green-500' },
+    { label: t('dashboard.statTotalEarnings'), value: 'Rs. 0', icon: DollarSign, color: 'text-green-500' },
     { label: t('dashboard.statActiveListings'), value: '0', icon: Package, color: 'text-blue-500' },
     { label: t('dashboard.statOrdersReceived'), value: '0', icon: ShoppingCart, color: 'text-purple-500' },
     { label: t('dashboard.statGrowth'), value: '0%', icon: TrendingUp, color: 'text-teal-500' },

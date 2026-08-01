@@ -84,7 +84,7 @@ export function PaymentSuccess() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground mb-1">{t('payment_success.amount_paid')}</p>
-                <p className="text-2xl font-bold text-primary">${transaction.amount}</p>
+                <p className="text-2xl font-bold text-primary">Rs. {transaction.amount}</p>
               </div>
             </div>
 

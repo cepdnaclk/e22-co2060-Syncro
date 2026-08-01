@@ -169,7 +169,7 @@ export function ServiceDetail() {
                         }`}
                     >
                       <h4 className="font-semibold mb-2">{pkg.name}</h4>
-                      <div className="text-2xl font-bold text-primary mb-3">${pkg.price}</div>
+                      <div className="text-2xl font-bold text-primary mb-3">Rs. {pkg.price}</div>
                       <div className="space-y-2 text-sm text-muted-foreground">
                         <div>⏱️ {pkg.deliveryDays} days delivery</div>
                         <div>🔄 {pkg.revisions} revisions</div>
@@ -202,7 +202,7 @@ export function ServiceDetail() {
                 <div className="mb-6">
                   <div className="text-sm text-muted-foreground mb-1">Selected Package</div>
                   <div className="text-3xl font-bold text-primary mb-2">
-                    ${service.packages[selectedPackage].price}
+                    Rs. {service.packages[selectedPackage].price}
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {service.packages[selectedPackage].name} Package
