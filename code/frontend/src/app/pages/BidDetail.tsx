@@ -204,7 +204,11 @@ export function BidDetail() {
                                             <p className="text-xs text-muted-foreground uppercase font-semibold">User</p>
                                             <p className="font-medium flex items-center gap-2">
                                                 <User className="w-4 h-4" />
-                                                {request.user_name || (authUser && authUser.userId === request.user_id && authUser.first_name ? authUser.first_name : `User ${request.user_id}`)}
+                                                {request.user_name && !request.user_name.startsWith('User ')
+                                                    ? request.user_name
+                                                    : (authUser && authUser.userId === request.user_id && authUser.firstName
+                                                        ? authUser.firstName
+                                                        : (request.user_name || `User ${request.user_id}`))}
                                             </p>
                                         </div>
                                         <div className="space-y-1">
