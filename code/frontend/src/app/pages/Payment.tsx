@@ -30,7 +30,7 @@ export function Payment() {
   const platformFee = parseFloat((price * PLATFORM_FEE_PCT).toFixed(2));
   const total = parseFloat((price + platformFee).toFixed(2));
 
-  const [paymentMethod, setPaymentMethod] = useState('card');
+  const [paymentMethod, setPaymentMethod] = useState('bank_transfer');
   const [processing, setProcessing] = useState(false);
   const [success, setSuccess] = useState(false);
   const [slipFile, setSlipFile] = useState<File | null>(null);
@@ -121,42 +121,52 @@ export function Payment() {
               <CardContent className="space-y-6">
                 {/* Payment Method Selection */}
                 <div className="grid md:grid-cols-3 gap-4">
-                  <button
-                    onClick={() => setPaymentMethod('card')}
-                    className={`p-4 border-2 rounded-lg transition-all text-left ${paymentMethod === 'card'
-                        ? 'border-primary bg-primary/5'
-                        : 'border-border hover:border-primary/50'
-                      }`}
-                  >
-                    <CreditCard className="w-6 h-6 mb-2 text-primary" />
-                    <div className="font-semibold text-sm">{t('payment.credit_debit')}</div>
-                    <div className="text-xs text-muted-foreground">{t('payment.card_desc')}</div>
-                  </button>
-                  <button
-                    onClick={() => setPaymentMethod('paypal')}
-                    className={`p-4 border-2 rounded-lg transition-all text-left ${paymentMethod === 'paypal'
-                        ? 'border-primary bg-primary/5'
-                        : 'border-border hover:border-primary/50'
-                      }`}
-                  >
-                    <div className="w-6 h-6 mb-2 font-bold text-primary text-xl">P</div>
-                    <div className="font-semibold text-sm">{t('payment.paypal')}</div>
-                    <div className="text-xs text-muted-foreground">{t('payment.paypal_desc')}</div>
-                  </button>
+                  {/* Bank Transfer (Priority / Active) */}
                   <button
                     onClick={() => setPaymentMethod('bank_transfer')}
-                    className={`p-4 border-2 rounded-lg transition-all text-left ${paymentMethod === 'bank_transfer'
-                        ? 'border-primary bg-primary/5'
+                    className={`p-4 border-2 rounded-lg transition-all text-left relative ${paymentMethod === 'bank_transfer'
+                        ? 'border-primary bg-primary/5 shadow-sm'
                         : 'border-border hover:border-primary/50'
                       }`}
                   >
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <Building2 className="w-5 h-5 text-primary" />
-                      <QrCode className="w-5 h-5 text-accent" />
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-1.5">
+                        <Building2 className="w-5 h-5 text-primary" />
+                        <QrCode className="w-5 h-5 text-accent" />
+                      </div>
+                      <Badge variant="success" className="text-[10px] uppercase font-bold px-1.5 py-0.5">Active</Badge>
                     </div>
                     <div className="font-semibold text-sm">{t('payment.bank_transfer')}</div>
                     <div className="text-xs text-muted-foreground">{t('payment.bank_desc')}</div>
                   </button>
+
+                  {/* Credit/Debit Card (Coming Soon) */}
+                  <div
+                    className="p-4 border-2 border-border/60 rounded-lg text-left opacity-60 bg-muted/20 relative cursor-not-allowed select-none"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <CreditCard className="w-6 h-6 text-muted-foreground" />
+                      <Badge variant="outline" className="text-[10px] font-medium bg-muted text-muted-foreground border-border px-1.5 py-0.5">
+                        {t('payment.coming_soon')}
+                      </Badge>
+                    </div>
+                    <div className="font-semibold text-sm text-muted-foreground">{t('payment.credit_debit')}</div>
+                    <div className="text-xs text-muted-foreground/70">{t('payment.card_desc')}</div>
+                  </div>
+
+                  {/* PayPal (Coming Soon) */}
+                  <div
+                    className="p-4 border-2 border-border/60 rounded-lg text-left opacity-60 bg-muted/20 relative cursor-not-allowed select-none"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="w-6 h-6 font-bold text-muted-foreground text-xl">P</div>
+                      <Badge variant="outline" className="text-[10px] font-medium bg-muted text-muted-foreground border-border px-1.5 py-0.5">
+                        {t('payment.coming_soon')}
+                      </Badge>
+                    </div>
+                    <div className="font-semibold text-sm text-muted-foreground">{t('payment.paypal')}</div>
+                    <div className="text-xs text-muted-foreground/70">{t('payment.paypal_desc')}</div>
+                  </div>
                 </div>
 
                 {/* Card Details Form */}

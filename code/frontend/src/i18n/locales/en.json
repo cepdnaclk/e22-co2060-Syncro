@@ -499,7 +499,8 @@
     "uploading_slip": "Uploading slip...",
     "submit_bank_payment": "Submit Bank Transfer Order —",
     "verification_notice": "Your payment will be verified. Your order will be updated once transfer is confirmed.",
-    "slip_required": "Please upload your transfer receipt slip before submitting."
+    "slip_required": "Please upload your transfer receipt slip before submitting.",
+    "coming_soon": "Coming Soon"
   },
   "districts": {
     "Ampara": "Ampara",
