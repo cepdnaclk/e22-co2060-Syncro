@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Globe } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 /**
  * Language switcher dropdown – visible on all pages.
@@ -10,22 +11,26 @@ import { Globe } from 'lucide-react';
 export function LanguageSwitcher() {
   const { i18n, t } = useTranslation();
 
-  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    i18n.changeLanguage(e.target.value);
+  const handleChange = (value: string) => {
+    i18n.changeLanguage(value);
   };
 
   return (
     <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-accent transition-colors">
       <Globe className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-      <select
-        aria-label={t('languageSwitcher.ariaLabel')}
+      <Select
         value={i18n.language}
-        onChange={handleChange}
-        className="bg-transparent text-sm font-medium text-foreground cursor-pointer focus:outline-none appearance-none"
+        onValueChange={handleChange}
       >
-        <option value="en">{t('languageSwitcher.english')}</option>
-        <option value="si">{t('languageSwitcher.sinhala')}</option>
-      </select>
+        <SelectTrigger className="border-0 bg-transparent shadow-none p-0 h-auto gap-1 text-sm font-medium focus:ring-0 [&>svg]:w-3 [&>svg]:h-3 [&>svg]:text-muted-foreground">
+          <SelectValue aria-label={t('languageSwitcher.ariaLabel')} />
+        </SelectTrigger>
+        <SelectContent align="end">
+          <SelectItem value="en">{t('languageSwitcher.english')}</SelectItem>
+          <SelectItem value="si">{t('languageSwitcher.sinhala')}</SelectItem>
+          <SelectItem value="ta">{t('languageSwitcher.tamil')}</SelectItem>
+        </SelectContent>
+      </Select>
     </div>
   );
 }

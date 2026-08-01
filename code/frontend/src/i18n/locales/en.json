@@ -352,7 +352,8 @@
   "languageSwitcher": {
     "english": "EN",
     "sinhala": "සිං",
-    "ariaLabel": "Select language"
+    "ariaLabel": "Select language",
+    "tamil": "தமிழ்"
   },
   "order_confirmation": {
     "title": "Order Confirmed!",
