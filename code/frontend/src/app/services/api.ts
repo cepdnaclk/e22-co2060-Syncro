@@ -82,6 +82,7 @@ export const authApi = {
         first_name: string;
         last_name: string;
         location: string;
+        phone_number: string;
     }): Promise<AuthResponse> {
         const res = await fetch(`${BASE_URL}/auth/register`, {
             method: 'POST',
@@ -116,14 +117,14 @@ export const authApi = {
         return handleResponse(res);
     },
 
-    async getMe(): Promise<{ id: number; email: string; first_name: string | null; last_name: string | null; location: string | null; active_role: string }> {
+    async getMe(): Promise<{ id: number; email: string; first_name: string | null; last_name: string | null; location: string | null; phone_number: string | null; active_role: string }> {
         const res = await fetch(`${BASE_URL}/auth/me`, {
             headers: headers(true),
         });
         return handleResponse(res);
     },
 
-    async updateMe(data: { first_name?: string; last_name?: string; location?: string }): Promise<{ id: number; email: string; first_name: string | null; last_name: string | null; location: string | null; active_role: string }> {
+    async updateMe(data: { first_name?: string; last_name?: string; location?: string; phone_number?: string }): Promise<{ id: number; email: string; first_name: string | null; last_name: string | null; location: string | null; phone_number: string | null; active_role: string }> {
         const res = await fetch(`${BASE_URL}/auth/me`, {
             method: 'PATCH',
             headers: headers(true),

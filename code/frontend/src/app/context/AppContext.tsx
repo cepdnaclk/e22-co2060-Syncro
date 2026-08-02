@@ -70,7 +70,7 @@ interface AppContextType {
   authUser: AuthUser | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, firstName: string, lastName: string, location: string) => Promise<void>;
+  register: (email: string, password: string, firstName: string, lastName: string, location: string, phone: string) => Promise<void>;
   logout: () => void;
   toggleRole: () => Promise<void>;
   isChatOpen: boolean;
@@ -241,6 +241,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         lastName: me.last_name || '',
         email: me.email,
         location: me.location || '',
+        phone: me.phone_number || prev.phone || '',
       }));
     } catch { /* ignore — profile still usable without location */ }
 
@@ -281,8 +282,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Real register — calls backend
-  const register = async (email: string, password: string, firstName: string, lastName: string, location: string) => {
-    const data = await authApi.register({ email, password, first_name: firstName, last_name: lastName, location });
+  const register = async (email: string, password: string, firstName: string, lastName: string, location: string, phone: string) => {
+    const data = await authApi.register({ email, password, first_name: firstName, last_name: lastName, location, phone_number: phone });
     const user: AuthUser = {
       userId: data.user_id,
       email,
@@ -293,7 +294,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setAuthUser(user);
     localStorage.setItem('syncro_role', 'buyer');
     setRoleState('buyer');
-    setUserProfileState({ firstName, lastName, email, location });
+    setUserProfileState({ firstName, lastName, email, location, phone });
   };
 
   // Logout — clear all auth state
