@@ -50,6 +50,7 @@ class User(Base):
     first_name = Column(String, nullable=True)
     last_name = Column(String, nullable=True)
     location = Column(String, nullable=True)  # Sri Lanka district
+    phone_number = Column(String, nullable=True)
 
     profile = relationship("Profile", back_populates="user", uselist=False, cascade="all, delete-orphan")
     listings = relationship("Listing", back_populates="owner", cascade="all, delete-orphan")

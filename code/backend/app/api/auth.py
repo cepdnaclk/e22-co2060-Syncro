@@ -45,6 +45,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
         first_name=user.first_name,
         last_name=user.last_name,
         location=user.location,
+        phone_number=user.phone_number,
         active_role="client" # Default role
     )
     db.add(new_user)
@@ -60,6 +61,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     new_profile = Profile(
         user_id=new_user.id,
         name=profile_name,
+        phone=new_user.phone_number,
         description=""
     )
     db.add(new_profile)
@@ -129,6 +131,8 @@ def update_current_user(
         current_user.last_name = data.last_name
     if data.location is not None:
         current_user.location = data.location
+    if data.phone_number is not None:
+        current_user.phone_number = data.phone_number
     db.commit()
     db.refresh(current_user)
     return current_user

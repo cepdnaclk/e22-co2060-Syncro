@@ -9,6 +9,7 @@ class UserCreate(BaseModel):
     first_name: str
     last_name: str
     location: str
+    phone_number: str
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -30,6 +31,7 @@ class UserResponse(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     location: Optional[str] = None
+    phone_number: Optional[str] = None
     active_role: str
 
     class Config:
@@ -39,6 +41,7 @@ class UserUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     location: Optional[str] = None
+    phone_number: Optional[str] = None
 
 # --- Bids & Bid Requests ---
 class BidRequestBase(BaseModel):
