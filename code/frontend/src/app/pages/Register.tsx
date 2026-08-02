@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { Moon, Sun, Loader2, MapPin } from 'lucide-react';
+import { Moon, Sun, Loader2, MapPin, Phone } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
@@ -22,7 +22,7 @@ export function Register() {
   const navigate = useNavigate();
   const { theme, setTheme, register } = useApp();
   const { t } = useTranslation();
-  const [formData, setFormData] = useState({ firstName: '', lastName: '', email: '', password: '', confirmPassword: '', location: '' });
+  const [formData, setFormData] = useState({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '', location: '' });
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const [apiError, setApiError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,6 +33,7 @@ export function Register() {
     if (!formData.lastName) errors.lastName = t('register.lastNameRequired');
     if (!formData.email) errors.email = t('register.emailRequired');
     else if (!/\S+@\S+\.\S+/.test(formData.email)) errors.email = t('register.emailInvalid');
+    if (!formData.phone) errors.phone = t('register.phoneRequired');
     if (!formData.password) errors.password = t('register.passwordRequired');
     else if (formData.password.length < 6) errors.password = t('register.passwordMinLength');
     if (formData.password !== formData.confirmPassword) errors.confirmPassword = t('register.passwordsNoMatch');
@@ -47,7 +48,7 @@ export function Register() {
     if (!validate()) return;
     setLoading(true);
     try {
-      await register(formData.email, formData.password, formData.firstName, formData.lastName, formData.location);
+      await register(formData.email, formData.password, formData.firstName, formData.lastName, formData.location, formData.phone);
       navigate('/dashboard');
     } catch (err: unknown) {
       setApiError(err instanceof Error ? err.message : t('register.registrationFailed'));
@@ -90,6 +91,7 @@ export function Register() {
                 <Input type="text" label={t('register.lastNameLabel')} placeholder={t('register.lastNamePlaceholder')} value={formData.lastName} error={formErrors.lastName} onChange={(e) => { setFormData({ ...formData, lastName: e.target.value }); if (formErrors.lastName) setFormErrors({ ...formErrors, lastName: '' }); }} required />
               </div>
               <Input type="email" label={t('register.emailLabel')} placeholder={t('register.emailPlaceholder')} value={formData.email} error={formErrors.email} onChange={(e) => { setFormData({ ...formData, email: e.target.value }); if (formErrors.email) setFormErrors({ ...formErrors, email: '' }); }} required />
+              <Input type="tel" label={t('register.phoneLabel')} placeholder={t('register.phonePlaceholder')} value={formData.phone} error={formErrors.phone} onChange={(e) => { setFormData({ ...formData, phone: e.target.value }); if (formErrors.phone) setFormErrors({ ...formErrors, phone: '' }); }} required />
               <Input type="password" label={t('register.passwordLabel')} placeholder={t('register.passwordPlaceholder')} value={formData.password} error={formErrors.password} onChange={(e) => { setFormData({ ...formData, password: e.target.value }); if (formErrors.password) setFormErrors({ ...formErrors, password: '' }); }} required />
               <Input type="password" label={t('register.confirmPasswordLabel')} placeholder={t('register.passwordPlaceholder')} value={formData.confirmPassword} error={formErrors.confirmPassword} onChange={(e) => { setFormData({ ...formData, confirmPassword: e.target.value }); if (formErrors.confirmPassword) setFormErrors({ ...formErrors, confirmPassword: '' }); }} required />
 
