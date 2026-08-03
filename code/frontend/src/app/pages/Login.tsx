@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { Moon, Sun, Loader2 } from 'lucide-react';
@@ -82,16 +82,6 @@ export function Login() {
                 {loading ? (<span className="flex items-center gap-2 justify-center"><Loader2 className="w-4 h-4 animate-spin" /> {t('login.loggingIn')}</span>) : t('login.loginButton')}
               </Button>
             </form>
-
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
-              <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">{t('login.orContinueWith')}</span></div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <Button variant="outline" type="button" className="w-full bg-background hover:bg-muted font-medium">Google</Button>
-              <Button variant="outline" type="button" className="w-full bg-background hover:bg-muted font-medium">Apple</Button>
-            </div>
 
             <div className="mt-4 text-center text-sm">
               <span className="text-muted-foreground">{t('login.noAccount')} </span>
