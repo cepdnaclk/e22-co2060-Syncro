@@ -83,13 +83,31 @@ export const authApi = {
         last_name: string;
         location: string;
         phone_number: string;
-    }): Promise<AuthResponse> {
+    }): Promise<{ message: string }> {
         const res = await fetch(`${BASE_URL}/auth/register`, {
             method: 'POST',
             headers: headers(),
             body: JSON.stringify(data),
         });
+        return handleResponse<{ message: string }>(res);
+    },
+
+    async verifyEmail(data: { email: string; otp: string }): Promise<AuthResponse> {
+        const res = await fetch(`${BASE_URL}/auth/verify-email`, {
+            method: 'POST',
+            headers: headers(),
+            body: JSON.stringify(data),
+        });
         return handleResponse<AuthResponse>(res);
+    },
+
+    async resendVerification(data: { email: string }): Promise<{ message: string }> {
+        const res = await fetch(`${BASE_URL}/auth/resend-verification`, {
+            method: 'POST',
+            headers: headers(),
+            body: JSON.stringify(data),
+        });
+        return handleResponse<{ message: string }>(res);
     },
 
     async login(data: { email: string; password: string }): Promise<AuthResponse> {

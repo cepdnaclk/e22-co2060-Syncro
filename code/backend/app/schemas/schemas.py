@@ -15,6 +15,14 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
+class VerifyEmailRequest(BaseModel):
+    email: EmailStr
+    otp: str
+
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str
