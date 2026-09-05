@@ -2,11 +2,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-from datetime import timedelta
+from datetime import datetime, timedelta
 from ..database import get_db
-from ..models.models import User
-from ..schemas.schemas import UserCreate, UserLogin, Token, UserResponse, UserUpdate
+from ..models.models import User, EmailVerificationOTP
+from ..schemas.schemas import UserCreate, UserLogin, Token, UserResponse, UserUpdate, VerifyEmailRequest, ResendVerificationRequest
 from ..core.security import get_password_hash, verify_password, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
+from ..utils.otp import generate_otp, hash_otp, verify_otp_hash
 
 router = APIRouter()
 
@@ -32,12 +33,12 @@ def get_current_user_from_token(token: str = Depends(oauth2_scheme), db: Session
     return user
 
 
-@router.post("/auth/register", response_model=Token)
+@router.post("/auth/register")
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.email == user.email).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
-    
+
     hashed_password = get_password_hash(user.password)
     new_user = User(
         email=user.email,
@@ -46,18 +47,18 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
         last_name=user.last_name,
         location=user.location,
         phone_number=user.phone_number,
-        active_role="client" # Default role
+        active_role="client",
+        email_verified=False,
     )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
-    
-    # Automatically create a default profile for the user
+
     from ..models.models import Profile
     profile_name = f"{new_user.first_name or ''} {new_user.last_name or ''}".strip()
     if not profile_name:
         profile_name = new_user.email.split('@')[0]
-        
+
     new_profile = Profile(
         user_id=new_user.id,
         name=profile_name,
@@ -66,13 +67,160 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     )
     db.add(new_profile)
     db.commit()
-    
+
+    try:
+        otp = generate_otp()
+        expires_at = datetime.utcnow() + timedelta(minutes=5)
+
+        db.query(EmailVerificationOTP).filter(
+            EmailVerificationOTP.email == user.email,
+            EmailVerificationOTP.used == False,
+        ).update({"used": True})
+
+        otp_record = EmailVerificationOTP(
+            email=user.email,
+            otp_hash=hash_otp(otp),
+            otp=None,
+            expires_at=expires_at,
+            attempt_count=0,
+            used=False,
+        )
+        db.add(otp_record)
+        db.commit()
+
+        from ..utils.email import send_otp_email
+
+        try:
+            send_otp_email(to_email=user.email, otp=otp, purpose="verification")
+        except Exception as exc:
+            db.rollback()
+            db.query(EmailVerificationOTP).filter(EmailVerificationOTP.id == otp_record.id).delete(synchronize_session=False)
+            db.query(Profile).filter(Profile.user_id == new_user.id).delete(synchronize_session=False)
+            db.query(User).filter(User.id == new_user.id).delete(synchronize_session=False)
+            db.commit()
+            raise HTTPException(
+                status_code=503,
+                detail="Unable to send the verification email. Please try again later."
+            ) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        db.rollback()
+        db.query(Profile).filter(Profile.user_id == new_user.id).delete(synchronize_session=False)
+        db.query(User).filter(User.id == new_user.id).delete(synchronize_session=False)
+        db.commit()
+        raise HTTPException(status_code=500, detail="Unable to create account. Please try again later.") from exc
+
+    return {"message": "Account created. Please check your email for the verification code."}
+
+@router.post("/auth/verify-email", response_model=Token)
+def verify_email(payload: VerifyEmailRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == payload.email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user.email_verified:
+        raise HTTPException(status_code=400, detail="Email is already verified")
+
+    otp_record = (
+        db.query(EmailVerificationOTP)
+        .filter(
+            EmailVerificationOTP.email == payload.email,
+            EmailVerificationOTP.used == False,
+        )
+        .order_by(EmailVerificationOTP.created_at.desc())
+        .first()
+    )
+
+    if not otp_record:
+        raise HTTPException(status_code=400, detail="No pending verification found. Please request a new code.")
+
+    if otp_record.attempt_count >= 5:
+        otp_record.used = True
+        db.commit()
+        raise HTTPException(status_code=400, detail="Too many incorrect attempts. Please request a new verification code.")
+
+    if datetime.utcnow() > otp_record.expires_at:
+        otp_record.used = True
+        db.commit()
+        raise HTTPException(status_code=400, detail="This verification code has expired. Please request a new code.")
+
+    submitted_otp = (payload.otp or '').strip()
+    stored_hash = otp_record.otp_hash or ''
+    if stored_hash:
+        otp_matches = verify_otp_hash(submitted_otp, stored_hash)
+    else:
+        otp_matches = bool(otp_record.otp and otp_record.otp == submitted_otp)
+
+    if not submitted_otp or not otp_matches:
+        otp_record.attempt_count += 1
+        db.commit()
+        raise HTTPException(status_code=400, detail="Invalid verification code. Please try again.")
+
+    otp_record.used = True
+    user.email_verified = True
+    db.commit()
+
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": new_user.email, "role": new_user.active_role}, expires_delta=access_token_expires
+        data={"sub": user.email, "role": user.active_role}, expires_delta=access_token_expires
     )
-    
-    return {"access_token": access_token, "token_type": "bearer", "user_id": new_user.id, "role": new_user.active_role, "first_name": new_user.first_name}
+
+    return {"access_token": access_token, "token_type": "bearer", "user_id": user.id, "role": user.active_role, "first_name": user.first_name}
+
+
+@router.post("/auth/resend-verification")
+def resend_verification(payload: ResendVerificationRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == payload.email).first()
+    if not user:
+        return {"message": "If this email is registered, a new verification code has been sent."}
+
+    if user.email_verified:
+        raise HTTPException(status_code=400, detail="Email is already verified")
+
+    latest_otp = (
+        db.query(EmailVerificationOTP)
+        .filter(EmailVerificationOTP.email == payload.email)
+        .order_by(EmailVerificationOTP.created_at.desc())
+        .first()
+    )
+    if latest_otp and latest_otp.created_at and datetime.utcnow() < latest_otp.created_at + timedelta(seconds=60):
+        raise HTTPException(status_code=429, detail="Please wait 60 seconds before requesting a new code.")
+
+    db.query(EmailVerificationOTP).filter(
+        EmailVerificationOTP.email == payload.email,
+        EmailVerificationOTP.used == False,
+    ).update({"used": True})
+    db.commit()
+
+    otp = generate_otp()
+    expires_at = datetime.utcnow() + timedelta(minutes=5)
+
+    otp_record = EmailVerificationOTP(
+        email=payload.email,
+        otp_hash=hash_otp(otp),
+        otp=None,
+        expires_at=expires_at,
+        used=False,
+        attempt_count=0,
+        last_sent_at=datetime.utcnow(),
+    )
+    db.add(otp_record)
+    db.commit()
+
+    try:
+        from ..utils.email import send_otp_email
+        send_otp_email(to_email=payload.email, otp=otp, purpose="verification")
+    except Exception as exc:
+        db.rollback()
+        db.query(EmailVerificationOTP).filter(EmailVerificationOTP.id == otp_record.id).delete(synchronize_session=False)
+        db.commit()
+        raise HTTPException(
+            status_code=503,
+            detail="Unable to send the verification email. Please try again later."
+        ) from exc
+
+    return {"message": "A new verification code has been sent to your email."}
 
 
 @router.post("/auth/login", response_model=Token)
@@ -85,6 +233,12 @@ def login_user(user: UserLogin, db: Session = Depends(get_db)):
             headers={"WWW-Authenticate": "Bearer"},
         )
     
+    if not db_user.email_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Please verify your email before logging in."
+        )
+
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": db_user.email, "role": db_user.active_role}, expires_delta=access_token_expires
