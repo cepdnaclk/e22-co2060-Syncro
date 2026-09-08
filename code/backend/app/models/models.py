@@ -51,6 +51,7 @@ class User(Base):
     last_name = Column(String, nullable=True)
     location = Column(String, nullable=True)  # Sri Lanka district
     phone_number = Column(String, nullable=True)
+    email_verified = Column(Boolean, default=False)
 
     profile = relationship("Profile", back_populates="user", uselist=False, cascade="all, delete-orphan")
     listings = relationship("Listing", back_populates="owner", cascade="all, delete-orphan")
@@ -198,3 +199,17 @@ class PasswordResetOTP(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     expires_at = Column(DateTime, nullable=False)
     used = Column(Boolean, default=False)
+
+class EmailVerificationOTP(Base):
+    """Stores the 6-digit OTP for email verification during registration. OTPs expire after 5 minutes."""
+    __tablename__ = "email_verification_otps"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, nullable=False, index=True)
+    otp_hash = Column(String(128), nullable=True)
+    otp = Column(String(6), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=False)
+    attempt_count = Column(Integer, default=0)
+    used = Column(Boolean, default=False)
+    last_sent_at = Column(DateTime, nullable=True)

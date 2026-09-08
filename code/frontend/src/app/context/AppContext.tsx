@@ -71,6 +71,7 @@ interface AppContextType {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, firstName: string, lastName: string, location: string, phone: string) => Promise<void>;
+  verifyEmail: (email: string, otp: string) => Promise<void>;
   logout: () => void;
   toggleRole: () => Promise<void>;
   isChatOpen: boolean;
@@ -281,9 +282,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Real register — calls backend
+  // Real register — calls backend. It now returns a success message, but we DON'T log the user in yet.
   const register = async (email: string, password: string, firstName: string, lastName: string, location: string, phone: string) => {
-    const data = await authApi.register({ email, password, first_name: firstName, last_name: lastName, location, phone_number: phone });
+    await authApi.register({ email, password, first_name: firstName, last_name: lastName, location, phone_number: phone });
+    // Note: We do NOT set authUser here anymore. The user must verify their email first.
+  };
+
+  const verifyEmail = async (email: string, otp: string) => {
+    const data = await authApi.verifyEmail({ email, otp });
     const user: AuthUser = {
       userId: data.user_id,
       email,
@@ -291,10 +297,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       role: data.role,
       token: data.access_token,
     };
+    
+    // Log the user in just like login()
+    localStorage.setItem('syncro_token', user.token);
     setAuthUser(user);
-    localStorage.setItem('syncro_role', 'buyer');
-    setRoleState('buyer');
-    setUserProfileState({ firstName, lastName, email, location, phone });
+    const newRole = data.role === 'seller' ? 'seller' : 'buyer';
+    setRoleState(newRole);
+    localStorage.setItem('syncro_role', newRole);
+    
+    try {
+      const me = await authApi.getMe();
+      setUserProfileState(prev => ({
+        ...prev,
+        firstName: me.first_name || data.first_name,
+        lastName: me.last_name || '',
+        email: me.email,
+        location: me.location || '',
+        phone: me.phone_number || prev.phone || '',
+      }));
+    } catch { /* ignore */ }
+
+    if (data.role === 'seller') {
+      setHasSellerAccount(true);
+    }
   };
 
   // Logout — clear all auth state
@@ -494,6 +519,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       isAuthenticated,
       login,
       register,
+      verifyEmail,
       logout,
       toggleRole,
       isChatOpen,

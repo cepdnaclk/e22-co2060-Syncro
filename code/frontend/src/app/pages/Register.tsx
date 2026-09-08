@@ -49,7 +49,7 @@ export function Register() {
     setLoading(true);
     try {
       await register(formData.email, formData.password, formData.firstName, formData.lastName, formData.location, formData.phone);
-      navigate('/dashboard');
+      navigate('/verify-email', { state: { email: formData.email } });
     } catch (err: unknown) {
       setApiError(err instanceof Error ? err.message : t('register.registrationFailed'));
     } finally {
