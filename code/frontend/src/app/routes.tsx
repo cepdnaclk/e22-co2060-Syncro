@@ -22,6 +22,7 @@ import { BidDetail } from './pages/BidDetail';
 
 import { TermsOfService } from './pages/TermsOfService';
 import { PrivacyPolicy } from './pages/PrivacyPolicy';
+import { HelpCenter } from './pages/HelpCenter';
 
 export const router = createBrowserRouter([
   {
@@ -51,6 +52,10 @@ export const router = createBrowserRouter([
   {
     path: '/privacy',
     element: <PrivacyPolicy />,
+  },
+  {
+    path: '/help',
+    element: <HelpCenter />,
   },
   {
     path: '/',
