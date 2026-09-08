@@ -82,6 +82,16 @@ export function LandingPage() {
   const [roleView, setRoleView] = useState<'buyer' | 'seller'>('buyer');
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [isPerspectivePaused, setIsPerspectivePaused] = useState(false);
+
+  // Auto-play toggle between Buyer and Seller every 6 seconds (pauses on user hover)
+  useEffect(() => {
+    if (isPerspectivePaused) return;
+    const timer = setInterval(() => {
+      setRoleView((prev) => (prev === 'buyer' ? 'seller' : 'buyer'));
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [isPerspectivePaused]);
 
   const popularBusinesses = BUSINESS_DATA.map((item) => ({
     id: item.id,
@@ -537,11 +547,15 @@ export function LandingPage() {
               {t('landing.dualPerspective.sub')}
             </p>
 
-            {/* Toggle Switch */}
-            <div className="inline-flex p-1.5 rounded-2xl bg-slate-200/70 dark:bg-white/10 backdrop-blur-md">
+            {/* Toggle Switch with Auto-Play Controls */}
+            <div 
+              onMouseEnter={() => setIsPerspectivePaused(true)}
+              onMouseLeave={() => setIsPerspectivePaused(false)}
+              className="inline-flex items-center gap-1.5 p-1.5 rounded-2xl bg-slate-200/70 dark:bg-white/10 backdrop-blur-md shadow-inner"
+            >
               <button
-                onClick={() => setRoleView('buyer')}
-                className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${
+                onClick={() => { setRoleView('buyer'); setIsPerspectivePaused(true); }}
+                className={`relative px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 ${
                   roleView === 'buyer'
                     ? 'bg-white dark:bg-indigo-600 text-slate-900 dark:text-white shadow-md'
                     : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
@@ -550,8 +564,8 @@ export function LandingPage() {
                 {t('landing.dualPerspective.buyerTab')}
               </button>
               <button
-                onClick={() => setRoleView('seller')}
-                className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${
+                onClick={() => { setRoleView('seller'); setIsPerspectivePaused(true); }}
+                className={`relative px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 ${
                   roleView === 'seller'
                     ? 'bg-white dark:bg-teal-600 text-slate-900 dark:text-white shadow-md'
                     : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
@@ -560,19 +574,45 @@ export function LandingPage() {
                 {t('landing.dualPerspective.sellerTab')}
               </button>
             </div>
+
+            {/* Slideshow Indicator Dots */}
+            <div className="flex items-center justify-center gap-2 mt-4">
+              <button
+                onClick={() => { setRoleView('buyer'); setIsPerspectivePaused(true); }}
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  roleView === 'buyer'
+                    ? 'w-8 bg-indigo-600 dark:bg-indigo-400'
+                    : 'w-2 bg-slate-300 dark:bg-slate-700 hover:bg-slate-400'
+                }`}
+                aria-label="Client perspective"
+              />
+              <button
+                onClick={() => { setRoleView('seller'); setIsPerspectivePaused(true); }}
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  roleView === 'seller'
+                    ? 'w-8 bg-teal-600 dark:bg-teal-400'
+                    : 'w-2 bg-slate-300 dark:bg-slate-700 hover:bg-slate-400'
+                }`}
+                aria-label="Provider perspective"
+              />
+            </div>
           </motion.div>
 
-          {/* Interactive Toggle Showcase with Images */}
-          <div className="max-w-5xl mx-auto">
+          {/* Interactive Toggle Showcase with Images & Auto-Slideshow */}
+          <div 
+            className="max-w-5xl mx-auto relative group"
+            onMouseEnter={() => setIsPerspectivePaused(true)}
+            onMouseLeave={() => setIsPerspectivePaused(false)}
+          >
             <AnimatePresence mode="wait">
               {roleView === 'buyer' ? (
                 <motion.div
                   key="buyer"
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -15 }}
-                  transition={{ duration: 0.4 }}
-                  className="rounded-3xl bg-white dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/5 p-8 sm:p-12 shadow-xl"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ duration: 0.45 }}
+                  className="rounded-3xl bg-white dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/5 p-8 sm:p-12 shadow-xl relative overflow-hidden"
                 >
                   <div className="grid md:grid-cols-2 gap-10 items-center">
                     <div>
@@ -598,31 +638,44 @@ export function LandingPage() {
                           </div>
                         ))}
                       </div>
-                      <Link to="/register">
-                        <Button className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold">
-                          {t('landing.dualPerspective.buyerBtn')}
-                          <ArrowRight className="ml-2 w-4 h-4" />
-                        </Button>
-                      </Link>
+                      <div className="flex items-center gap-4">
+                        <Link to="/register">
+                          <Button className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-md shadow-indigo-600/20">
+                            {t('landing.dualPerspective.buyerBtn')}
+                            <ArrowRight className="ml-2 w-4 h-4" />
+                          </Button>
+                        </Link>
+                        <button
+                          onClick={() => setRoleView('seller')}
+                          className="text-xs font-semibold text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1"
+                        >
+                          Looking for work instead? Switch &rarr;
+                        </button>
+                      </div>
                     </div>
 
-                    <div className="rounded-2xl overflow-hidden shadow-lg border border-slate-200/80 dark:border-white/10 aspect-[4/3] bg-slate-950">
+                    <div className="rounded-2xl overflow-hidden shadow-xl border border-slate-200/80 dark:border-white/10 aspect-[4/3] bg-slate-950 relative group/img">
                       <img
-                        src="/images/saas_mockup.jpg"
-                        alt="Clients managing proposals"
-                        className="w-full h-full object-cover"
+                        src="/images/sl_client_quotes.jpg"
+                        alt="Sri Lankan client reviewing service quotes"
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover/img:scale-105"
                       />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent pointer-events-none" />
+                      <div className="absolute bottom-4 left-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-900 dark:text-white border border-slate-200/60 dark:border-white/10 flex items-center gap-2 shadow-md">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        Live Competitive Bids
+                      </div>
                     </div>
                   </div>
                 </motion.div>
               ) : (
                 <motion.div
                   key="seller"
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -15 }}
-                  transition={{ duration: 0.4 }}
-                  className="rounded-3xl bg-white dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/5 p-8 sm:p-12 shadow-xl"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.45 }}
+                  className="rounded-3xl bg-white dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/5 p-8 sm:p-12 shadow-xl relative overflow-hidden"
                 >
                   <div className="grid md:grid-cols-2 gap-10 items-center">
                     <div>
@@ -648,20 +701,33 @@ export function LandingPage() {
                           </div>
                         ))}
                       </div>
-                      <Link to="/register">
-                        <Button className="bg-teal-600 hover:bg-teal-700 text-white font-semibold">
-                          {t('landing.dualPerspective.sellerBtn')}
-                          <ArrowRight className="ml-2 w-4 h-4" />
-                        </Button>
-                      </Link>
+                      <div className="flex items-center gap-4">
+                        <Link to="/register">
+                          <Button className="bg-teal-600 hover:bg-teal-700 text-white font-semibold shadow-md shadow-teal-600/20">
+                            {t('landing.dualPerspective.sellerBtn')}
+                            <ArrowRight className="ml-2 w-4 h-4" />
+                          </Button>
+                        </Link>
+                        <button
+                          onClick={() => setRoleView('buyer')}
+                          className="text-xs font-semibold text-slate-500 hover:text-teal-600 dark:hover:text-teal-400 transition-colors flex items-center gap-1"
+                        >
+                          Need work done instead? Switch &rarr;
+                        </button>
+                      </div>
                     </div>
 
-                    <div className="rounded-2xl overflow-hidden shadow-lg border border-slate-200/80 dark:border-white/10 aspect-[4/3] bg-slate-950">
+                    <div className="rounded-2xl overflow-hidden shadow-xl border border-slate-200/80 dark:border-white/10 aspect-[4/3] bg-slate-950 relative group/img">
                       <img
                         src="/images/sri_lankan_team.jpg"
                         alt="Sri Lankan creative professionals collaborating"
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover/img:scale-105"
                       />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent pointer-events-none" />
+                      <div className="absolute bottom-4 left-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-900 dark:text-white border border-slate-200/60 dark:border-white/10 flex items-center gap-2 shadow-md">
+                        <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
+                        Guaranteed Payment Protection
+                      </div>
                     </div>
                   </div>
                 </motion.div>
