@@ -130,7 +130,13 @@ const FAQS: FAQItem[] = [
     id: 'a3',
     category: 'account',
     question: 'Can I both hire pros and offer my services with one account?',
-    answer: 'Yes! Syncro accounts support dual roles seamlessly. You can post requests as a client while also bidding on opportunities as a service provider using the same login.'
+    answer: 'Yes! Syncro accounts natively support dual roles. Every account starts as a client account so you can immediately post jobs, compare quotes, and hire professionals. You do not need to register a second account or log in with different credentials to offer your own services.'
+  },
+  {
+    id: 'a4',
+    category: 'account',
+    question: 'How do I activate seller/business mode if I started as a buyer?',
+    answer: 'Simply log in and head to your Dashboard. In the "Become a Service Provider" banner, click "Create Business Profile". Complete the 3-step setup (your business name, category, services, and optional logo). Once finished, a persistent "Buyer | Seller" toggle appears in your top navigation bar, allowing you to switch between hiring and bidding anytime in 1 click.'
   }
 ];
 
