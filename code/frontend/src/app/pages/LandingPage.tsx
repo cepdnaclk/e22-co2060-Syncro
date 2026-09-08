@@ -912,9 +912,9 @@ export function LandingPage() {
               <h4 className="font-bold text-slate-900 dark:text-white text-sm mb-4">{t('landing.footer.support')}</h4>
               <ul className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
                 <li><span className="hover:text-indigo-600 cursor-pointer">{t('landing.footer.helpCenter')}</span></li>
-                <li><span className="hover:text-indigo-600 cursor-pointer">{t('landing.footer.safetyPolicy')}</span></li>
-                <li><span className="hover:text-indigo-600 cursor-pointer">{t('landing.footer.terms')}</span></li>
-                <li><span className="hover:text-indigo-600 cursor-pointer">{t('landing.footer.privacy')}</span></li>
+                <li><Link to="/terms#payments" className="hover:text-indigo-600 transition-colors">{t('landing.footer.safetyPolicy')}</Link></li>
+                <li><Link to="/terms" className="hover:text-indigo-600 transition-colors">{t('landing.footer.terms')}</Link></li>
+                <li><Link to="/privacy" className="hover:text-indigo-600 transition-colors">{t('landing.footer.privacy')}</Link></li>
               </ul>
             </div>
           </div>

@@ -9,6 +9,7 @@ import { useApp } from '../context/AppContext';
 import { useTranslation } from 'react-i18next';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { LegalModal } from '../components/LegalModal';
 
 const SRI_LANKA_DISTRICTS = [
   'Ampara', 'Anuradhapura', 'Badulla', 'Batticaloa', 'Colombo',
@@ -26,6 +27,9 @@ export function Register() {
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const [apiError, setApiError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [legalModalTab, setLegalModalTab] = useState<'terms' | 'privacy'>('terms');
+  const [agreeTerms, setAgreeTerms] = useState(false);
 
   const validate = () => {
     const errors: { [key: string]: string } = {};
@@ -119,12 +123,30 @@ export function Register() {
 
               <div className="text-sm">
                 <label className="flex items-start gap-2">
-                  <input type="checkbox" className="rounded border-border mt-1" required />
+                  <input 
+                    type="checkbox" 
+                    className="rounded border-border mt-1 cursor-pointer" 
+                    checked={agreeTerms}
+                    onChange={(e) => setAgreeTerms(e.target.checked)}
+                    required 
+                  />
                   <span className="text-muted-foreground">
                     {t('register.termsText')}{' '}
-                    <Link to="#" className="text-primary hover:underline">{t('register.termsLink')}</Link>
+                    <button
+                      type="button"
+                      onClick={() => { setLegalModalTab('terms'); setLegalModalOpen(true); }}
+                      className="text-primary hover:underline font-medium cursor-pointer"
+                    >
+                      {t('register.termsLink')}
+                    </button>
                     {' '}{t('register.andText')}{' '}
-                    <Link to="#" className="text-primary hover:underline">{t('register.privacyLink')}</Link>
+                    <button
+                      type="button"
+                      onClick={() => { setLegalModalTab('privacy'); setLegalModalOpen(true); }}
+                      className="text-primary hover:underline font-medium cursor-pointer"
+                    >
+                      {t('register.privacyLink')}
+                    </button>
                   </span>
                 </label>
               </div>
@@ -142,6 +164,13 @@ export function Register() {
           <p className="text-center text-xs text-muted-foreground mt-4">{t('register.accountRoles')}</p>
         </motion.div>
       </div>
+
+      <LegalModal
+        isOpen={legalModalOpen}
+        onClose={() => setLegalModalOpen(false)}
+        defaultTab={legalModalTab}
+        onAccept={() => setAgreeTerms(true)}
+      />
     </div>
   );
 }
