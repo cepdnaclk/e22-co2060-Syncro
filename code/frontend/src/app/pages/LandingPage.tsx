@@ -540,11 +540,18 @@ export function LandingPage() {
       <section id="grow-business" className="py-24 relative">
         <div className="container mx-auto px-6">
           <motion.div {...fadeInUp} className="text-center max-w-2xl mx-auto mb-12">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200/70 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 text-xs font-bold mb-4 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+              {t('landing.dualPerspective.oneAccountBadge')}
+            </div>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-950 dark:text-white tracking-tight mb-4">
               {t('landing.dualPerspective.heading')}
             </h2>
-            <p className="text-slate-600 dark:text-slate-400 mb-8">
+            <p className="text-slate-600 dark:text-slate-400 mb-3">
               {t('landing.dualPerspective.sub')}
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-8 max-w-xl mx-auto font-medium">
+              ✨ {t('landing.dualPerspective.oneAccountNote')}
             </p>
 
             {/* Toggle Switch with Auto-Play Controls */}
