@@ -667,6 +667,8 @@
       }
     },
     "dualPerspective": {
+      "oneAccountBadge": "One Account • Dual Roles",
+      "oneAccountNote": "Start as a client to post tasks. Create a verified business profile anytime to offer services and earn — all with one account.",
       "heading": "Built for Clients & Service Providers",
       "sub": "Whether you need to get work done quickly or want steady client work, Syncro puts you in control.",
       "buyerTab": "I Want to Hire (Clients)",
