@@ -395,7 +395,7 @@ export function TermsOfService() {
               </p>
               <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 text-sm space-y-1 text-slate-700 dark:text-slate-300">
                 <div><strong>Platform:</strong> Syncro Technologies (Private) Limited</div>
-                <div><strong>Email:</strong> <a href="mailto:support@syncro.lk" className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline">support@syncro.lk</a> / <a href="mailto:legal@syncro.lk" className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline">legal@syncro.lk</a></div>
+                <div><strong>Email:</strong> <a href="mailto:syncromarketplace@gmail.com" className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline">syncromarketplace@gmail.com</a></div>
                 <div><strong>Location:</strong> Colombo, Western Province, Sri Lanka</div>
               </div>
             </section>

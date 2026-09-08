@@ -344,7 +344,7 @@ export function PrivacyPolicy() {
               </p>
               <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 text-sm space-y-1 text-slate-700 dark:text-slate-300">
                 <div><strong>Data Protection Officer (DPO):</strong> Syncro Privacy Team</div>
-                <div><strong>Email:</strong> <a href="mailto:privacy@syncro.lk" className="text-emerald-600 dark:text-emerald-400 font-medium hover:underline">privacy@syncro.lk</a></div>
+                <div><strong>Email:</strong> <a href="mailto:syncromarketplace@gmail.com" className="text-emerald-600 dark:text-emerald-400 font-medium hover:underline">syncromarketplace@gmail.com</a></div>
                 <div><strong>Address:</strong> Syncro Technologies (Pvt) Ltd, Colombo, Sri Lanka</div>
               </div>
             </section>

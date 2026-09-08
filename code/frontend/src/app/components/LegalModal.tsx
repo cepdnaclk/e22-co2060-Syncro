@@ -155,7 +155,7 @@ export function LegalModal({ isOpen, onClose, defaultTab = 'terms', onAccept }: 
               <div className="pt-4 space-y-3">
                 <h4 className="font-bold text-slate-900 dark:text-white text-base">5. Your Statutory Rights</h4>
                 <p>
-                  You retain the right to access, rectify, or request the deletion of your personal data at any time by contacting our Data Protection Officer at privacy@syncro.lk.
+                  You retain the right to access, rectify, or request the deletion of your personal data at any time by contacting our Data Protection Officer at syncromarketplace@gmail.com.
                 </p>
               </div>
             </>
