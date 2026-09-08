@@ -20,6 +20,9 @@ import { PublicSellerProfile } from './pages/PublicSellerProfile';
 import { Bids } from './pages/Bids';
 import { BidDetail } from './pages/BidDetail';
 
+import { TermsOfService } from './pages/TermsOfService';
+import { PrivacyPolicy } from './pages/PrivacyPolicy';
+
 export const router = createBrowserRouter([
   {
     path: '/',
@@ -40,6 +43,14 @@ export const router = createBrowserRouter([
   {
     path: '/forgot-password',
     element: <ForgotPassword />,
+  },
+  {
+    path: '/terms',
+    element: <TermsOfService />,
+  },
+  {
+    path: '/privacy',
+    element: <PrivacyPolicy />,
   },
   {
     path: '/',
