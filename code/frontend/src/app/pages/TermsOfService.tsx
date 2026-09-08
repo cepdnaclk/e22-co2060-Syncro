@@ -13,7 +13,8 @@ import {
   CheckCircle2, 
   XCircle,
   ExternalLink,
-  Printer
+  Printer,
+  UserCheck
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -199,6 +200,21 @@ export function TermsOfService() {
                   </p>
                 </div>
               </div>
+
+              {/* Single-Account Dual-Role Policy Card */}
+              <div className="p-4 rounded-xl border border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/40 dark:bg-indigo-950/20 my-3">
+                <div className="flex items-center gap-2 font-bold text-indigo-900 dark:text-indigo-200 text-sm mb-1">
+                  <UserCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                  Single-Account, Dual-Role Architecture
+                </div>
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-2">
+                  Each user is permitted one primary account. All accounts are initialized with <strong>Client</strong> capabilities (allowing you to post jobs, review bids, and hire providers). You do not need to register a second account to offer services.
+                </p>
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                  At any time, you may create a verified <strong>Business Profile</strong> from your Dashboard to unlock <strong>Provider</strong> capabilities. You can seamlessly switch between Buyer and Seller modes via the top navigation switcher while keeping your unified login, reviews, and transaction history intact.
+                </p>
+              </div>
+
               <p className="text-slate-600 dark:text-slate-300">
                 You are solely responsible for maintaining the confidentiality of your credentials (including passwords and OTP verification codes). You agree to notify us immediately of any unauthorized access to your account.
               </p>
