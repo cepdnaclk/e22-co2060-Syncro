@@ -1,15 +1,23 @@
 import httpx
 import json
 import os
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
-load_dotenv()
+print("AI service loaded")
 
-print("GROQ ai_service loaded")
+# Google Gemini Configuration (Primary)
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_MODEL = "gemini-3.6-flash"
 
+# Groq Configuration (Fallback)
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-MODEL = "openai/gpt-oss-120b"
+GROQ_MODEL = "openai/gpt-oss-120b"
 
 SYSTEM_PROMPT = """You are a friendly, helpful AI assistant for Syncro, a marketplace app in Sri Lanka.
 Your goal is to collect service request details from a customer through a warm, natural conversation.
@@ -42,38 +50,65 @@ async def chat_with_ai(conversation_history: list) -> dict:
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     messages += conversation_history
 
-    try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                GROQ_URL,
-                headers={
-                    "Authorization": f"Bearer {GROQ_API_KEY}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": MODEL,
-                    "messages": messages
-                }
-            )
-        print("Groq status code:", response.status_code)
-        print("Groq response:", response.text)
-        response.raise_for_status()
-    except httpx.HTTPStatusError as e:
-        # Groq returned a non-2xx response (rate limit, invalid key, etc.)
+    response = None
+    last_error = None
+
+    # 1. Primary: Try Google Gemini
+    if GEMINI_API_KEY:
         try:
-            detail = e.response.json().get("error", {}).get("message", str(e))
-        except Exception:
-            detail = str(e)
-        print("GROQ HTTP ERROR:", detail)
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.post(
+                    GEMINI_URL,
+                    headers={
+                        "Authorization": f"Bearer {GEMINI_API_KEY}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": GEMINI_MODEL,
+                        "messages": messages
+                    }
+                )
+            if resp.status_code == 200:
+                response = resp
+            else:
+                detail = resp.text
+                print(f"Gemini API returned status {resp.status_code}: {detail}")
+                last_error = f"Gemini error ({resp.status_code}): {detail}"
+        except Exception as e:
+            print(f"Gemini request exception: {e}")
+            last_error = str(e)
+
+    # 2. Fallback: Try Groq if Gemini is not configured or encountered an issue
+    if response is None and GROQ_API_KEY:
+        try:
+            print("Falling back to Groq...")
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.post(
+                    GROQ_URL,
+                    headers={
+                        "Authorization": f"Bearer {GROQ_API_KEY}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": GROQ_MODEL,
+                        "messages": messages
+                    }
+                )
+            if resp.status_code == 200:
+                response = resp
+            else:
+                detail = resp.text
+                print(f"Groq API returned status {resp.status_code}: {detail}")
+                last_error = f"Groq error ({resp.status_code}): {detail}"
+        except Exception as e:
+            print(f"Groq request exception: {e}")
+            last_error = str(e)
+
+    if response is None:
+        print("ALL AI PROVIDERS FAILED:", last_error)
         return {
             "status": "error",
-            "message": f"AI service error: {detail}"
-        }
-    except Exception as e:
-        print("FULL ERROR:", str(e))
-        return {
-            "status": "error",
-            "message": f"AI service error: {str(e)}"
+            "message": f"AI service error: {last_error or 'No AI provider available'}"
         }
 
     ai_text = response.json()["choices"][0]["message"]["content"].strip()
@@ -81,6 +116,12 @@ async def chat_with_ai(conversation_history: list) -> dict:
     if "READY:" in ai_text:
         try:
             json_part = ai_text.split("READY:")[1].strip()
+            if json_part.startswith("```json"):
+                json_part = json_part[7:].strip()
+            if json_part.startswith("```"):
+                json_part = json_part[3:].strip()
+            if json_part.endswith("```"):
+                json_part = json_part[:-3].strip()
             if "}" in json_part:
                 json_part = json_part[:json_part.rindex("}") + 1]
             order_data = json.loads(json_part)
@@ -89,8 +130,8 @@ async def chat_with_ai(conversation_history: list) -> dict:
                 "order": order_data,
                 "message": "Perfect! I have all your details. Sending your request to sellers now!"
             }
-        except (json.JSONDecodeError, ValueError):
-            pass
+        except (json.JSONDecodeError, ValueError) as err:
+            print("READY JSON parse error:", err, "raw:", json_part)
 
     return {
         "status": "collecting",
