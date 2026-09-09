@@ -78,7 +78,8 @@ const BUSINESS_DATA = [
 
 export function LandingPage() {
   const { theme, setTheme, isAuthenticated, role, hasSellerProfile } = useApp();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const currencyPrefix = i18n.language === 'si' ? 'රු. ' : i18n.language === 'ta' ? 'ரூ. ' : 'Rs. ';
   const [roleView, setRoleView] = useState<'buyer' | 'seller'>('buyer');
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -318,7 +319,7 @@ export function LandingPage() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-slate-900 dark:text-white">
-                    <AnimatedCounter target={5} suffix=" Min" />
+                    <AnimatedCounter target={0} prefix={currencyPrefix} />
                   </div>
                   <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">{t('landing.hero.stat3Label')}</div>
                 </div>
