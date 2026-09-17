@@ -73,6 +73,37 @@ def send_otp_email(to_email: str, otp: str, purpose: str = "verification") -> No
         f"Regards,\nSyncro Team"
     )
 
+    # --- 1. Brevo HTTPS API (Recommended for Cloud / Render) ---
+    brevo_api_key = os.getenv("BREVO_API_KEY", "").strip()
+    if brevo_api_key:
+        import httpx
+        sender_email = gmail_user or "syncromarketplace@gmail.com"
+        brevo_url = "https://api.brevo.com/v3/smtp/email"
+        brevo_headers = {
+            "accept": "application/json",
+            "api-key": brevo_api_key,
+            "content-type": "application/json",
+        }
+        brevo_payload = {
+            "sender": {"name": "Syncro", "email": sender_email},
+            "to": [{"email": to_email}],
+            "subject": subject,
+            "htmlContent": html_body,
+            "textContent": text_body,
+        }
+        try:
+            with httpx.Client(timeout=10.0) as client:
+                res = client.post(brevo_url, json=brevo_payload, headers=brevo_headers)
+                if res.status_code in (200, 201, 202):
+                    print(f"Brevo email sent successfully to {to_email}", flush=True)
+                    return
+                print(f"Brevo API returned error {res.status_code}: {res.text}", file=sys.stderr, flush=True)
+                raise RuntimeError(f"Brevo error: {res.text}")
+        except Exception as exc:
+            print(f"Brevo email sending failed: {exc}", file=sys.stderr, flush=True)
+            raise RuntimeError("Unable to send the verification email. Please try again later.") from exc
+
+    # --- 2. Fallback to standard Gmail SMTP (for local development) ---
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = f"Syncro Team <{gmail_user}>"
@@ -94,3 +125,4 @@ def send_otp_email(to_email: str, otp: str, purpose: str = "verification") -> No
     except Exception as exc:
         print("SMTP sending failed while sending OTP email.", file=sys.stderr)
         raise RuntimeError("Unable to send the verification email. Please try again later.") from exc
+
