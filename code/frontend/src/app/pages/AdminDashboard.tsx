@@ -275,13 +275,17 @@ export function AdminDashboard() {
                   </div>
                 </div>
                 <div className="mt-3">
-                  <div className="text-3xl font-extrabold text-foreground">{metrics?.total_users ?? '...'}</div>
+                  <div className="text-3xl font-extrabold text-foreground">
+                    {metrics?.total_users ?? (metrics as any)?.users?.total ?? 0}
+                  </div>
                   <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-                    <span>{metrics?.total_buyers ?? 0} buyers</span>
+                    <span>{metrics?.total_buyers ?? (metrics as any)?.users?.buyers ?? 0} buyers</span>
                     <span>•</span>
-                    <span>{metrics?.total_sellers ?? 0} sellers</span>
+                    <span>{metrics?.total_sellers ?? (metrics as any)?.users?.sellers ?? 0} sellers</span>
                     <span>•</span>
-                    <span className="text-destructive font-medium">{metrics?.banned_users ?? 0} banned</span>
+                    <span className="text-destructive font-medium">
+                      {metrics?.banned_users ?? (metrics as any)?.users?.banned ?? 0} banned
+                    </span>
                   </div>
                 </div>
               </div>
@@ -294,7 +298,9 @@ export function AdminDashboard() {
                   </div>
                 </div>
                 <div className="mt-3">
-                  <div className="text-3xl font-extrabold text-amber-500">{metrics?.pending_verification_orders ?? '...'}</div>
+                  <div className="text-3xl font-extrabold text-amber-500">
+                    {metrics?.pending_verification_orders ?? (metrics as any)?.orders?.pending_slips ?? 0}
+                  </div>
                   <div className="text-xs text-muted-foreground mt-1">
                     Bank transfers/QR slips waiting for manual review
                   </div>
@@ -310,7 +316,7 @@ export function AdminDashboard() {
                 </div>
                 <div className="mt-3">
                   <div className="text-3xl font-extrabold text-foreground">
-                    LKR {(metrics?.escrow_holding_amount ?? 0).toLocaleString()}
+                    LKR {((metrics?.escrow_holding_amount ?? (metrics as any)?.financials?.escrow_holding) ?? 0).toLocaleString()}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
                     Funds currently locked safe in escrow
@@ -327,7 +333,7 @@ export function AdminDashboard() {
                 </div>
                 <div className="mt-3">
                   <div className="text-3xl font-extrabold text-primary">
-                    LKR {(metrics?.platform_revenue_collected ?? 0).toLocaleString()}
+                    LKR {((metrics?.platform_revenue_collected ?? (metrics as any)?.financials?.platform_revenue) ?? 0).toLocaleString()}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
                     Total commissions earned on completed orders
@@ -342,19 +348,27 @@ export function AdminDashboard() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="p-4 rounded-xl bg-muted/40 border border-border">
                   <span className="text-xs text-muted-foreground font-medium">All Time Orders</span>
-                  <div className="text-2xl font-bold mt-1">{metrics?.total_orders ?? 0}</div>
+                  <div className="text-2xl font-bold mt-1">
+                    {metrics?.total_orders ?? (metrics as any)?.orders?.total ?? 0}
+                  </div>
                 </div>
                 <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/20">
                   <span className="text-xs text-blue-500 font-medium">Active (In Escrow)</span>
-                  <div className="text-2xl font-bold text-blue-500 mt-1">{metrics?.active_orders ?? 0}</div>
+                  <div className="text-2xl font-bold text-blue-500 mt-1">
+                    {metrics?.active_orders ?? (metrics as any)?.orders?.in_progress ?? 0}
+                  </div>
                 </div>
                 <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
                   <span className="text-xs text-emerald-500 font-medium">Completed & Released</span>
-                  <div className="text-2xl font-bold text-emerald-500 mt-1">{metrics?.completed_orders ?? 0}</div>
+                  <div className="text-2xl font-bold text-emerald-500 mt-1">
+                    {metrics?.completed_orders ?? (metrics as any)?.orders?.completed ?? 0}
+                  </div>
                 </div>
                 <div className="p-4 rounded-xl bg-destructive/5 border border-destructive/20">
                   <span className="text-xs text-destructive font-medium">Cancelled / Rejected</span>
-                  <div className="text-2xl font-bold text-destructive mt-1">{metrics?.cancelled_orders ?? 0}</div>
+                  <div className="text-2xl font-bold text-destructive mt-1">
+                    {metrics?.cancelled_orders ?? 0}
+                  </div>
                 </div>
               </div>
             </div>
@@ -533,7 +547,7 @@ export function AdminDashboard() {
                               )}
                             </td>
                             <td className="py-3 px-4 text-xs text-muted-foreground">
-                              {new Date(u.created_at).toLocaleDateString()}
+                              {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'Active Member'}
                             </td>
                             <td className="py-3 px-4 text-right">
                               {isSuperAdmin ? (
@@ -633,32 +647,36 @@ export function AdminDashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {orders.map(order => (
-                        <tr key={order.id} className="hover:bg-muted/30 transition-colors">
-                          <td className="py-3 px-4 font-mono font-medium text-xs">
-                            #{order.id}
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="font-medium text-foreground line-clamp-1">{order.service_title}</div>
-                            <div className="text-[11px] text-muted-foreground">
-                              {new Date(order.created_at).toLocaleDateString()}
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="font-medium text-foreground">{order.buyer?.name}</div>
-                            <div className="text-[11px] text-muted-foreground">{order.buyer?.email}</div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="font-medium text-foreground">{order.seller?.name}</div>
-                          </td>
-                          <td className="py-3 px-4 font-bold text-foreground">
-                            LKR {order.total_price.toLocaleString()}
-                          </td>
-                          <td className="py-3 px-4">
-                            <span className="capitalize text-xs font-medium px-2 py-0.5 bg-muted rounded-md border border-border">
-                              {order.payment_method}
-                            </span>
-                          </td>
+                      {orders.map(order => {
+                        const price = Number(order.total_price ?? order.amount ?? 0);
+                        const serviceName = order.service_title || order.service_name || 'Custom Service';
+                        const createdAt = order.created_at ? new Date(order.created_at).toLocaleDateString() : 'N/A';
+                        return (
+                          <tr key={order.id} className="hover:bg-muted/30 transition-colors">
+                            <td className="py-3 px-4 font-mono font-medium text-xs">
+                              #{order.id}
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="font-medium text-foreground line-clamp-1">{serviceName}</div>
+                              <div className="text-[11px] text-muted-foreground">
+                                {createdAt}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="font-medium text-foreground">{order.buyer?.name || 'Buyer'}</div>
+                              <div className="text-[11px] text-muted-foreground">{order.buyer?.email || ''}</div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="font-medium text-foreground">{order.seller?.name || 'Seller'}</div>
+                            </td>
+                            <td className="py-3 px-4 font-bold text-foreground">
+                              LKR {price.toLocaleString()}
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="capitalize text-xs font-medium px-2 py-0.5 bg-muted rounded-md border border-border">
+                                {order.payment_method}
+                              </span>
+                            </td>
                           <td className="py-3 px-4">
                             {order.payment_verified ? (
                               <span className="inline-flex items-center gap-1 text-xs text-emerald-600 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full">
@@ -687,7 +705,8 @@ export function AdminDashboard() {
                             </button>
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -729,22 +748,24 @@ export function AdminDashboard() {
                     </thead>
                     <tbody className="divide-y divide-border">
                       {payoutOrders.map(order => {
-                        const fee = Math.round(order.total_price * 0.05);
-                        const netPayout = order.total_price - fee;
+                        const price = Number(order.total_price ?? order.amount ?? 0);
+                        const fee = Math.round(price * 0.05);
+                        const netPayout = price - fee;
+                        const createdAt = order.created_at ? new Date(order.created_at).toLocaleDateString() : 'N/A';
                         return (
                           <tr key={order.id} className="hover:bg-muted/30 transition-colors">
                             <td className="py-3 px-4 font-mono font-medium text-xs">
                               #{order.id}
                             </td>
                             <td className="py-3 px-4 text-xs text-muted-foreground">
-                              {new Date(order.created_at).toLocaleDateString()}
+                              {createdAt}
                             </td>
                             <td className="py-3 px-4">
-                              <div className="font-semibold text-foreground">{order.seller?.name}</div>
+                              <div className="font-semibold text-foreground">{order.seller?.name || 'Seller'}</div>
                               <div className="text-xs text-muted-foreground">{order.seller?.phone || order.seller?.email || 'Seller ID ' + order.seller_id}</div>
                             </td>
                             <td className="py-3 px-4 font-medium">
-                              LKR {order.total_price.toLocaleString()}
+                              LKR {price.toLocaleString()}
                             </td>
                             <td className="py-3 px-4 text-xs text-primary font-medium">
                               LKR {fee.toLocaleString()}
@@ -782,7 +803,7 @@ export function AdminDashboard() {
             <div className="flex items-center justify-between pb-4 border-b border-border">
               <div>
                 <h3 className="text-lg font-bold text-foreground">Review Bank Slip / QR Screenshot</h3>
-                <p className="text-xs text-muted-foreground">Order #{selectedSlipOrder.id} • LKR {selectedSlipOrder.total_price.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">Order #{selectedSlipOrder.id} • LKR {Number(selectedSlipOrder.total_price ?? selectedSlipOrder.amount ?? 0).toLocaleString()}</p>
               </div>
               <button
                 onClick={() => setSelectedSlipOrder(null)}
@@ -794,11 +815,11 @@ export function AdminDashboard() {
 
             {/* Slip image display */}
             <div className="my-5 flex flex-col items-center">
-              {selectedSlipOrder.bank_slip_url ? (
+              {(selectedSlipOrder.bank_slip_url || selectedSlipOrder.payment_slip_url) ? (
                 <div className="space-y-2 w-full">
                   <div className="max-h-96 overflow-hidden rounded-xl border border-border bg-black/5 flex items-center justify-center">
                     <img
-                      src={selectedSlipOrder.bank_slip_url}
+                      src={selectedSlipOrder.bank_slip_url || selectedSlipOrder.payment_slip_url}
                       alt="Bank Transfer Slip"
                       className="max-h-96 object-contain rounded-lg"
                       onError={(e) => {
@@ -809,7 +830,7 @@ export function AdminDashboard() {
                   </div>
                   <div className="text-center">
                     <a
-                      href={selectedSlipOrder.bank_slip_url}
+                      href={selectedSlipOrder.bank_slip_url || selectedSlipOrder.payment_slip_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium"
@@ -838,11 +859,11 @@ export function AdminDashboard() {
                 </div>
                 <div>
                   <span className="text-muted-foreground">Payment Expected:</span>
-                  <div className="font-bold text-foreground">LKR {selectedSlipOrder.total_price.toLocaleString()}</div>
+                  <div className="font-bold text-foreground">LKR {Number(selectedSlipOrder.total_price ?? selectedSlipOrder.amount ?? 0).toLocaleString()}</div>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Current Status:</span>
-                  <div className="font-semibold capitalize text-foreground">{selectedSlipOrder.order_status}</div>
+                  <div className="font-semibold capitalize text-foreground">{selectedSlipOrder.order_status || selectedSlipOrder.status}</div>
                 </div>
               </div>
             </div>
@@ -957,15 +978,15 @@ export function AdminDashboard() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Order Total:</span>
-                <span className="font-semibold text-foreground">LKR {settleTargetOrder.total_price.toLocaleString()}</span>
+                <span className="font-semibold text-foreground">LKR {Number(settleTargetOrder.total_price ?? settleTargetOrder.amount ?? 0).toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Platform Fee (5%):</span>
-                <span className="font-semibold text-primary">LKR {Math.round(settleTargetOrder.total_price * 0.05).toLocaleString()}</span>
+                <span className="font-semibold text-primary">LKR {Math.round(Number(settleTargetOrder.total_price ?? settleTargetOrder.amount ?? 0) * 0.05).toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-sm font-bold border-t border-border pt-2">
                 <span>Net Transfer Amount:</span>
-                <span className="text-emerald-600">LKR {(settleTargetOrder.total_price - Math.round(settleTargetOrder.total_price * 0.05)).toLocaleString()}</span>
+                <span className="text-emerald-600">LKR {(Number(settleTargetOrder.total_price ?? settleTargetOrder.amount ?? 0) - Math.round(Number(settleTargetOrder.total_price ?? settleTargetOrder.amount ?? 0) * 0.05)).toLocaleString()}</span>
               </div>
             </div>
 

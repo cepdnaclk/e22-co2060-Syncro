@@ -43,6 +43,7 @@ def get_admin_metrics(
     
     in_progress_orders = db.query(Order).filter(Order.status == OrderStatus.IN_PROGRESS).count()
     completed_orders = db.query(Order).filter(Order.status == OrderStatus.COMPLETED).count()
+    cancelled_orders = db.query(Order).filter(Order.status == OrderStatus.CANCELLED).count()
     settled_orders = db.query(Order).filter(Order.payout_settled == True).count()
 
     # Financial aggregations
@@ -58,6 +59,17 @@ def get_admin_metrics(
     platform_revenue = sum(o.amount * 0.05 for o in revenue_orders) if revenue_orders else 0.0
 
     return {
+        "total_users": total_users,
+        "total_buyers": total_buyers,
+        "total_sellers": total_sellers,
+        "banned_users": banned_users,
+        "total_orders": total_orders,
+        "pending_verification_orders": pending_slips,
+        "active_orders": in_progress_orders,
+        "completed_orders": completed_orders,
+        "cancelled_orders": cancelled_orders,
+        "escrow_holding_amount": round(escrow_holding, 2),
+        "platform_revenue_collected": round(platform_revenue, 2),
         "users": {
             "total": total_users,
             "buyers": total_buyers,
@@ -117,7 +129,7 @@ def get_admin_users(
     user_list = []
     for u in users:
         profile = db.query(Profile).filter(Profile.user_id == u.id).first()
-        listings_count = db.query(Listing).filter(Listing.owner_id == u.id).count()
+        listings_count = db.query(Listing).filter(Listing.seller_id == u.id).count()
         buyer_orders_count = db.query(Order).filter(Order.buyer_id == u.id).count()
         seller_orders_count = db.query(Order).filter(Order.seller_id == u.id).count()
 
@@ -234,20 +246,25 @@ def get_admin_orders(
         platform_fee = round(amount * 0.05, 2)
         seller_payout = round(amount - platform_fee, 2)
 
+        status_val = o.status.value if hasattr(o.status, "value") else str(o.status)
         enriched.append({
             "id": o.id,
             "service_name": o.service_name,
+            "service_title": o.service_name,
             "amount": amount,
+            "total_price": amount,
             "platform_fee": platform_fee,
             "seller_payout": seller_payout,
-            "status": o.status,
+            "status": status_val,
+            "order_status": status_val,
             "payment_method": getattr(o, "payment_method", "bank_transfer"),
             "payment_slip_url": getattr(o, "payment_slip_url", None),
+            "bank_slip_url": getattr(o, "payment_slip_url", None),
             "payment_verified": bool(getattr(o, "payment_verified", False)),
             "payout_settled": bool(getattr(o, "payout_settled", False)),
             "payout_settled_at": getattr(o, "payout_settled_at", None),
             "rejection_reason": getattr(o, "rejection_reason", None),
-            "created_at": o.created_at,
+            "created_at": o.created_at.isoformat() if hasattr(o.created_at, "isoformat") else str(o.created_at),
             "buyer": {
                 "id": buyer.id if buyer else None,
                 "name": buyer_name,
