@@ -128,12 +128,23 @@ def get_admin_users(
 
     user_list = []
     for u in users:
-        profile = db.query(Profile).filter(Profile.user_id == u.id).first()
-        listings_count = db.query(Listing).filter(Listing.seller_id == u.id).count()
-        buyer_orders_count = db.query(Order).filter(Order.buyer_id == u.id).count()
-        seller_orders_count = db.query(Order).filter(Order.seller_id == u.id).count()
+        try:
+            profile = db.query(Profile).filter(Profile.user_id == u.id).first()
+        except Exception:
+            profile = None
+        try:
+            listings_count = db.query(Listing).filter(Listing.seller_id == u.id).count()
+        except Exception:
+            listings_count = 0
+        try:
+            buyer_orders_count = db.query(Order).filter(Order.buyer_id == u.id).count()
+            seller_orders_count = db.query(Order).filter(Order.seller_id == u.id).count()
+        except Exception:
+            buyer_orders_count = 0
+            seller_orders_count = 0
 
         full_name = f"{u.first_name or ''} {u.last_name or ''}".strip()
+        role_str = u.active_role.value if hasattr(u.active_role, "value") else str(u.active_role or "client")
         user_list.append({
             "id": u.id,
             "email": u.email,
@@ -142,8 +153,8 @@ def get_admin_users(
             "full_name": full_name or (profile.name if profile else u.email.split('@')[0]),
             "phone_number": u.phone_number,
             "location": u.location,
-            "active_role": u.active_role,
-            "email_verified": u.email_verified,
+            "active_role": role_str,
+            "email_verified": bool(u.email_verified),
             "is_banned": bool(getattr(u, "is_banned", False)),
             "is_admin": is_admin_email(u.email),
             "profile_name": profile.name if profile else None,
