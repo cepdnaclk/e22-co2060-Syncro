@@ -45,6 +45,10 @@ def _enrich_orders(orders, db):
             "status": order.status,
             "payment_method": getattr(order, "payment_method", "card"),
             "payment_slip_url": getattr(order, "payment_slip_url", None),
+            "payment_verified": getattr(order, "payment_verified", False),
+            "payout_settled": getattr(order, "payout_settled", False),
+            "payout_settled_at": getattr(order, "payout_settled_at", None),
+            "rejection_reason": getattr(order, "rejection_reason", None),
             "has_review": order.has_review,
             "created_at": order.created_at,
         })

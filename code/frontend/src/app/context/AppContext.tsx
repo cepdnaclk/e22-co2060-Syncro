@@ -51,6 +51,7 @@ interface AuthUser {
   firstName: string;
   role: string;
   token: string;
+  isAdmin?: boolean;
 }
 
 interface AppContextType {
@@ -69,6 +70,7 @@ interface AppContextType {
   // Real auth state
   authUser: AuthUser | null;
   isAuthenticated: boolean;
+  isAdmin: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, firstName: string, lastName: string, location: string, phone: string) => Promise<void>;
   verifyEmail: (email: string, otp: string) => Promise<void>;
@@ -101,7 +103,13 @@ const DEFAULT_USER_PROFILE: UserProfile = {
 function loadAuthUser(): AuthUser | null {
   try {
     const stored = localStorage.getItem('syncro_auth_user');
-    if (stored) return JSON.parse(stored);
+    if (stored) {
+      const user = JSON.parse(stored);
+      if (user && user.email?.toLowerCase() === 'syncromarketplace@gmail.com') {
+        user.isAdmin = true;
+      }
+      return user;
+    }
   } catch {
     // ignore
   }
@@ -197,6 +205,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const isAuthenticated = authUser !== null;
+  const isAdmin = authUser?.isAdmin === true || authUser?.email?.toLowerCase() === 'syncromarketplace@gmail.com';
 
   // Sync auth user to localStorage
   const setAuthUser = (user: AuthUser | null) => {
@@ -221,6 +230,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       firstName: data.first_name,
       role: data.role,
       token: data.access_token,
+      isAdmin: data.is_admin || email.toLowerCase() === 'syncromarketplace@gmail.com',
     };
 
     // Set token in localStorage immediately so subsequent requests work
@@ -296,6 +306,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       firstName: data.first_name,
       role: data.role,
       token: data.access_token,
+      isAdmin: data.is_admin || email.toLowerCase() === 'syncromarketplace@gmail.com',
     };
     
     // Log the user in just like login()
@@ -517,6 +528,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setUserProfile: setUserProfileState,
       authUser,
       isAuthenticated,
+      isAdmin,
       login,
       register,
       verifyEmail,

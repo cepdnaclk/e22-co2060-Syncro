@@ -29,6 +29,7 @@ class Token(BaseModel):
     user_id: int
     role: str
     first_name: str
+    is_admin: Optional[bool] = False
 
 class TokenData(BaseModel):
     email: Optional[str] = None
@@ -166,6 +167,10 @@ class OrderResponse(OrderBase):
     status: str
     payment_method: Optional[str] = None
     payment_slip_url: Optional[str] = None
+    payment_verified: Optional[bool] = False
+    payout_settled: Optional[bool] = False
+    payout_settled_at: Optional[datetime] = None
+    rejection_reason: Optional[str] = None
     has_review: bool
     created_at: datetime
 

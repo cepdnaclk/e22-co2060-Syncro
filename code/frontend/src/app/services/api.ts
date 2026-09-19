@@ -34,6 +34,7 @@ export interface AuthResponse {
     user_id: number;
     role: string;
     first_name: string;
+    is_admin?: boolean;
 }
 
 export interface Profile {
@@ -511,6 +512,126 @@ export const messagesApi = {
             body: JSON.stringify({ receiver_id: receiverId, content }),
         });
         return handleResponse<Message>(res);
+    },
+};
+
+// ---------- Admin Types & Service ----------
+export interface AdminMetrics {
+    users: {
+        total: number;
+        buyers: number;
+        sellers: number;
+        banned: number;
+    };
+    orders: {
+        total: number;
+        pending_slips: number;
+        in_progress: number;
+        completed: number;
+        settled: number;
+    };
+    financials: {
+        total_volume: number;
+        escrow_holding: number;
+        platform_revenue: number;
+        commission_rate_pct: number;
+    };
+}
+
+export interface AdminUser {
+    id: number;
+    email: string;
+    first_name?: string;
+    last_name?: string;
+    full_name: string;
+    phone_number?: string;
+    location?: string;
+    active_role: string;
+    email_verified: boolean;
+    is_banned: boolean;
+    is_admin: boolean;
+    profile_name?: string;
+    listings_count: number;
+    orders_count: number;
+}
+
+export interface AdminOrder {
+    id: number;
+    service_name: string;
+    amount: number;
+    platform_fee: number;
+    seller_payout: number;
+    status: string;
+    payment_method: string;
+    payment_slip_url?: string;
+    payment_verified: boolean;
+    payout_settled: boolean;
+    payout_settled_at?: string;
+    rejection_reason?: string;
+    created_at: string;
+    buyer: {
+        id?: number;
+        name: string;
+        email?: string;
+        phone?: string;
+    };
+    seller: {
+        id?: number;
+        name: string;
+        email?: string;
+        phone?: string;
+    };
+}
+
+export const adminApi = {
+    async getMetrics(): Promise<AdminMetrics> {
+        const res = await fetch(`${BASE_URL}/api/admin/metrics`, { headers: headers(true) });
+        return handleResponse<AdminMetrics>(res);
+    },
+    async getUsers(search?: string, role?: string, isBanned?: boolean): Promise<{ total: number; users: AdminUser[] }> {
+        const params = new URLSearchParams();
+        if (search) params.append('search', search);
+        if (role) params.append('role', role);
+        if (isBanned !== undefined) params.append('is_banned', String(isBanned));
+        const res = await fetch(`${BASE_URL}/api/admin/users?${params.toString()}`, { headers: headers(true) });
+        return handleResponse<{ total: number; users: AdminUser[] }>(res);
+    },
+    async toggleBan(userId: number): Promise<{ success: boolean; is_banned: boolean; message: string }> {
+        const res = await fetch(`${BASE_URL}/api/admin/users/${userId}/toggle-ban`, {
+            method: 'POST',
+            headers: headers(true),
+        });
+        return handleResponse<{ success: boolean; is_banned: boolean; message: string }>(res);
+    },
+    async deleteUser(userId: number): Promise<{ success: boolean; message: string }> {
+        const res = await fetch(`${BASE_URL}/api/admin/users/${userId}`, {
+            method: 'DELETE',
+            headers: headers(true),
+        });
+        return handleResponse<{ success: boolean; message: string }>(res);
+    },
+    async getOrders(unverifiedOnly?: boolean, pendingPayoutOnly?: boolean): Promise<AdminOrder[]> {
+        const params = new URLSearchParams();
+        if (unverifiedOnly) params.append('unverified_only', 'true');
+        if (pendingPayoutOnly) params.append('pending_payout_only', 'true');
+        const res = await fetch(`${BASE_URL}/api/admin/orders?${params.toString()}`, { headers: headers(true) });
+        return handleResponse<AdminOrder[]>(res);
+    },
+    async verifyPayment(orderId: number, action: 'approve' | 'reject', rejectionReason?: string): Promise<{ success: boolean; message: string }> {
+        const res = await fetch(`${BASE_URL}/api/admin/orders/${orderId}/verify-payment`, {
+            method: 'PATCH',
+            headers: headers(true),
+            body: JSON.stringify({ action, rejection_reason: rejectionReason }),
+        });
+        return handleResponse<{ success: boolean; message: string }>(res);
+    },
+    async settlePayout(orderId: number, payoutReference?: string): Promise<{ success: boolean; message: string }> {
+        const res = await fetch(`${BASE_URL}/api/admin/orders/${orderId}/settle-payout`, {
+            method: 'PATCH',
+            headers: headers(true),
+            body: JSON.stringify({ payout_reference: payoutReference }),
+        });
+        return handleResponse<{ success: boolean; message: string }>(res);
     },
 };
 

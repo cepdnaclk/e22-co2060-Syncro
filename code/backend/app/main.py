@@ -4,7 +4,7 @@ import sys
 import traceback
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import listings, auth, profiles, orders, reviews, bids, chat, notifications, messages  # Import your API routers
+from app.api import listings, auth, profiles, orders, reviews, bids, chat, notifications, messages, admin  # Import your API routers
 from app.database import engine, SessionLocal # Import the database engine and Base for table creation
 from app.models import models  # Import the models so SQLAlchemy knows which tables to create
 from app.models import chat as chat_model  # Ensure Message table is registered with Base
@@ -21,6 +21,60 @@ try:
         print("--- DATABASE_URL NOT FOUND OR INVALID FORMAT ---", file=sys.stderr, flush=True)
 
     models.Base.metadata.create_all(bind=engine)
+    
+    # Ensure new columns exist on Neon database
+    with engine.connect() as conn:
+        from sqlalchemy import text
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN DEFAULT FALSE;"))
+        conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_verified BOOLEAN DEFAULT FALSE;"))
+        conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS payout_settled BOOLEAN DEFAULT FALSE;"))
+        conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS payout_settled_at TIMESTAMP;"))
+        conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS rejection_reason VARCHAR;"))
+        conn.commit()
+
+    # Ensure admin user syncromarketplace@gmail.com exists with password Admin@Syncro2026
+    try:
+        from app.core.security import get_password_hash
+        db = SessionLocal()
+        admin_email = "syncromarketplace@gmail.com"
+        admin_user = db.query(models.User).filter(models.User.email == admin_email).first()
+        admin_hashed_pw = get_password_hash("Admin@Syncro2026")
+        
+        if not admin_user:
+            new_admin = models.User(
+                email=admin_email,
+                hashed_password=admin_hashed_pw,
+                first_name="Syncro",
+                last_name="Admin",
+                location="Kandy",
+                phone_number="0700000000",
+                active_role="client",
+                email_verified=True,
+                is_banned=False
+            )
+            db.add(new_admin)
+            db.commit()
+            db.refresh(new_admin)
+
+            admin_profile = models.Profile(
+                user_id=new_admin.id,
+                name="Syncro Administrator",
+                phone="0700000000",
+                description="Platform Super Administrator"
+            )
+            db.add(admin_profile)
+            db.commit()
+            print(f"--- ADMIN USER CREATED: {admin_email} ---", file=sys.stderr, flush=True)
+        else:
+            admin_user.hashed_password = admin_hashed_pw
+            admin_user.email_verified = True
+            admin_user.is_banned = False
+            db.commit()
+            print(f"--- ADMIN USER VERIFIED & UPDATED: {admin_email} ---", file=sys.stderr, flush=True)
+        db.close()
+    except Exception as ex:
+        print(f"--- Admin check skipped/error: {ex} ---", file=sys.stderr, flush=True)
+
     print("--- DATABASE CONNECTION SUCCESSFUL ---", file=sys.stderr, flush=True)
 
 except Exception as e:
@@ -53,6 +107,7 @@ fastapi_app.include_router(bids.router)
 fastapi_app.include_router(chat.router)
 fastapi_app.include_router(notifications.router)
 fastapi_app.include_router(messages.router)
+fastapi_app.include_router(admin.router)
 
 
 @fastapi_app.get("/")

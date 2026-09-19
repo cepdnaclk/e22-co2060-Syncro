@@ -52,6 +52,7 @@ class User(Base):
     location = Column(String, nullable=True)  # Sri Lanka district
     phone_number = Column(String, nullable=True)
     email_verified = Column(Boolean, default=False)
+    is_banned = Column(Boolean, default=False)
 
     profile = relationship("Profile", back_populates="user", uselist=False, cascade="all, delete-orphan")
     listings = relationship("Listing", back_populates="owner", cascade="all, delete-orphan")
@@ -112,6 +113,10 @@ class Order(Base):
     amount = Column(Float, nullable=False)
     payment_method = Column(String, nullable=True, default="card")
     payment_slip_url = Column(String, nullable=True)
+    payment_verified = Column(Boolean, default=False)
+    payout_settled = Column(Boolean, default=False)
+    payout_settled_at = Column(DateTime, nullable=True)
+    rejection_reason = Column(String, nullable=True)
     has_review = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 

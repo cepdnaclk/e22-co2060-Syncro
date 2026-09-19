@@ -1,4 +1,4 @@
-# app/api/auth.py
+import os
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
@@ -12,6 +12,17 @@ from ..utils.otp import generate_otp, hash_otp, verify_otp_hash
 router = APIRouter()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+
+ADMIN_EMAILS = [
+    e.strip().lower() 
+    for e in os.getenv("ADMIN_EMAILS", "syncromarketplace@gmail.com").split(",") 
+    if e.strip()
+]
+
+def is_admin_email(email: str) -> bool:
+    if not email:
+        return False
+    return email.strip().lower() in ADMIN_EMAILS
 
 def get_current_user_from_token(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     # This is a basic implementation. Ideally, decode the JWT and fetch the user.
@@ -30,7 +41,14 @@ def get_current_user_from_token(token: str = Depends(oauth2_scheme), db: Session
     user = db.query(User).filter(User.email == email).first()
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    if getattr(user, "is_banned", False):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Your account has been suspended by the administrator.")
     return user
+
+def get_current_admin_user(current_user: User = Depends(get_current_user_from_token)):
+    if not is_admin_email(current_user.email):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required.")
+    return current_user
 
 
 @router.post("/auth/register")
@@ -161,12 +179,20 @@ def verify_email(payload: VerifyEmailRequest, db: Session = Depends(get_db)):
     user.email_verified = True
     db.commit()
 
+    is_admin = is_admin_email(user.email)
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.email, "role": user.active_role}, expires_delta=access_token_expires
+        data={"sub": user.email, "role": user.active_role, "is_admin": is_admin}, expires_delta=access_token_expires
     )
 
-    return {"access_token": access_token, "token_type": "bearer", "user_id": user.id, "role": user.active_role, "first_name": user.first_name}
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer", 
+        "user_id": user.id, 
+        "role": user.active_role, 
+        "first_name": user.first_name,
+        "is_admin": is_admin
+    }
 
 
 @router.post("/auth/resend-verification")
@@ -233,18 +259,32 @@ def login_user(user: UserLogin, db: Session = Depends(get_db)):
             headers={"WWW-Authenticate": "Bearer"},
         )
     
+    if getattr(db_user, "is_banned", False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your account has been suspended by the administrator."
+        )
+
     if not db_user.email_verified:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Please verify your email before logging in."
         )
 
+    is_admin = is_admin_email(db_user.email)
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": db_user.email, "role": db_user.active_role}, expires_delta=access_token_expires
+        data={"sub": db_user.email, "role": db_user.active_role, "is_admin": is_admin}, expires_delta=access_token_expires
     )
     
-    return {"access_token": access_token, "token_type": "bearer", "user_id": db_user.id, "role": db_user.active_role, "first_name": db_user.first_name}
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer", 
+        "user_id": db_user.id, 
+        "role": db_user.active_role, 
+        "first_name": db_user.first_name,
+        "is_admin": is_admin
+    }
 
 
 @router.post("/auth/toggle-role")
