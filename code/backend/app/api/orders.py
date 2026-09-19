@@ -57,7 +57,12 @@ def _enrich_orders(orders, db):
 
 @router.get("/user/{user_id}", response_model=List[OrderResponse])
 def get_user_orders(user_id: int, db: Session = Depends(get_db)):
-    orders = db.query(Order).filter((Order.buyer_id == user_id) | (Order.seller_id == user_id)).all()
+    orders = (
+        db.query(Order)
+        .filter((Order.buyer_id == user_id) | (Order.seller_id == user_id))
+        .order_by(Order.created_at.desc())
+        .all()
+    )
     return _enrich_orders(orders, db)
 
 

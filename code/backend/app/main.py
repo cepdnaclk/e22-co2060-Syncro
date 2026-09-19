@@ -195,7 +195,7 @@ async def on_send_message(sid, data):
             "receiver_id": msg.receiver_id,
             "order_id": msg.order_id,
             "content": msg.content,
-            "timestamp": msg.timestamp.isoformat(),
+            "timestamp": f"{msg.timestamp.isoformat()}Z" if not msg.timestamp.isoformat().endswith("Z") else msg.timestamp.isoformat(),
             "is_read": msg.is_read,
         }
 

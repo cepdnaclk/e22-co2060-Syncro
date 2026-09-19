@@ -218,6 +218,7 @@
     "passwordMinLength": "Password must be at least 6 characters",
     "passwordsNoMatch": "Passwords do not match",
     "districtRequired": "Please select your district",
+    "termsRequired": "You must agree to the Terms of Service and Privacy Policy to register.",
     "registrationFailed": "Registration failed. Please try again."
   },
   "forgotPassword": {

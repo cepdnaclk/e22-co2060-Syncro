@@ -42,6 +42,7 @@ export function Register() {
     else if (formData.password.length < 6) errors.password = t('register.passwordMinLength');
     if (formData.password !== formData.confirmPassword) errors.confirmPassword = t('register.passwordsNoMatch');
     if (!formData.location) errors.location = t('register.districtRequired');
+    if (!agreeTerms) errors.terms = t('register.termsRequired', 'You must agree to the Terms of Service and Privacy Policy');
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -127,7 +128,16 @@ export function Register() {
                     type="checkbox" 
                     className="rounded border-border mt-1 cursor-pointer" 
                     checked={agreeTerms}
-                    onChange={(e) => setAgreeTerms(e.target.checked)}
+                    onChange={(e) => {
+                      setAgreeTerms(e.target.checked);
+                      if (e.target.checked && formErrors.terms) {
+                        setFormErrors(prev => {
+                          const next = { ...prev };
+                          delete next.terms;
+                          return next;
+                        });
+                      }
+                    }}
                     required 
                   />
                   <span className="text-muted-foreground">
@@ -149,6 +159,9 @@ export function Register() {
                     </button>
                   </span>
                 </label>
+                {formErrors.terms && (
+                  <p className="text-xs text-destructive mt-1.5 font-medium ml-5">{formErrors.terms}</p>
+                )}
               </div>
 
               <Button type="submit" className="w-full mt-2" disabled={loading}>
@@ -169,7 +182,14 @@ export function Register() {
         isOpen={legalModalOpen}
         onClose={() => setLegalModalOpen(false)}
         defaultTab={legalModalTab}
-        onAccept={() => setAgreeTerms(true)}
+        onAccept={() => {
+          setAgreeTerms(true);
+          setFormErrors(prev => {
+            const next = { ...prev };
+            delete next.terms;
+            return next;
+          });
+        }}
       />
     </div>
   );

@@ -11,18 +11,21 @@ import {
   MessageSquare,
   ArrowRight,
   Sparkles,
-  Bot
+  Bot,
+  Eye,
+  Search,
+  Filter
 } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { useApp } from '../context/AppContext';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { SellerOnboarding } from '../components/SellerOnboarding';
 import { buyerActivities, revenueData, orderData } from '../services/mockData';
 import type { Activity } from '../services/mockData';
-import { ordersApi, profilesApi, Order } from '../services/api';
+import { ordersApi, profilesApi, listingsApi, Order } from '../services/api';
 import { useEffect, useState } from 'react';
 
 // ────────────────────────── Types ──────────────────────────
@@ -38,6 +41,7 @@ interface SellerDashboardProps {
   revenueData: { month: string; revenue: number }[];
   orderData: { month: string; orders: number }[];
   businessName: string;
+  isOrdersReceivedOnly?: boolean;
 }
 
 // ────────────────────────── Animation helpers ──────────────
@@ -59,8 +63,11 @@ function statusVariant(status: Order['status']): 'success' | 'info' | 'warning' 
 
 export function Dashboard() {
   const { role, businessProfile, hasSellerProfile, hasSellerAccount, showOnboarding, setShowOnboarding, userProfile } = useApp();
+  const location = useLocation();
 
-  if (role === 'buyer') {
+  const isOrdersReceived = location.pathname === '/orders-received';
+
+  if (role === 'buyer' && !isOrdersReceived) {
     return (
       <>
         <BuyerDashboard
@@ -81,6 +88,7 @@ export function Dashboard() {
       revenueData={revenueData}
       orderData={orderData}
       businessName={businessProfile?.name || 'Your Business'}
+      isOrdersReceivedOnly={isOrdersReceived}
     />
   );
 }
@@ -117,7 +125,7 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
         try {
           const data = await ordersApi.getForUser(authUser.userId);
           // Only show orders where user is buyer
-          setOrders(data.filter(o => o.buyer_id === authUser.userId));
+          setOrders(data.filter(o => Number(o.buyer_id) === Number(authUser.userId)));
         } catch (error) {
           console.error("Failed to load orders:", error);
         }
@@ -235,18 +243,19 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
               <th className="text-left py-3 px-4 text-sm font-semibold">{t('dashboard.sellerCol')}</th>
               <th className="text-left py-3 px-4 text-sm font-semibold">{t('common.status')}</th>
               <th className="text-right py-3 px-4 text-sm font-semibold">{t('common.amount')}</th>
+              <th className="text-right py-3 px-4 text-sm font-semibold">{t('common.actions', 'Action')}</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                <td colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
                   {t('dashboard.loadingOrders')}
                 </td>
               </tr>
             ) : orders.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                <td colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
                   {t('dashboard.noOrders')}
                 </td>
               </tr>
@@ -261,6 +270,14 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
                   </Badge>
                 </td>
                 <td className="py-3 px-4 text-sm font-semibold text-right">LKR {order.amount}</td>
+                <td className="py-3 px-4 text-right">
+                  <Link to={`/order/${order.id}`}>
+                    <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs gap-1">
+                      <Eye className="w-3.5 h-3.5" />
+                      View
+                    </Button>
+                  </Link>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -346,12 +363,14 @@ function SyncroChatTriggerButton() {
 
 // ────────────────────────── Seller Dashboard ───────────────
 
-function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboardProps) {
+function SellerDashboard({ revenueData, orderData, businessName, isOrdersReceivedOnly }: SellerDashboardProps) {
   const { t } = useTranslation();
   const { authUser } = useApp();
   const [orders, setOrders] = useState<Order[]>([]);
   const [activeListingsCount, setActiveListingsCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const [orderFilter, setOrderFilter] = useState<'all' | 'pending' | 'in-progress' | 'completed'>('all');
+  const [orderSearch, setOrderSearch] = useState('');
 
   // ── Active status toggle ────────────────────────────────────
   const [isActive, setIsActive] = useState<boolean>(true);
@@ -405,9 +424,9 @@ function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboa
             ordersApi.getForUser(authUser.userId),
             listingsApi.getAll().catch(() => [])
           ]);
-          const sellerOrders = userOrders.filter(o => o.seller_id === authUser.userId);
+          const sellerOrders = userOrders.filter(o => Number(o.seller_id) === Number(authUser.userId));
           setOrders(sellerOrders);
-          const myActiveListings = allListings.filter(l => l.seller_id === authUser.userId);
+          const myActiveListings = allListings.filter(l => Number(l.seller_id) === Number(authUser.userId));
           setActiveListingsCount(myActiveListings.length);
         } catch (error) {
           console.error("Failed to load seller dashboard data:", error);
@@ -451,6 +470,206 @@ function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboa
       color: 'text-teal-500',
     },
   ];
+
+  const filteredOrders = orders.filter(o => {
+    const statusMatch = orderFilter === 'all' || (o.status?.toLowerCase() === orderFilter);
+    const searchMatch = !orderSearch ||
+      o.service_name.toLowerCase().includes(orderSearch.toLowerCase()) ||
+      (o.buyer_name || '').toLowerCase().includes(orderSearch.toLowerCase()) ||
+      String(o.id).includes(orderSearch);
+    return statusMatch && searchMatch;
+  });
+
+  if (isOrdersReceivedOnly) {
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-bold">{t('dashboard.ordersReceivedTitle', 'Orders Received')}</h1>
+              <Badge variant="outline" className="text-sm font-semibold px-2.5 py-0.5">
+                {orders.length} {orders.length === 1 ? 'Order' : 'Orders'}
+              </Badge>
+            </div>
+            <p className="text-muted-foreground mt-1">
+              {t('dashboard.ordersReceivedSubtitle', 'Manage incoming customer orders, review deliverables, and update progress.')}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Link to="/dashboard">
+              <Button variant="outline" size="sm">
+                <ArrowRight className="w-4 h-4 mr-1.5 rotate-180" />
+                {t('dashboard.backToDashboard', 'Dashboard Overview')}
+              </Button>
+            </Link>
+          </div>
+        </div>
+
+        {/* Quick Order Stats Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Total Received</p>
+                <p className="text-2xl font-bold">{orders.length}</p>
+              </div>
+              <div className="p-2.5 rounded-lg bg-purple-500/10 text-purple-600">
+                <ShoppingCart className="w-5 h-5" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Pending Action</p>
+                <p className="text-2xl font-bold text-amber-600">
+                  {orders.filter(o => o.status?.toLowerCase() === 'pending').length}
+                </p>
+              </div>
+              <div className="p-2.5 rounded-lg bg-amber-500/10 text-amber-600">
+                <Clock className="w-5 h-5" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">In Progress</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {orders.filter(o => o.status?.toLowerCase() === 'in-progress').length}
+                </p>
+              </div>
+              <div className="p-2.5 rounded-lg bg-blue-500/10 text-blue-600">
+                <Package className="w-5 h-5" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Completed</p>
+                <p className="text-2xl font-bold text-emerald-600">
+                  {orders.filter(o => o.status?.toLowerCase() === 'completed').length}
+                </p>
+              </div>
+              <div className="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-600">
+                <CheckCircle className="w-5 h-5" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Filters & Orders Table */}
+        <Card>
+          <CardHeader className="pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              {/* Search */}
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search service, buyer, or #ID..."
+                  value={orderSearch}
+                  onChange={e => setOrderSearch(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              {/* Status Tabs */}
+              <div className="flex items-center gap-1.5 p-1 bg-muted rounded-lg text-xs font-medium self-start sm:self-auto">
+                {(['all', 'pending', 'in-progress', 'completed'] as const).map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setOrderFilter(tab)}
+                    className={`px-3 py-1.5 rounded-md transition-all capitalize ${
+                      orderFilter === tab
+                        ? 'bg-background text-foreground shadow-sm font-semibold'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {tab === 'all' ? 'All Orders' : tab.replace('-', ' ')}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-3 px-4 text-sm font-semibold">{t('dashboard.orderId', 'Order ID')}</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold">{t('dashboard.service', 'Service')}</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold">{t('dashboard.buyerCol', 'Buyer')}</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold">Date</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold">{t('common.status', 'Status')}</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold">{t('common.amount', 'Amount')}</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
+                        Loading orders...
+                      </td>
+                    </tr>
+                  ) : filteredOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center">
+                        <ShoppingCart className="w-10 h-10 text-muted-foreground mx-auto mb-2 opacity-40" />
+                        <p className="text-sm font-medium text-muted-foreground">
+                          {orders.length === 0 ? t('dashboard.noOrdersReceived', 'No orders received yet.') : 'No orders match your filter.'}
+                        </p>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredOrders.map(order => (
+                      <tr key={order.id} className="border-b border-border last:border-0 hover:bg-muted/50 transition-colors">
+                        <td className="py-3 px-4 text-sm font-semibold">#{order.id}</td>
+                        <td className="py-3 px-4 text-sm font-medium max-w-xs truncate">{order.service_name}</td>
+                        <td className="py-3 px-4 text-sm text-muted-foreground">
+                          {order.buyer_name || `Buyer #${order.buyer_id}`}
+                        </td>
+                        <td className="py-3 px-4 text-sm text-muted-foreground">
+                          {order.created_at ? new Date(order.created_at).toLocaleDateString() : '—'}
+                        </td>
+                        <td className="py-3 px-4">
+                          <Badge variant={statusVariant(order.status as any)}>
+                            {order.status}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4 text-sm font-semibold text-right">LKR {order.amount.toLocaleString()}</td>
+                        <td className="py-3 px-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Link to={`/order/${order.id}`}>
+                              <Button size="sm" variant="outline" className="h-8 px-2.5 text-xs gap-1">
+                                <Eye className="w-3.5 h-3.5" />
+                                View Order
+                              </Button>
+                            </Link>
+                            {order.buyer_id && (
+                              <Link to={`/messages?userId=${order.buyer_id}&name=${encodeURIComponent(order.buyer_name || `Buyer ${order.buyer_id}`)}`}>
+                                <Button size="sm" variant="ghost" className="h-8 px-2 text-xs" title="Message Buyer">
+                                  <MessageSquare className="w-3.5 h-3.5" />
+                                </Button>
+                              </Link>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -585,18 +804,19 @@ function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboa
                     <th className="text-left py-3 px-4 text-sm font-semibold">{t('dashboard.buyerCol')}</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold">{t('common.status')}</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold">{t('common.amount')}</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold">{t('common.actions', 'Action')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                      <td colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
                         Loading orders...
                       </td>
                     </tr>
                   ) : orders.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                      <td colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
                         {t('dashboard.noOrdersReceived')}
                       </td>
                     </tr>
@@ -610,7 +830,15 @@ function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboa
                           {order.status}
                         </Badge>
                       </td>
-                      <td className="py-3 px-4 text-sm font-semibold text-right">LKR {order.amount}</td>
+                      <td className="py-3 px-4 text-sm font-semibold text-right">LKR {order.amount.toLocaleString()}</td>
+                      <td className="py-3 px-4 text-right">
+                        <Link to={`/order/${order.id}`}>
+                          <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs gap-1">
+                            <Eye className="w-3.5 h-3.5" />
+                            View
+                          </Button>
+                        </Link>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
