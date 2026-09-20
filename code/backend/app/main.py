@@ -30,6 +30,9 @@ try:
         conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS payout_settled BOOLEAN DEFAULT FALSE;"))
         conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS payout_settled_at TIMESTAMP;"))
         conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS rejection_reason VARCHAR;"))
+        conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS proposed_price FLOAT;"))
+        conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS proposal_status VARCHAR;"))
+        conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS proposal_note VARCHAR;"))
         conn.commit()
 
     # Ensure admin user syncromarketplace@gmail.com exists with password Admin@Syncro2026

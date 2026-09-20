@@ -117,6 +117,9 @@ class Order(Base):
     payout_settled = Column(Boolean, default=False)
     payout_settled_at = Column(DateTime, nullable=True)
     rejection_reason = Column(String, nullable=True)
+    proposed_price = Column(Float, nullable=True)
+    proposal_status = Column(String, nullable=True)  # pending, accepted, rejected
+    proposal_note = Column(String, nullable=True)
     has_review = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 

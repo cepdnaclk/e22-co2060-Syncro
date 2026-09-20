@@ -12,6 +12,10 @@ import {
   Star,
   Loader2,
   AlertCircle,
+  ArrowRight,
+  Check,
+  X,
+  Send,
 } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
@@ -19,13 +23,18 @@ import { Button } from '../components/ui/Button';
 import { Textarea } from '../components/ui/Input';
 import { ReviewModal } from '../components/ReviewModal';
 import { useApp } from '../context/AppContext';
-import { ordersApi, Order } from '../services/api';
+import { ordersApi, messagesApi, Order } from '../services/api';
+import { toast } from 'sonner';
 
 export function OrderDetail() {
   const { id } = useParams();
   const { role, authUser } = useApp();
   const [message, setMessage] = useState('');
   const [proposedPrice, setProposedPrice] = useState('');
+  const [proposing, setProposing] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [responding, setResponding] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,6 +52,81 @@ export function OrderDetail() {
       .catch((e: any) => setError(e.message || 'Failed to load order.'))
       .finally(() => setLoading(false));
   }, [id, authUser?.userId]);
+
+  const handleProposePrice = async () => {
+    const val = parseFloat(proposedPrice);
+    if (isNaN(val) || val <= 0) {
+      toast.error('Please enter a valid price greater than 0.');
+      return;
+    }
+    if (val === order?.amount) {
+      toast.error('Proposed price must be different from the current price.');
+      return;
+    }
+    if (!order) return;
+    setProposing(true);
+    try {
+      const updated = await ordersApi.proposePrice(order.id, val);
+      setOrder(updated);
+      setProposedPrice('');
+      toast.success(`Price proposal of LKR ${val.toLocaleString()} submitted to buyer!`);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to submit price proposal.');
+    } finally {
+      setProposing(false);
+    }
+  };
+
+  const handleCancelProposal = async () => {
+    if (!order) return;
+    setCancelling(true);
+    try {
+      const updated = await ordersApi.cancelProposal(order.id);
+      setOrder(updated);
+      toast.success('Price proposal cancelled.');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to cancel proposal.');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const handleRespondProposal = async (action: 'accept' | 'reject') => {
+    if (!order) return;
+    setResponding(true);
+    try {
+      const updated = await ordersApi.respondProposal(order.id, action);
+      setOrder(updated);
+      if (action === 'accept') {
+        toast.success(`Price proposal accepted! Order price is now LKR ${updated.amount.toLocaleString()}.`);
+      } else {
+        toast.info('Price proposal declined.');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to respond to price proposal.');
+    } finally {
+      setResponding(false);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!message.trim() || !order) return;
+    const recipientId = role === 'seller' ? order.buyer_id : order.seller_id;
+    if (!recipientId) {
+      toast.error('Recipient not found.');
+      return;
+    }
+    setSendingMessage(true);
+    try {
+      await messagesApi.send(recipientId, message.trim());
+      toast.success('Message sent!');
+      setMessage('');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to send message.');
+    } finally {
+      setSendingMessage(false);
+    }
+  };
 
   // Called by ReviewModal after a successful submission
   const handleReviewSuccess = () => {
@@ -141,6 +225,71 @@ export function OrderDetail() {
             {/* ── Main column ── */}
             <div className="lg:col-span-2 space-y-6">
 
+              {/* ── Buyer: Price Proposal Review Card ── */}
+              {role === 'buyer' && order.proposal_status === 'pending' && order.proposed_price && (
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+                  <Card className="border-amber-500/40 bg-amber-500/5 shadow-sm">
+                    <CardContent className="p-6 space-y-4">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h3 className="text-lg font-semibold flex items-center gap-2 text-foreground">
+                            <DollarSign className="w-5 h-5 text-amber-500" />
+                            Seller Proposed a Price Change
+                          </h3>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {order.seller_name || 'The seller'} proposed a new price for this order. Review and decide whether to accept the revised amount.
+                          </p>
+                        </div>
+                        <Badge variant="warning" className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30">
+                          Decision Required
+                        </Badge>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-4 p-4 bg-card border border-border rounded-xl">
+                        <div>
+                          <span className="text-xs text-muted-foreground block mb-0.5">Current Price</span>
+                          <span className="text-base font-medium line-through text-muted-foreground">
+                            LKR {order.amount.toLocaleString()}
+                          </span>
+                        </div>
+                        <ArrowRight className="w-5 h-5 text-muted-foreground" />
+                        <div>
+                          <span className="text-xs text-primary font-medium block mb-0.5">Proposed Price</span>
+                          <span className="text-2xl font-bold text-primary">
+                            LKR {order.proposed_price.toLocaleString()}
+                          </span>
+                        </div>
+                        {order.proposal_note && (
+                          <div className="w-full pt-2 border-t border-border text-sm text-muted-foreground">
+                            <span className="font-medium text-foreground">Note from seller:</span> {order.proposal_note}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <Button
+                          onClick={() => handleRespondProposal('accept')}
+                          disabled={responding}
+                          className="gap-2 bg-primary hover:bg-primary/90"
+                        >
+                          {responding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                          Accept LKR {order.proposed_price.toLocaleString()}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => handleRespondProposal('reject')}
+                          disabled={responding}
+                          className="gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/30"
+                        >
+                          <X className="w-4 h-4" />
+                          Decline
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+
               {/* Order Timeline */}
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
                 <Card>
@@ -179,20 +328,38 @@ export function OrderDetail() {
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
                 <Card>
                   <CardHeader>
-                    <h3 className="text-xl font-semibold flex items-center gap-2">
-                      <MessageSquare className="w-5 h-5" />
-                      Communication
-                    </h3>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xl font-semibold flex items-center gap-2">
+                        <MessageSquare className="w-5 h-5" />
+                        Communication
+                      </h3>
+                      {((role === 'seller' && order.buyer_id) || (role === 'buyer' && order.seller_id)) && (
+                        <Link
+                          to={`/messages?userId=${role === 'seller' ? order.buyer_id : order.seller_id}&name=${encodeURIComponent((role === 'seller' ? order.buyer_name : order.seller_name) || 'User')}`}
+                          className="text-xs text-primary hover:underline font-medium"
+                        >
+                          Open Full Chat
+                        </Link>
+                      )}
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <Textarea
-                      placeholder="Type a message..."
+                      placeholder={`Send a direct message to ${role === 'seller' ? (order.buyer_name || 'the buyer') : (order.seller_name || 'the seller')}...`}
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
                       rows={3}
                     />
-                    <Button className="mt-3 w-full">
-                      <MessageSquare className="w-4 h-4 mr-2" />
+                    <Button
+                      onClick={handleSendMessage}
+                      disabled={sendingMessage || !message.trim()}
+                      className="mt-3 w-full"
+                    >
+                      {sendingMessage ? (
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      ) : (
+                        <Send className="w-4 h-4 mr-2" />
+                      )}
                       Send Message
                     </Button>
                   </CardContent>
@@ -212,22 +379,72 @@ export function OrderDetail() {
                     <CardContent className="space-y-4">
                       <div className="bg-muted/50 p-4 rounded-lg flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Current Price</span>
-                        <span className="text-2xl font-bold text-primary">LKR {order.amount}</span>
+                        <span className="text-2xl font-bold text-primary">LKR {order.amount.toLocaleString()}</span>
                       </div>
-                      <div className="space-y-3">
-                        <label className="block text-sm font-semibold">Propose New Price</label>
-                        <div className="flex gap-3">
-                          <input
-                            type="number"
-                            placeholder="Enter amount"
-                            value={proposedPrice}
-                            onChange={(e) => setProposedPrice(e.target.value)}
-                            className="flex-1 px-4 py-2 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
-                          />
-                          <Button>Propose</Button>
+
+                      {order.proposal_status === 'pending' && order.proposed_price ? (
+                        <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="text-xs text-amber-700 dark:text-amber-400 font-semibold uppercase tracking-wider block">
+                                Pending Proposal
+                              </span>
+                              <span className="text-xl font-bold text-foreground">
+                                LKR {order.proposed_price.toLocaleString()}
+                              </span>
+                            </div>
+                            <Badge variant="warning" className="bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40">
+                              Awaiting Buyer Approval
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            You proposed a revised price of LKR {order.proposed_price.toLocaleString()}. The order price will automatically update once the buyer approves.
+                          </p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleCancelProposal}
+                            disabled={cancelling}
+                            className="text-xs h-8 text-destructive hover:bg-destructive/10 border-destructive/30"
+                          >
+                            {cancelling ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : null}
+                            Cancel Proposal
+                          </Button>
                         </div>
-                        <p className="text-xs text-muted-foreground">Note: Price changes require buyer approval</p>
-                      </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {order.proposal_status === 'rejected' && (
+                            <p className="text-xs text-destructive font-medium">
+                              Your previous price proposal was declined by the buyer. You can propose a different price below.
+                            </p>
+                          )}
+                          <label className="block text-sm font-semibold">Propose New Price</label>
+                          <div className="flex gap-3">
+                            <div className="relative flex-1">
+                              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-semibold">
+                                LKR
+                              </span>
+                              <input
+                                type="number"
+                                min="1"
+                                step="any"
+                                placeholder="Enter amount"
+                                value={proposedPrice}
+                                onChange={(e) => setProposedPrice(e.target.value)}
+                                className="w-full pl-14 pr-4 py-2 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                              />
+                            </div>
+                            <Button
+                              onClick={handleProposePrice}
+                              disabled={proposing || !proposedPrice.trim()}
+                            >
+                              {proposing ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : null}
+                              Propose
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground">Note: Price changes require buyer approval</p>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -257,7 +474,14 @@ export function OrderDetail() {
                     <div className="border-t border-border pt-4 space-y-2">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Amount</span>
-                        <span className="font-bold text-primary">LKR {order.amount}</span>
+                        <div className="text-right">
+                          <span className="font-bold text-primary">LKR {order.amount.toLocaleString()}</span>
+                          {order.proposal_status === 'pending' && order.proposed_price && (
+                            <span className="block text-xs text-amber-600 dark:text-amber-400 font-medium">
+                              (Prop: LKR {order.proposed_price.toLocaleString()})
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Status</span>

@@ -73,6 +73,9 @@ export interface Order {
     buyer_name?: string;
     seller_name?: string;
     listing_id?: number;
+    proposed_price?: number | null;
+    proposal_status?: 'pending' | 'accepted' | 'rejected' | null;
+    proposal_note?: string | null;
 }
 
 // ---------- Auth ----------
@@ -197,6 +200,39 @@ export const ordersApi = {
     async updateStatus(orderId: number, status: string): Promise<Order> {
         const res = await fetch(`${BASE_URL}/orders/${orderId}/status?status=${status}`, {
             method: 'PATCH',
+            headers: headers(true),
+        });
+        return handleResponse<Order>(res);
+    },
+
+    async getById(orderId: number): Promise<Order> {
+        const res = await fetch(`${BASE_URL}/orders/${orderId}`, {
+            headers: headers(true),
+        });
+        return handleResponse<Order>(res);
+    },
+
+    async proposePrice(orderId: number, proposed_price: number, note?: string): Promise<Order> {
+        const res = await fetch(`${BASE_URL}/orders/${orderId}/propose-price`, {
+            method: 'POST',
+            headers: headers(true),
+            body: JSON.stringify({ proposed_price, note }),
+        });
+        return handleResponse<Order>(res);
+    },
+
+    async respondProposal(orderId: number, action: 'accept' | 'reject'): Promise<Order> {
+        const res = await fetch(`${BASE_URL}/orders/${orderId}/respond-proposal`, {
+            method: 'POST',
+            headers: headers(true),
+            body: JSON.stringify({ action }),
+        });
+        return handleResponse<Order>(res);
+    },
+
+    async cancelProposal(orderId: number): Promise<Order> {
+        const res = await fetch(`${BASE_URL}/orders/${orderId}/cancel-proposal`, {
+            method: 'POST',
             headers: headers(true),
         });
         return handleResponse<Order>(res);

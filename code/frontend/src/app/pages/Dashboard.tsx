@@ -269,7 +269,14 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
                     {order.status}
                   </Badge>
                 </td>
-                <td className="py-3 px-4 text-sm font-semibold text-right">LKR {order.amount}</td>
+                <td className="py-3 px-4 text-sm font-semibold text-right">
+                  <span>LKR {order.amount.toLocaleString()}</span>
+                  {order.proposal_status === 'pending' && order.proposed_price && (
+                    <span className="block text-xs font-medium text-amber-600 dark:text-amber-400">
+                      Prop: LKR {order.proposed_price.toLocaleString()}
+                    </span>
+                  )}
+                </td>
                 <td className="py-3 px-4 text-right">
                   <Link to={`/order/${order.id}`}>
                     <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs gap-1">
@@ -641,7 +648,14 @@ function SellerDashboard({ revenueData, orderData, businessName, isOrdersReceive
                             {order.status}
                           </Badge>
                         </td>
-                        <td className="py-3 px-4 text-sm font-semibold text-right">LKR {order.amount.toLocaleString()}</td>
+                        <td className="py-3 px-4 text-sm font-semibold text-right">
+                          <span>LKR {order.amount.toLocaleString()}</span>
+                          {order.proposal_status === 'pending' && order.proposed_price && (
+                            <span className="block text-xs font-medium text-amber-600 dark:text-amber-400">
+                              Prop: LKR {order.proposed_price.toLocaleString()}
+                            </span>
+                          )}
+                        </td>
                         <td className="py-3 px-4 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <Link to={`/order/${order.id}`}>
@@ -830,7 +844,14 @@ function SellerDashboard({ revenueData, orderData, businessName, isOrdersReceive
                           {order.status}
                         </Badge>
                       </td>
-                      <td className="py-3 px-4 text-sm font-semibold text-right">LKR {order.amount.toLocaleString()}</td>
+                      <td className="py-3 px-4 text-sm font-semibold text-right">
+                        <span>LKR {order.amount.toLocaleString()}</span>
+                        {order.proposal_status === 'pending' && order.proposed_price && (
+                          <span className="block text-xs font-medium text-amber-600 dark:text-amber-400">
+                            Prop: LKR {order.proposed_price.toLocaleString()}
+                          </span>
+                        )}
+                      </td>
                       <td className="py-3 px-4 text-right">
                         <Link to={`/order/${order.id}`}>
                           <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs gap-1">

@@ -171,11 +171,21 @@ class OrderResponse(OrderBase):
     payout_settled: Optional[bool] = False
     payout_settled_at: Optional[datetime] = None
     rejection_reason: Optional[str] = None
+    proposed_price: Optional[float] = None
+    proposal_status: Optional[str] = None
+    proposal_note: Optional[str] = None
     has_review: bool
     created_at: datetime
 
     class Config:
         from_attributes = True
+
+class ProposePriceRequest(BaseModel):
+    proposed_price: float = Field(..., gt=0)
+    note: Optional[str] = None
+
+class RespondProposalRequest(BaseModel):
+    action: str = Field(..., pattern="^(accept|reject)$")
 
 # --- Reviews ---
 class ReviewBase(BaseModel):
