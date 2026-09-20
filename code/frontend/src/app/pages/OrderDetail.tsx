@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router';
 import { motion } from 'motion/react';
 import {
@@ -28,7 +28,7 @@ import { toast } from 'sonner';
 
 export function OrderDetail() {
   const { id } = useParams();
-  const { role, authUser } = useApp();
+  const { role, authUser, socketOn } = useApp();
   const [message, setMessage] = useState('');
   const [proposedPrice, setProposedPrice] = useState('');
   const [proposing, setProposing] = useState(false);
@@ -40,18 +40,61 @@ export function OrderDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const fetchOrder = useCallback(async () => {
+    if (!id) return;
+    try {
+      const data = await ordersApi.getById(Number(id));
+      setOrder(data);
+      setError(null);
+    } catch (err: any) {
+      if (authUser?.userId) {
+        try {
+          const userOrders = await ordersApi.getForUser(authUser.userId);
+          const found = userOrders.find((o) => o.id === Number(id)) ?? null;
+          if (found) {
+            setOrder(found);
+            setError(null);
+            return;
+          }
+        } catch {
+          // ignore
+        }
+      }
+      setError(err.message || 'Failed to load order.');
+    } finally {
+      setLoading(false);
+    }
+  }, [id, authUser?.userId]);
+
+  useEffect(() => {
+    fetchOrder();
+  }, [fetchOrder]);
+
+  // Real-time: update order when socket notification arrives for this order
   useEffect(() => {
     if (!id) return;
-    setLoading(true);
-    ordersApi.getForUser(authUser?.userId ?? 0)
-      .then((orders) => {
-        const found = orders.find((o) => o.id === Number(id)) ?? null;
-        setOrder(found);
-        if (!found) setError('Order not found or you do not have access to it.');
-      })
-      .catch((e: any) => setError(e.message || 'Failed to load order.'))
-      .finally(() => setLoading(false));
-  }, [id, authUser?.userId]);
+    const unsubscribe = socketOn('new_notification', (data: any) => {
+      if (
+        data &&
+        (data.type?.startsWith('order_') || data.type?.includes('price') || data.type?.includes('order')) &&
+        Number(data.reference_id) === Number(id)
+      ) {
+        fetchOrder();
+      }
+    });
+    return unsubscribe;
+  }, [id, fetchOrder, socketOn]);
+
+  // Determine user identity relative to this order:
+  // If the logged-in user matches buyer_id or seller_id, that takes precedence.
+  // Otherwise fall back to the currently selected role.
+  const isOrderBuyer = order && authUser
+    ? Number(order.buyer_id) === Number(authUser.userId)
+    : role === 'buyer';
+
+  const isOrderSeller = order && authUser
+    ? Number(order.seller_id) === Number(authUser.userId)
+    : role === 'seller';
 
   const handleProposePrice = async () => {
     const val = parseFloat(proposedPrice);
@@ -111,7 +154,7 @@ export function OrderDetail() {
 
   const handleSendMessage = async () => {
     if (!message.trim() || !order) return;
-    const recipientId = role === 'seller' ? order.buyer_id : order.seller_id;
+    const recipientId = isOrderSeller ? order.buyer_id : order.seller_id;
     if (!recipientId) {
       toast.error('Recipient not found.');
       return;
@@ -185,7 +228,7 @@ export function OrderDetail() {
           </div>
 
           {/* ── Review prompt (buyer only, completed order, not yet reviewed) ── */}
-          {role === 'buyer' && order.buyer_id === authUser?.userId && order.status === 'completed' && !order.has_review && (
+          {isOrderBuyer && order.status === 'completed' && !order.has_review && (
             <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
               <Card className="bg-gradient-to-r from-primary/10 to-accent/10 border-primary/20">
                 <CardContent className="p-6">
@@ -210,7 +253,7 @@ export function OrderDetail() {
           )}
 
           {/* ── Already reviewed banner ── */}
-          {role === 'buyer' && order.buyer_id === authUser?.userId && order.status === 'completed' && order.has_review && (
+          {isOrderBuyer && order.status === 'completed' && order.has_review && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <Card className="border-green-500/30 bg-green-500/5">
                 <CardContent className="p-4 flex items-center gap-3">
@@ -226,7 +269,7 @@ export function OrderDetail() {
             <div className="lg:col-span-2 space-y-6">
 
               {/* ── Buyer: Price Proposal Review Card ── */}
-              {role === 'buyer' && order.proposal_status === 'pending' && order.proposed_price && (
+              {isOrderBuyer && order.proposal_status === 'pending' && order.proposed_price && (
                 <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
                   <Card className="border-amber-500/40 bg-amber-500/5 shadow-sm">
                     <CardContent className="p-6 space-y-4">
@@ -333,9 +376,9 @@ export function OrderDetail() {
                         <MessageSquare className="w-5 h-5" />
                         Communication
                       </h3>
-                      {((role === 'seller' && order.buyer_id) || (role === 'buyer' && order.seller_id)) && (
+                      {((isOrderSeller && order.buyer_id) || (isOrderBuyer && order.seller_id)) && (
                         <Link
-                          to={`/messages?userId=${role === 'seller' ? order.buyer_id : order.seller_id}&name=${encodeURIComponent((role === 'seller' ? order.buyer_name : order.seller_name) || 'User')}`}
+                          to={`/messages?userId=${isOrderSeller ? order.buyer_id : order.seller_id}&name=${encodeURIComponent((isOrderSeller ? order.buyer_name : order.seller_name) || 'User')}`}
                           className="text-xs text-primary hover:underline font-medium"
                         >
                           Open Full Chat
@@ -345,7 +388,7 @@ export function OrderDetail() {
                   </CardHeader>
                   <CardContent>
                     <Textarea
-                      placeholder={`Send a direct message to ${role === 'seller' ? (order.buyer_name || 'the buyer') : (order.seller_name || 'the seller')}...`}
+                      placeholder={`Send a direct message to ${isOrderSeller ? (order.buyer_name || 'the buyer') : (order.seller_name || 'the seller')}...`}
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
                       rows={3}
@@ -367,7 +410,7 @@ export function OrderDetail() {
               </motion.div>
 
               {/* Price Negotiation (Seller only) */}
-              {role === 'seller' && (
+              {isOrderSeller && (
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
                   <Card>
                     <CardHeader>

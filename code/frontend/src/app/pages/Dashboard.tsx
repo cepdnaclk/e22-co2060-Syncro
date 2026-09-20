@@ -26,7 +26,7 @@ import { SellerOnboarding } from '../components/SellerOnboarding';
 import { buyerActivities, revenueData, orderData } from '../services/mockData';
 import type { Activity } from '../services/mockData';
 import { ordersApi, profilesApi, listingsApi, Order } from '../services/api';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 // ────────────────────────── Types ──────────────────────────
 
@@ -115,25 +115,38 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
     return t('dashboard.greetingEvening');
   };
 
-  const { authUser } = useApp();
+  const { authUser, socketOn } = useApp();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function loadOrders() {
-      if (authUser?.userId) {
-        try {
-          const data = await ordersApi.getForUser(authUser.userId);
-          // Only show orders where user is buyer
-          setOrders(data.filter(o => Number(o.buyer_id) === Number(authUser.userId)));
-        } catch (error) {
-          console.error("Failed to load orders:", error);
-        }
+  const loadOrders = useCallback(async () => {
+    if (authUser?.userId) {
+      try {
+        const data = await ordersApi.getForUser(authUser.userId);
+        // Only show orders where user is buyer
+        setOrders(data.filter(o => Number(o.buyer_id) === Number(authUser.userId)));
+      } catch (error) {
+        console.error("Failed to load orders:", error);
+      } finally {
+        setLoading(false);
       }
+    } else {
       setLoading(false);
     }
-    loadOrders();
   }, [authUser?.userId]);
+
+  useEffect(() => {
+    loadOrders();
+  }, [loadOrders]);
+
+  useEffect(() => {
+    const unsubscribe = socketOn('new_notification', (data: any) => {
+      if (data && (data.type?.startsWith('order_') || data.type?.includes('price') || data.type?.includes('order'))) {
+        loadOrders();
+      }
+    });
+    return unsubscribe;
+  }, [loadOrders, socketOn]);
 
   return (
     <div className="space-y-8">
@@ -222,6 +235,35 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
       </div>
 
 
+{/* Pending Price Proposals Alert Banner for Buyer */}
+{orders.some(o => o.proposal_status === 'pending' && o.proposed_price) && (
+  <motion.div {...fadeInUp}>
+    <Card className="border-amber-500/40 bg-amber-500/10 shadow-sm">
+      <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+            <DollarSign className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="font-semibold text-sm text-foreground">
+              Price Revision Proposed by Seller
+            </h4>
+            <p className="text-xs text-muted-foreground">
+              {orders.filter(o => o.proposal_status === 'pending' && o.proposed_price).length} order(s) have a price change waiting for your approval.
+            </p>
+          </div>
+        </div>
+        <Link to={`/order/${orders.find(o => o.proposal_status === 'pending' && o.proposed_price)?.id}`}>
+          <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white font-medium text-xs gap-1.5 whitespace-nowrap">
+            <DollarSign className="w-3.5 h-3.5" />
+            Review Proposal
+          </Button>
+        </Link>
+      </CardContent>
+    </Card>
+  </motion.div>
+)}
+
 {/* Recent Orders */}
 <motion.div {...fadeInUp} transition={{ delay: 0.4 }}>
   <Card>
@@ -278,12 +320,21 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
                   )}
                 </td>
                 <td className="py-3 px-4 text-right">
-                  <Link to={`/order/${order.id}`}>
-                    <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs gap-1">
-                      <Eye className="w-3.5 h-3.5" />
-                      View
-                    </Button>
-                  </Link>
+                  {order.proposal_status === 'pending' && order.proposed_price ? (
+                    <Link to={`/order/${order.id}`}>
+                      <Button size="sm" className="h-8 px-2.5 text-xs gap-1 bg-amber-500 hover:bg-amber-600 text-white font-semibold">
+                        <DollarSign className="w-3.5 h-3.5" />
+                        Review Price
+                      </Button>
+                    </Link>
+                  ) : (
+                    <Link to={`/order/${order.id}`}>
+                      <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs gap-1">
+                        <Eye className="w-3.5 h-3.5" />
+                        View
+                      </Button>
+                    </Link>
+                  )}
                 </td>
               </tr>
             ))}
@@ -372,7 +423,7 @@ function SyncroChatTriggerButton() {
 
 function SellerDashboard({ revenueData, orderData, businessName, isOrdersReceivedOnly }: SellerDashboardProps) {
   const { t } = useTranslation();
-  const { authUser } = useApp();
+  const { authUser, socketOn } = useApp();
   const [orders, setOrders] = useState<Order[]>([]);
   const [activeListingsCount, setActiveListingsCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
@@ -423,26 +474,39 @@ function SellerDashboard({ revenueData, orderData, businessName, isOrdersReceive
   };
   // ───────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    async function loadSellerData() {
-      if (authUser?.userId) {
-        try {
-          const [userOrders, allListings] = await Promise.all([
-            ordersApi.getForUser(authUser.userId),
-            listingsApi.getAll().catch(() => [])
-          ]);
-          const sellerOrders = userOrders.filter(o => Number(o.seller_id) === Number(authUser.userId));
-          setOrders(sellerOrders);
-          const myActiveListings = allListings.filter(l => Number(l.seller_id) === Number(authUser.userId));
-          setActiveListingsCount(myActiveListings.length);
-        } catch (error) {
-          console.error("Failed to load seller dashboard data:", error);
-        }
+  const loadSellerData = useCallback(async () => {
+    if (authUser?.userId) {
+      try {
+        const [userOrders, allListings] = await Promise.all([
+          ordersApi.getForUser(authUser.userId),
+          listingsApi.getAll().catch(() => [])
+        ]);
+        const sellerOrders = userOrders.filter(o => Number(o.seller_id) === Number(authUser.userId));
+        setOrders(sellerOrders);
+        const myActiveListings = allListings.filter(l => Number(l.seller_id) === Number(authUser.userId));
+        setActiveListingsCount(myActiveListings.length);
+      } catch (error) {
+        console.error("Failed to load seller dashboard data:", error);
+      } finally {
+        setLoading(false);
       }
+    } else {
       setLoading(false);
     }
-    loadSellerData();
   }, [authUser?.userId]);
+
+  useEffect(() => {
+    loadSellerData();
+  }, [loadSellerData]);
+
+  useEffect(() => {
+    const unsubscribe = socketOn('new_notification', (data: any) => {
+      if (data && (data.type?.startsWith('order_') || data.type?.includes('price') || data.type?.includes('order'))) {
+        loadSellerData();
+      }
+    });
+    return unsubscribe;
+  }, [loadSellerData, socketOn]);
 
   const completedEarnings = orders
     .filter(o => o.status?.toLowerCase() === 'completed')

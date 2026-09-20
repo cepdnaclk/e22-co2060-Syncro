@@ -37,6 +37,23 @@ export function TopNav() {
     try { await toggleRole(); } catch (e) { console.error('Role toggle failed', e); } finally { setRoleToggling(false); }
   };
 
+  const handleNotificationClick = (notif: any) => {
+    if (!notif.is_read) {
+      markNotificationRead(notif.id);
+    }
+    setShowNotifications(false);
+    if (!notif.reference_id) return;
+
+    const notifType = notif.type || '';
+    if (notifType.startsWith('order_') || notifType.includes('order')) {
+      navigate(`/order/${notif.reference_id}`);
+    } else if (notifType === 'new_bid' || notifType === 'bid_accepted' || notifType === 'bid_rejected') {
+      navigate(`/bids/${notif.reference_id}`);
+    } else {
+      navigate('/bids');
+    }
+  };
+
   const unreadCount = notifications.filter(n => !n.is_read).length;
   const firstInitial = authUser?.firstName?.[0] || userProfile.firstName?.[0] || '?';
   const userInitials = firstInitial.toUpperCase();
@@ -94,7 +111,7 @@ export function TopNav() {
                       <div className="p-4 text-center text-sm text-muted-foreground">{t('nav.noNotifications')}</div>
                     ) : (
                       notifications.map((notif) => (
-                        <div key={notif.id} onClick={() => { if (!notif.is_read) markNotificationRead(notif.id); if (notif.reference_id) navigate('/bids'); }} className={`p-4 border-b border-border hover:bg-accent/50 cursor-pointer ${!notif.is_read ? 'bg-primary/5' : ''}`}>
+                        <div key={notif.id} onClick={() => handleNotificationClick(notif)} className={`p-4 border-b border-border hover:bg-accent/50 cursor-pointer ${!notif.is_read ? 'bg-primary/5' : ''}`}>
                           <p className="text-sm">{notif.message}</p>
                           <p className="text-xs text-muted-foreground mt-1">{new Date(notif.created_at).toLocaleDateString()}</p>
                         </div>
