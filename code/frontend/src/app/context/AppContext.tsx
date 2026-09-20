@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
-import { authApi } from '../services/api';
+import { authApi, profilesApi } from '../services/api';
 import { io, Socket } from 'socket.io-client';
 import { toast } from 'sonner';
 
@@ -130,8 +130,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const [userProfile, setUserProfileState] = useState<UserProfile>(() => {
     try {
+      const currentAuth = loadAuthUser();
       const stored = localStorage.getItem('syncro_userProfile');
-      if (stored) return JSON.parse(stored);
+      if (stored && currentAuth) {
+        const parsed = JSON.parse(stored);
+        if (parsed.email && parsed.email.toLowerCase() === currentAuth.email.toLowerCase()) {
+          return parsed;
+        }
+      }
     } catch { /* ignore */ }
     return DEFAULT_USER_PROFILE;
   });
@@ -240,56 +246,54 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const newRole = data.role === 'seller' ? 'seller' : 'buyer';
     setRoleState(newRole);
     localStorage.setItem('syncro_role', newRole);
-    // Seed the user profile from backend response
-    setUserProfileState(prev => ({ ...prev, firstName: data.first_name, email }));
-
-    // Fetch full user details (including location) after token is set
-    try {
-      const me = await authApi.getMe();
-      setUserProfileState(prev => ({
-        ...prev,
-        firstName: me.first_name || data.first_name,
-        lastName: me.last_name || '',
-        email: me.email,
-        location: me.location || '',
-        phone: me.phone_number || prev.phone || '',
-      }));
-    } catch { /* ignore — profile still usable without location */ }
+    // Seed the user profile cleanly for the newly authenticated account
+    setUserProfileState({
+      ...DEFAULT_USER_PROFILE,
+      firstName: data.first_name,
+      email,
+    });
 
     if (data.role === 'seller') {
       setHasSellerAccount(true);
     }
 
-    // Try to fetch seller profile to restore seller toggle state
+    // Fetch full user details and profile from backend
     try {
-      // Must use profilesApi from the imported module (already added to top of file)
-      const { profilesApi } = await import('../services/api');
-      const profile = await profilesApi.get(data.user_id);
-      
-      // A user is only considered to have a seller account if they completed onboarding.
-      // We require BOTH a non-empty description AND a profile name that differs from the
-      // user's personal "First Last" name — onboarding always sets a distinct business name.
-      // This prevents a buyer's personal bio (stored only in localStorage) from ever
-      // triggering seller mode if it accidentally ends up in profile.description.
-      const personalName = `${data.first_name || ''} ${profile?.name?.split(' ')[1] || ''}`.trim().toLowerCase();
-      const profileName  = (profile?.name || '').trim().toLowerCase();
-      const hasCustomBusinessName = profileName !== '' && profileName !== personalName;
+      const me = await authApi.getMe();
+      let profileData: any = null;
+      try {
+        profileData = await profilesApi.get(data.user_id);
+      } catch { /* ignore */ }
 
-      if (profile && profile.description && profile.description.trim() !== '' && hasCustomBusinessName) {
-        setHasSellerAccount(true);
-        setBusinessProfileState({
-          name: profile.name,
-          initials: profile.name.substring(0, 2).toUpperCase(),
-          rating: 0,
-          reviewCount: 0,
-          description: profile.description,
-          logo: profile.logo,
-          coverImage: profile.cover_image,
-        });
+      setUserProfileState({
+        firstName: me.first_name || data.first_name,
+        lastName: me.last_name || '',
+        email: me.email || email,
+        location: me.location || '',
+        phone: me.phone_number || profileData?.phone || '',
+        avatar: profileData?.logo || undefined,
+        bio: profileData?.description || '',
+      });
+
+      if (profileData) {
+        const personalName = `${data.first_name || ''} ${profileData?.name?.split(' ')[1] || ''}`.trim().toLowerCase();
+        const profileName  = (profileData?.name || '').trim().toLowerCase();
+        const hasCustomBusinessName = profileName !== '' && profileName !== personalName;
+
+        if (profileData.description && profileData.description.trim() !== '' && hasCustomBusinessName) {
+          setHasSellerAccount(true);
+          setBusinessProfileState({
+            name: profileData.name,
+            initials: profileData.name.substring(0, 2).toUpperCase(),
+            rating: 0,
+            reviewCount: 0,
+            description: profileData.description,
+            logo: profileData.logo,
+            coverImage: profileData.cover_image,
+          });
+        }
       }
-    } catch (e) {
-      // Ignore errors (user likely doesn't have a seller profile yet)
-    }
+    } catch { /* ignore */ }
   };
 
   // Real register — calls backend. It now returns a success message, but we DON'T log the user in yet.
@@ -316,16 +320,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setRoleState(newRole);
     localStorage.setItem('syncro_role', newRole);
     
+    setUserProfileState({
+      ...DEFAULT_USER_PROFILE,
+      firstName: data.first_name,
+      email,
+    });
+
     try {
       const me = await authApi.getMe();
-      setUserProfileState(prev => ({
-        ...prev,
+      let profileData: any = null;
+      try {
+        profileData = await profilesApi.get(data.user_id);
+      } catch { /* ignore */ }
+
+      setUserProfileState({
         firstName: me.first_name || data.first_name,
         lastName: me.last_name || '',
-        email: me.email,
+        email: me.email || email,
         location: me.location || '',
-        phone: me.phone_number || prev.phone || '',
-      }));
+        phone: me.phone_number || profileData?.phone || '',
+        avatar: profileData?.logo || undefined,
+        bio: profileData?.description || '',
+      });
     } catch { /* ignore */ }
 
     if (data.role === 'seller') {
@@ -339,10 +355,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setRoleState('buyer');
     setBusinessProfileState(null);
     setHasSellerAccount(false);
+    setUserProfileState(DEFAULT_USER_PROFILE);
     setNotifications([]);
     localStorage.removeItem('syncro_role');
     localStorage.removeItem('syncro_businessProfile');
     localStorage.removeItem('syncro_userProfile');
+    localStorage.removeItem('syncro_auth_user');
+    localStorage.removeItem('syncro_token');
+    localStorage.removeItem('syncro_auth');
+    localStorage.removeItem('syncro_seller_account');
   };
 
   // Toggle role — calls backend and updates token
@@ -379,25 +400,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     fetchNotifs();
   }, [authUser]);
 
-  // ── Effect 1b: Hydrate location from backend on every session start ───────────
-  // When a session is restored from localStorage the userProfile may not have
-  // a location (e.g. sessions that pre-date the location feature, or the field
-  // was not yet persisted). We always re-fetch /auth/me so the district the user
-  // selected at sign-up is reliably shown in their profile settings.
+  // ── Effect 1b: Hydrate user profile from backend on session start / user change ───
   useEffect(() => {
-    if (!authUser) return;
-    const syncLocation = async () => {
+    const userId = authUser?.userId;
+    if (!userId) {
+      setUserProfileState(DEFAULT_USER_PROFILE);
+      return;
+    }
+    const syncProfile = async () => {
       try {
         const me = await authApi.getMe();
-        if (me.location) {
-          setUserProfileState(prev => ({
-            ...prev,
-            location: me.location ?? prev.location,
-          }));
-        }
-      } catch { /* silent — UI still functional without location */ }
+        let profileLogo: string | undefined = undefined;
+        try {
+          const profile = await profilesApi.get(userId);
+          profileLogo = profile?.logo || undefined;
+        } catch { /* silent */ }
+
+        setUserProfileState(prev => ({
+          ...prev,
+          firstName: me.first_name || authUser.firstName || prev.firstName,
+          lastName: me.last_name || prev.lastName || '',
+          email: me.email || authUser.email,
+          location: me.location ?? prev.location,
+          phone: me.phone_number ?? prev.phone,
+          avatar: profileLogo,
+        }));
+      } catch { /* silent — UI still functional */ }
     };
-    syncLocation();
+    syncProfile();
   }, [authUser?.userId]);
 
   // ── Effect 2: Socket.IO connection — only reconnect when userId changes ──────
