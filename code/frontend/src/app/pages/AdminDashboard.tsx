@@ -18,9 +18,18 @@ import {
   ExternalLink,
   ChevronRight,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  X,
+  Mail,
+  Phone,
+  MapPin,
+  Store,
+  Star,
+  ShoppingBag,
+  Package,
+  MessageSquare
 } from 'lucide-react';
-import { adminApi, AdminMetrics, AdminUser, AdminOrder } from '../services/api';
+import { adminApi, AdminMetrics, AdminUser, AdminUserDetail, AdminOrder } from '../services/api';
 import { toast } from 'sonner';
 import { useApp } from '../context/AppContext';
 
@@ -58,6 +67,27 @@ export function AdminDashboard() {
   const [deleteTargetUser, setDeleteTargetUser] = useState<AdminUser | null>(null);
   const [settleTargetOrder, setSettleTargetOrder] = useState<AdminOrder | null>(null);
   const [payoutReference, setPayoutReference] = useState('');
+
+  // User Details Modal state
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [userDetail, setUserDetail] = useState<AdminUserDetail | null>(null);
+  const [loadingUserDetail, setLoadingUserDetail] = useState(false);
+  const [detailTab, setDetailTab] = useState<'profile' | 'seller' | 'orders' | 'reviews'>('profile');
+
+  const handleOpenUserDetail = async (userId: number) => {
+    setSelectedUserId(userId);
+    setDetailTab('profile');
+    setLoadingUserDetail(true);
+    try {
+      const data = await adminApi.getUserDetails(userId);
+      setUserDetail(data);
+    } catch (err: any) {
+      toast.error('Failed to load user details: ' + (err.message || 'Unknown error'));
+      setSelectedUserId(null);
+    } finally {
+      setLoadingUserDetail(false);
+    }
+  };
 
   // Initial load
   useEffect(() => {
@@ -501,10 +531,14 @@ export function AdminDashboard() {
                       {users.map(u => {
                         const isSuperAdmin = u.email === 'syncromarketplace@gmail.com';
                         return (
-                          <tr key={u.id} className="hover:bg-muted/30 transition-colors">
+                          <tr
+                            key={u.id}
+                            onClick={() => handleOpenUserDetail(u.id)}
+                            className="hover:bg-muted/40 transition-colors cursor-pointer group"
+                          >
                             <td className="py-3 px-4">
-                              <div className="font-semibold text-foreground flex items-center gap-1.5">
-                                {u.first_name} {u.last_name}
+                              <div className="font-semibold text-foreground flex items-center gap-1.5 group-hover:text-primary transition-colors">
+                                <span className="hover:underline">{u.first_name} {u.last_name}</span>
                                 {isSuperAdmin && (
                                   <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/20 text-primary">
                                     ADMIN
@@ -550,32 +584,66 @@ export function AdminDashboard() {
                               {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'Active Member'}
                             </td>
                             <td className="py-3 px-4 text-right">
-                              {isSuperAdmin ? (
-                                <span className="text-xs text-muted-foreground italic">Protected</span>
-                              ) : (
-                                <div className="flex items-center justify-end gap-2">
-                                  <button
-                                    onClick={() => handleToggleBan(u)}
-                                    title={u.is_banned ? 'Unban User' : 'Ban User'}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 ${
-                                      u.is_banned
-                                        ? 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20'
-                                        : 'bg-amber-500/10 text-amber-600 hover:bg-amber-500/20'
-                                    }`}
-                                  >
-                                    <Ban className="w-3 h-3" />
-                                    {u.is_banned ? 'Unban' : 'Ban'}
-                                  </button>
+                              <div className="flex items-center justify-end gap-1.5">
+                                {/* View Details Button */}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenUserDetail(u.id);
+                                  }}
+                                  title="View Full User & Seller Details"
+                                  className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </button>
 
-                                  <button
-                                    onClick={() => setDeleteTargetUser(u)}
-                                    title="Delete User Account"
-                                    className="p-1.5 rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
+                                {/* Direct Public Storefront Link if Seller */}
+                                {(u.active_role === 'seller' || u.profile_name) && (
+                                  <a
+                                    href={`/seller/${u.id}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    title="Open Public Seller Storefront in New Tab"
+                                    className="p-1.5 rounded-lg text-purple-600 hover:bg-purple-500/10 transition-colors"
+                                    onClick={e => e.stopPropagation()}
                                   >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              )}
+                                    <Store className="w-4 h-4" />
+                                  </a>
+                                )}
+
+                                {isSuperAdmin ? (
+                                  <span className="text-xs text-muted-foreground italic ml-2">Protected</span>
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleToggleBan(u);
+                                      }}
+                                      title={u.is_banned ? 'Unban User' : 'Ban User'}
+                                      className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 ${
+                                        u.is_banned
+                                          ? 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20'
+                                          : 'bg-amber-500/10 text-amber-600 hover:bg-amber-500/20'
+                                      }`}
+                                    >
+                                      <Ban className="w-3 h-3" />
+                                      {u.is_banned ? 'Unban' : 'Ban'}
+                                    </button>
+
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setDeleteTargetUser(u);
+                                      }}
+                                      title="Delete User Account"
+                                      className="p-1.5 rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );
@@ -922,6 +990,478 @@ export function AdminDashboard() {
                 </>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* =================== MODAL: USER & SELLER ACCOUNT DETAILS =================== */}
+      {selectedUserId !== null && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+          <div className="bg-card border border-border rounded-2xl max-w-3xl w-full shadow-2xl overflow-hidden my-auto max-h-[90vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-border flex items-center justify-between bg-muted/20">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg overflow-hidden border border-border shrink-0">
+                  {userDetail?.profile?.logo ? (
+                    <img src={userDetail.profile.logo} alt="Logo" className="w-full h-full object-cover" />
+                  ) : (
+                    <span>{userDetail ? (userDetail.first_name?.[0] || userDetail.email[0]).toUpperCase() : 'U'}</span>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-lg font-bold text-foreground truncate">
+                      {userDetail ? userDetail.full_name : 'Loading User...'}
+                    </h3>
+                    {userDetail?.is_admin && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-primary/20 text-primary">ADMIN</span>
+                    )}
+                    {userDetail && (
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${
+                        userDetail.active_role === 'seller' ? 'bg-purple-500/10 text-purple-600' : 'bg-blue-500/10 text-blue-600'
+                      }`}>
+                        {userDetail.active_role === 'client' ? 'Buyer' : userDetail.active_role}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5 flex-wrap">
+                    <span>{userDetail?.email}</span>
+                    {userDetail?.phone_number && <span>• {userDetail.phone_number}</span>}
+                    {userDetail?.location && <span>• {userDetail.location}</span>}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {userDetail && (userDetail.active_role === 'seller' || userDetail.profile) && (
+                  <a
+                    href={`/seller/${userDetail.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-purple-500/10 text-purple-600 hover:bg-purple-500/20 transition-colors"
+                  >
+                    <Store className="w-3.5 h-3.5" />
+                    Public Storefront
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+                <button
+                  onClick={() => { setSelectedUserId(null); setUserDetail(null); }}
+                  className="p-2 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Subnav Tabs */}
+            <div className="flex items-center gap-2 px-5 pt-3 border-b border-border bg-muted/10 text-sm overflow-x-auto">
+              <button
+                onClick={() => setDetailTab('profile')}
+                className={`pb-2.5 px-3 font-semibold border-b-2 transition-colors whitespace-nowrap ${
+                  detailTab === 'profile'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Account Overview
+              </button>
+              <button
+                onClick={() => setDetailTab('seller')}
+                className={`pb-2.5 px-3 font-semibold border-b-2 transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+                  detailTab === 'seller'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Store className="w-3.5 h-3.5" />
+                Seller Storefront {userDetail?.listings?.length ? `(${userDetail.listings.length})` : ''}
+              </button>
+              <button
+                onClick={() => setDetailTab('orders')}
+                className={`pb-2.5 px-3 font-semibold border-b-2 transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+                  detailTab === 'orders'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <ShoppingBag className="w-3.5 h-3.5" />
+                Orders & Transactions {userDetail ? `(${((userDetail.orders_as_seller?.length || 0) + (userDetail.orders_as_buyer?.length || 0))})` : ''}
+              </button>
+              <button
+                onClick={() => setDetailTab('reviews')}
+                className={`pb-2.5 px-3 font-semibold border-b-2 transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+                  detailTab === 'reviews'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Star className="w-3.5 h-3.5" />
+                Reviews {userDetail?.reviews_received?.length ? `(${userDetail.reviews_received.length})` : ''}
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1">
+              {loadingUserDetail ? (
+                <div className="p-12 text-center text-muted-foreground">Loading full account details...</div>
+              ) : !userDetail ? (
+                <div className="p-12 text-center text-destructive">User details could not be found.</div>
+              ) : (
+                <>
+                  {/* TAB 1: ACCOUNT OVERVIEW */}
+                  {detailTab === 'profile' && (
+                    <div className="space-y-6">
+                      {/* Stat Counters */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div className="p-3 rounded-xl bg-muted/30 border border-border">
+                          <span className="text-[11px] text-muted-foreground block font-medium">Orders Placed (Buyer)</span>
+                          <span className="text-xl font-bold text-foreground">{userDetail.orders_as_buyer?.length || 0}</span>
+                        </div>
+                        <div className="p-3 rounded-xl bg-muted/30 border border-border">
+                          <span className="text-[11px] text-muted-foreground block font-medium">Orders Sold (Seller)</span>
+                          <span className="text-xl font-bold text-foreground">{userDetail.orders_as_seller?.length || 0}</span>
+                        </div>
+                        <div className="p-3 rounded-xl bg-muted/30 border border-border">
+                          <span className="text-[11px] text-muted-foreground block font-medium">Active Services / Listings</span>
+                          <span className="text-xl font-bold text-foreground">{userDetail.listings?.length || 0}</span>
+                        </div>
+                        <div className="p-3 rounded-xl bg-muted/30 border border-border">
+                          <span className="text-[11px] text-muted-foreground block font-medium">Avg Review Rating</span>
+                          <span className="text-xl font-bold text-amber-500 flex items-center gap-1">
+                            ★ {userDetail.avg_rating || 'N/A'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Detail Fields */}
+                      <div className="bg-card border border-border rounded-xl p-4 space-y-3 text-sm">
+                        <h4 className="font-bold text-foreground text-xs uppercase tracking-wide text-muted-foreground">Personal & Account Information</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                          <div>
+                            <span className="text-xs text-muted-foreground block">User ID</span>
+                            <span className="font-semibold text-foreground font-mono text-xs">#{userDetail.id}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground block">Primary Email</span>
+                            <span className="font-semibold text-foreground">{userDetail.email}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground block">First Name</span>
+                            <span className="font-semibold text-foreground">{userDetail.first_name || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground block">Last Name</span>
+                            <span className="font-semibold text-foreground">{userDetail.last_name || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground block">Contact Phone</span>
+                            <span className="font-semibold text-foreground">{userDetail.phone_number || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground block">Sri Lanka District / Location</span>
+                            <span className="font-semibold text-foreground">{userDetail.location || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground block">Email Verification</span>
+                            <span className={`inline-flex items-center gap-1 text-xs font-semibold ${userDetail.email_verified ? 'text-emerald-600' : 'text-amber-600'}`}>
+                              {userDetail.email_verified ? <><CheckCircle2 className="w-3.5 h-3.5" /> Verified</> : <><Clock className="w-3.5 h-3.5" /> Pending Verification</>}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground block">Account Security Status</span>
+                            <span className={`inline-flex items-center gap-1 text-xs font-semibold ${userDetail.is_banned ? 'text-destructive' : 'text-emerald-600'}`}>
+                              {userDetail.is_banned ? <><Ban className="w-3.5 h-3.5" /> Banned Account</> : <><CheckCircle2 className="w-3.5 h-3.5" /> Active & Standing Good</>}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground block">Reverse Auction RFPs Created</span>
+                            <span className="font-semibold text-foreground">{userDetail.bid_requests_count || 0} RFPs</span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground block">Competitive Bids Submitted</span>
+                            <span className="font-semibold text-foreground">{userDetail.bids_count || 0} Bids</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TAB 2: SELLER STOREFRONT & SERVICES */}
+                  {detailTab === 'seller' && (
+                    <div className="space-y-6">
+                      {userDetail.profile ? (
+                        <div className="space-y-4">
+                          {/* Storefront Header Card */}
+                          <div className="bg-card border border-border rounded-xl p-4 space-y-4">
+                            {userDetail.profile.cover_image && (
+                              <div className="h-32 w-full rounded-lg overflow-hidden border border-border">
+                                <img src={userDetail.profile.cover_image} alt="Cover" className="w-full h-full object-cover" />
+                              </div>
+                            )}
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                              <div>
+                                <h4 className="text-base font-bold text-foreground">{userDetail.profile.name || 'Storefront'}</h4>
+                                <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
+                                  userDetail.profile.is_active ? 'bg-emerald-500/10 text-emerald-600' : 'bg-muted text-muted-foreground'
+                                }`}>
+                                  {userDetail.profile.is_active ? 'Store Active & Public' : 'Store Inactive'}
+                                </span>
+                              </div>
+                              <a
+                                href={`/seller/${userDetail.id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+                              >
+                                View Live Storefront <ExternalLink className="w-3.5 h-3.5" />
+                              </a>
+                            </div>
+
+                            {userDetail.profile.description && (
+                              <p className="text-xs text-muted-foreground leading-relaxed bg-muted/20 p-3 rounded-lg border border-border">
+                                {userDetail.profile.description}
+                              </p>
+                            )}
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-1">
+                              {userDetail.profile.phone && (
+                                <div className="flex items-center gap-1.5 text-muted-foreground">
+                                  <Phone className="w-3.5 h-3.5 text-primary" /> {userDetail.profile.phone}
+                                </div>
+                              )}
+                              {userDetail.profile.address && (
+                                <div className="flex items-center gap-1.5 text-muted-foreground">
+                                  <MapPin className="w-3.5 h-3.5 text-primary" /> {userDetail.profile.address}
+                                </div>
+                              )}
+                              {userDetail.profile.website && (
+                                <div className="flex items-center gap-1.5 text-muted-foreground">
+                                  <ExternalLink className="w-3.5 h-3.5 text-primary" />
+                                  <a href={userDetail.profile.website.startsWith('http') ? userDetail.profile.website : `https://${userDetail.profile.website}`} target="_blank" rel="noreferrer" className="hover:underline truncate">
+                                    {userDetail.profile.website}
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Published Listings / Services */}
+                          <div>
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
+                              Services & Listings ({userDetail.listings?.length || 0})
+                            </h4>
+                            {userDetail.listings?.length === 0 ? (
+                              <div className="p-8 text-center bg-muted/20 rounded-xl border border-border text-xs text-muted-foreground">
+                                No services or product listings posted yet.
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {userDetail.listings.map(l => (
+                                  <div key={l.id} className="p-3 rounded-xl bg-card border border-border flex gap-3 items-start">
+                                    {l.image_url ? (
+                                      <img src={l.image_url} alt={l.title} className="w-16 h-16 rounded-lg object-cover border border-border shrink-0" />
+                                    ) : (
+                                      <div className="w-16 h-16 rounded-lg bg-muted/40 border border-border flex items-center justify-center text-muted-foreground shrink-0">
+                                        <Package className="w-6 h-6" />
+                                      </div>
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                      <h5 className="font-semibold text-xs text-foreground truncate">{l.title}</h5>
+                                      <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">{l.description}</p>
+                                      <div className="flex items-center justify-between mt-2 pt-1 border-t border-border/50 text-[11px]">
+                                        <span className="font-bold text-primary">LKR {Number(l.price).toLocaleString()}</span>
+                                        {l.delivery_time && <span className="text-muted-foreground">{l.delivery_time}</span>}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-12 text-center bg-muted/20 rounded-xl border border-border space-y-2">
+                          <Store className="w-10 h-10 text-muted-foreground mx-auto opacity-50" />
+                          <h4 className="text-sm font-semibold text-foreground">No Seller Profile Configured</h4>
+                          <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                            This user is currently registered as a {userDetail.active_role === 'client' ? 'Buyer' : userDetail.active_role} and has not yet set up a seller storefront profile.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* TAB 3: ORDERS & TRANSACTIONS */}
+                  {detailTab === 'orders' && (
+                    <div className="space-y-6">
+                      {/* Orders as Seller */}
+                      <div>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+                          <span>Orders Received as Seller</span>
+                          <span className="px-1.5 py-0.2 rounded bg-purple-500/10 text-purple-600 text-[10px]">
+                            {userDetail.orders_as_seller?.length || 0}
+                          </span>
+                        </h4>
+                        {userDetail.orders_as_seller?.length === 0 ? (
+                          <div className="p-4 text-center bg-muted/20 rounded-xl border border-border text-xs text-muted-foreground">
+                            No orders fulfilled as seller.
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {userDetail.orders_as_seller.map(o => (
+                              <div key={o.id} className="p-3 rounded-xl bg-card border border-border flex items-center justify-between gap-3 text-xs">
+                                <div>
+                                  <div className="font-semibold text-foreground flex items-center gap-2">
+                                    <span>#{o.id} - {o.service_name}</span>
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-muted uppercase">
+                                      {o.status}
+                                    </span>
+                                  </div>
+                                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                                    Buyer: {o.buyer_name} • {o.created_at ? new Date(o.created_at).toLocaleDateString() : 'N/A'}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="font-bold text-foreground">LKR {Number(o.amount).toLocaleString()}</div>
+                                  <div className="text-[10px] text-muted-foreground">
+                                    {o.payout_settled ? (
+                                      <span className="text-emerald-600 font-semibold">Payout Settled</span>
+                                    ) : o.payment_verified ? (
+                                      <span className="text-blue-600 font-semibold">Payment In Escrow</span>
+                                    ) : (
+                                      <span className="text-amber-600 font-semibold">Payment Pending</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Orders as Buyer */}
+                      <div>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+                          <span>Orders Placed as Buyer</span>
+                          <span className="px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-600 text-[10px]">
+                            {userDetail.orders_as_buyer?.length || 0}
+                          </span>
+                        </h4>
+                        {userDetail.orders_as_buyer?.length === 0 ? (
+                          <div className="p-4 text-center bg-muted/20 rounded-xl border border-border text-xs text-muted-foreground">
+                            No orders placed as buyer.
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {userDetail.orders_as_buyer.map(o => (
+                              <div key={o.id} className="p-3 rounded-xl bg-card border border-border flex items-center justify-between gap-3 text-xs">
+                                <div>
+                                  <div className="font-semibold text-foreground flex items-center gap-2">
+                                    <span>#{o.id} - {o.service_name}</span>
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-muted uppercase">
+                                      {o.status}
+                                    </span>
+                                  </div>
+                                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                                    Seller: {o.seller_name} • {o.created_at ? new Date(o.created_at).toLocaleDateString() : 'N/A'}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="font-bold text-foreground">LKR {Number(o.amount).toLocaleString()}</div>
+                                  <div className="text-[10px] text-muted-foreground capitalize">
+                                    {o.payment_method?.replace('_', ' ') || 'card'}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TAB 4: REVIEWS & RATINGS */}
+                  {detailTab === 'reviews' && (
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-xl bg-muted/30 border border-border flex items-center justify-between">
+                        <div>
+                          <span className="text-xs text-muted-foreground block font-medium">Customer Satisfaction</span>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-2xl font-bold text-foreground">★ {userDetail.avg_rating || '0.0'}</span>
+                            <span className="text-xs text-muted-foreground">({userDetail.reviews_received?.length || 0} customer reviews)</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {userDetail.reviews_received?.length === 0 ? (
+                        <div className="p-8 text-center bg-muted/20 rounded-xl border border-border text-xs text-muted-foreground">
+                          No reviews received yet.
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {userDetail.reviews_received.map(r => (
+                            <div key={r.id} className="p-3 rounded-xl bg-card border border-border space-y-1 text-xs">
+                              <div className="flex items-center justify-between">
+                                <span className="font-semibold text-foreground">{r.reviewer_name}</span>
+                                <span className="font-bold text-amber-500">★ {r.rating} / 5</span>
+                              </div>
+                              {r.comment && (
+                                <p className="text-muted-foreground text-xs leading-relaxed">{r.comment}</p>
+                              )}
+                              {r.timestamp && (
+                                <div className="text-[10px] text-muted-foreground pt-1">
+                                  {new Date(r.timestamp).toLocaleDateString()}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            {userDetail && (
+              <div className="p-4 border-t border-border flex items-center justify-between bg-muted/20">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      handleToggleBan(userDetail);
+                      setUserDetail(prev => prev ? { ...prev, is_banned: !prev.is_banned } : prev);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                      userDetail.is_banned
+                        ? 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20'
+                        : 'bg-amber-500/10 text-amber-600 hover:bg-amber-500/20'
+                    }`}
+                  >
+                    <Ban className="w-3.5 h-3.5" />
+                    {userDetail.is_banned ? 'Unban Account' : 'Ban Account'}
+                  </button>
+
+                  {!userDetail.is_admin && (
+                    <button
+                      onClick={() => setDeleteTargetUser(userDetail)}
+                      className="px-3 py-1.5 rounded-xl text-xs font-semibold text-destructive hover:bg-destructive/10 transition-colors flex items-center gap-1.5"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Delete User
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => { setSelectedUserId(null); setUserDetail(null); }}
+                  className="px-4 py-2 text-xs font-semibold rounded-xl border border-border hover:bg-muted"
+                >
+                  Close
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

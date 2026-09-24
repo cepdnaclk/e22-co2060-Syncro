@@ -591,6 +591,60 @@ export interface AdminUser {
     orders_count: number;
 }
 
+export interface AdminUserDetail extends AdminUser {
+    profile?: {
+        id: number;
+        name: string;
+        logo?: string;
+        cover_image?: string;
+        description?: string;
+        address?: string;
+        phone?: string;
+        website?: string;
+        is_active: boolean;
+    } | null;
+    listings: Array<{
+        id: number;
+        title: string;
+        description: string;
+        price: number;
+        delivery_time?: string;
+        image_url?: string;
+        category_id?: number;
+    }>;
+    orders_as_seller: Array<{
+        id: number;
+        service_name: string;
+        amount: number;
+        status: string;
+        payment_method?: string;
+        payment_verified: boolean;
+        payout_settled: boolean;
+        buyer_name: string;
+        created_at?: string;
+    }>;
+    orders_as_buyer: Array<{
+        id: number;
+        service_name: string;
+        amount: number;
+        status: string;
+        payment_method?: string;
+        payment_verified: boolean;
+        seller_name: string;
+        created_at?: string;
+    }>;
+    reviews_received: Array<{
+        id: number;
+        rating: number;
+        comment?: string;
+        reviewer_name: string;
+        timestamp?: string;
+    }>;
+    avg_rating: number;
+    bid_requests_count: number;
+    bids_count: number;
+}
+
 export interface AdminOrder {
     id: number;
     service_name: string;
@@ -631,6 +685,10 @@ export const adminApi = {
         if (isBanned !== undefined) params.append('is_banned', String(isBanned));
         const res = await fetch(`${BASE_URL}/api/admin/users?${params.toString()}`, { headers: headers(true) });
         return handleResponse<{ total: number; users: AdminUser[] }>(res);
+    },
+    async getUserDetails(userId: number): Promise<AdminUserDetail> {
+        const res = await fetch(`${BASE_URL}/api/admin/users/${userId}`, { headers: headers(true) });
+        return handleResponse<AdminUserDetail>(res);
     },
     async toggleBan(userId: number): Promise<{ success: boolean; is_banned: boolean; message: string }> {
         const res = await fetch(`${BASE_URL}/api/admin/users/${userId}/toggle-ban`, {

@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
 
 from ..database import get_db
-from ..models.models import User, Profile, Order, OrderStatus, Listing, BidRequest, Notification
+from ..models.models import User, Profile, Order, OrderStatus, Listing, BidRequest, Notification, Review, Bid
 from .auth import get_current_admin_user, is_admin_email
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
@@ -165,6 +165,132 @@ def get_admin_users(
     return {
         "total": total_count,
         "users": user_list
+    }
+
+
+@router.get("/users/{user_id}")
+def get_admin_user_details(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(get_current_admin_user)
+):
+    target_user = db.query(User).filter(User.id == user_id).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    try:
+        profile = db.query(Profile).filter(Profile.user_id == target_user.id).first()
+    except Exception:
+        profile = None
+
+    try:
+        listings = db.query(Listing).filter(Listing.seller_id == target_user.id).all()
+    except Exception:
+        listings = []
+
+    try:
+        orders_as_seller = db.query(Order).filter(Order.seller_id == target_user.id).order_by(Order.id.desc()).all()
+    except Exception:
+        orders_as_seller = []
+
+    try:
+        orders_as_buyer = db.query(Order).filter(Order.buyer_id == target_user.id).order_by(Order.id.desc()).all()
+    except Exception:
+        orders_as_buyer = []
+
+    try:
+        reviews_received = db.query(Review).filter(Review.reviewee_id == target_user.id).order_by(Review.id.desc()).all()
+    except Exception:
+        reviews_received = []
+
+    try:
+        bid_requests_count = db.query(BidRequest).filter(BidRequest.user_id == target_user.id).count()
+    except Exception:
+        bid_requests_count = 0
+
+    try:
+        bids_count = db.query(Bid).filter(Bid.seller_id == target_user.id).count()
+    except Exception:
+        bids_count = 0
+
+    full_name = f"{target_user.first_name or ''} {target_user.last_name or ''}".strip()
+    role_str = target_user.active_role.value if hasattr(target_user.active_role, "value") else str(target_user.active_role or "client")
+
+    profile_data = None
+    if profile:
+        profile_data = {
+            "id": profile.id,
+            "name": profile.name,
+            "logo": profile.logo,
+            "cover_image": profile.cover_image,
+            "description": profile.description,
+            "address": profile.address,
+            "phone": profile.phone,
+            "website": profile.website,
+            "is_active": profile.is_active if profile.is_active is not None else True
+        }
+
+    return {
+        "id": target_user.id,
+        "email": target_user.email,
+        "first_name": target_user.first_name,
+        "last_name": target_user.last_name,
+        "full_name": full_name or (profile.name if profile else target_user.email.split('@')[0]),
+        "phone_number": target_user.phone_number,
+        "location": target_user.location,
+        "active_role": role_str,
+        "email_verified": bool(target_user.email_verified),
+        "is_banned": bool(getattr(target_user, "is_banned", False)),
+        "is_admin": is_admin_email(target_user.email),
+        "profile": profile_data,
+        "listings": [
+            {
+                "id": l.id,
+                "title": l.title,
+                "description": l.description,
+                "price": l.price,
+                "delivery_time": l.delivery_time,
+                "image_url": l.image_url,
+                "category_id": l.category_id
+            } for l in listings
+        ],
+        "orders_as_seller": [
+            {
+                "id": o.id,
+                "service_name": o.service_name,
+                "amount": o.amount,
+                "status": o.status.value if hasattr(o.status, "value") else str(o.status),
+                "payment_method": o.payment_method,
+                "payment_verified": bool(o.payment_verified),
+                "payout_settled": bool(o.payout_settled),
+                "buyer_name": f"{o.buyer.first_name or ''} {o.buyer.last_name or ''}".strip() if getattr(o, "buyer", None) else "Buyer",
+                "created_at": o.created_at.isoformat() if getattr(o, "created_at", None) else None
+            } for o in orders_as_seller
+        ],
+        "orders_as_buyer": [
+            {
+                "id": o.id,
+                "service_name": o.service_name,
+                "amount": o.amount,
+                "status": o.status.value if hasattr(o.status, "value") else str(o.status),
+                "payment_method": o.payment_method,
+                "payment_verified": bool(o.payment_verified),
+                "seller_name": f"{o.seller.first_name or ''} {o.seller.last_name or ''}".strip() if getattr(o, "seller", None) else "Seller",
+                "created_at": o.created_at.isoformat() if getattr(o, "created_at", None) else None
+            } for o in orders_as_buyer
+        ],
+        "reviews_received": [
+            {
+                "id": r.id,
+                "rating": r.rating,
+                "comment": r.comment,
+                "reviewer_name": f"{r.reviewer.first_name or ''} {r.reviewer.last_name or ''}".strip() if getattr(r, "reviewer", None) else "Anonymous",
+                "timestamp": r.timestamp.isoformat() if getattr(r, "timestamp", None) else None
+            } for r in reviews_received
+        ],
+        "avg_rating": round(sum(r.rating for r in reviews_received) / len(reviews_received), 1) if reviews_received else 0.0,
+        "bid_requests_count": bid_requests_count,
+        "bids_count": bids_count
     }
 
 
