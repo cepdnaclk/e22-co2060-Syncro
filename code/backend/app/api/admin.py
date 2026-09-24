@@ -145,6 +145,7 @@ def get_admin_users(
 
         full_name = f"{u.first_name or ''} {u.last_name or ''}".strip()
         role_str = u.active_role.value if hasattr(u.active_role, "value") else str(u.active_role or "client")
+        is_seller = (role_str == "seller") or (listings_count > 0)
         user_list.append({
             "id": u.id,
             "email": u.email,
@@ -154,10 +155,11 @@ def get_admin_users(
             "phone_number": u.phone_number,
             "location": u.location,
             "active_role": role_str,
+            "has_seller_account": is_seller,
             "email_verified": bool(u.email_verified),
             "is_banned": bool(getattr(u, "is_banned", False)),
             "is_admin": is_admin_email(u.email),
-            "profile_name": profile.name if profile else None,
+            "profile_name": (profile.name if profile else None) if is_seller else None,
             "listings_count": listings_count,
             "orders_count": buyer_orders_count + seller_orders_count
         })
@@ -204,9 +206,9 @@ def get_admin_user_details(
         reviews_received = []
 
     try:
-        bid_requests_count = db.query(BidRequest).filter(BidRequest.user_id == target_user.id).count()
+        bid_requests = db.query(BidRequest).filter(BidRequest.user_id == target_user.id).order_by(BidRequest.id.desc()).all()
     except Exception:
-        bid_requests_count = 0
+        bid_requests = []
 
     try:
         bids_count = db.query(Bid).filter(Bid.seller_id == target_user.id).count()
@@ -215,9 +217,10 @@ def get_admin_user_details(
 
     full_name = f"{target_user.first_name or ''} {target_user.last_name or ''}".strip()
     role_str = target_user.active_role.value if hasattr(target_user.active_role, "value") else str(target_user.active_role or "client")
+    is_seller = (role_str == "seller") or (len(listings) > 0)
 
     profile_data = None
-    if profile:
+    if profile and is_seller:
         profile_data = {
             "id": profile.id,
             "name": profile.name,
@@ -239,6 +242,7 @@ def get_admin_user_details(
         "phone_number": target_user.phone_number,
         "location": target_user.location,
         "active_role": role_str,
+        "has_seller_account": is_seller,
         "email_verified": bool(target_user.email_verified),
         "is_banned": bool(getattr(target_user, "is_banned", False)),
         "is_admin": is_admin_email(target_user.email),
@@ -253,7 +257,7 @@ def get_admin_user_details(
                 "image_url": l.image_url,
                 "category_id": l.category_id
             } for l in listings
-        ],
+        ] if is_seller else [],
         "orders_as_seller": [
             {
                 "id": o.id,
@@ -266,7 +270,7 @@ def get_admin_user_details(
                 "buyer_name": f"{o.buyer.first_name or ''} {o.buyer.last_name or ''}".strip() if getattr(o, "buyer", None) else "Buyer",
                 "created_at": o.created_at.isoformat() if getattr(o, "created_at", None) else None
             } for o in orders_as_seller
-        ],
+        ] if is_seller else [],
         "orders_as_buyer": [
             {
                 "id": o.id,
@@ -279,6 +283,16 @@ def get_admin_user_details(
                 "created_at": o.created_at.isoformat() if getattr(o, "created_at", None) else None
             } for o in orders_as_buyer
         ],
+        "bid_requests": [
+            {
+                "id": br.id,
+                "description": br.description,
+                "location": br.location,
+                "status": br.status.value if hasattr(br.status, "value") else str(br.status),
+                "bid_count": br.bid_count,
+                "created_at": br.created_at.isoformat() if getattr(br, "created_at", None) else None
+            } for br in bid_requests
+        ],
         "reviews_received": [
             {
                 "id": r.id,
@@ -287,10 +301,10 @@ def get_admin_user_details(
                 "reviewer_name": f"{r.reviewer.first_name or ''} {r.reviewer.last_name or ''}".strip() if getattr(r, "reviewer", None) else "Anonymous",
                 "timestamp": r.timestamp.isoformat() if getattr(r, "timestamp", None) else None
             } for r in reviews_received
-        ],
-        "avg_rating": round(sum(r.rating for r in reviews_received) / len(reviews_received), 1) if reviews_received else 0.0,
-        "bid_requests_count": bid_requests_count,
-        "bids_count": bids_count
+        ] if is_seller else [],
+        "avg_rating": round(sum(r.rating for r in reviews_received) / len(reviews_received), 1) if (is_seller and reviews_received) else 0.0,
+        "bid_requests_count": len(bid_requests),
+        "bids_count": bids_count if is_seller else 0
     }
 
 

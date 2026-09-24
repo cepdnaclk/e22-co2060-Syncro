@@ -583,6 +583,7 @@ export interface AdminUser {
     phone_number?: string;
     location?: string;
     active_role: string;
+    has_seller_account?: boolean;
     email_verified: boolean;
     is_banned: boolean;
     is_admin: boolean;
@@ -592,6 +593,7 @@ export interface AdminUser {
 }
 
 export interface AdminUserDetail extends AdminUser {
+    has_seller_account: boolean;
     profile?: {
         id: number;
         name: string;
@@ -631,6 +633,14 @@ export interface AdminUserDetail extends AdminUser {
         payment_method?: string;
         payment_verified: boolean;
         seller_name: string;
+        created_at?: string;
+    }>;
+    bid_requests?: Array<{
+        id: number;
+        description: string;
+        location?: string;
+        status: string;
+        bid_count: number;
         created_at?: string;
     }>;
     reviews_received: Array<{

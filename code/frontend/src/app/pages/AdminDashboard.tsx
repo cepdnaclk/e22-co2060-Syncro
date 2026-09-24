@@ -72,7 +72,7 @@ export function AdminDashboard() {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [userDetail, setUserDetail] = useState<AdminUserDetail | null>(null);
   const [loadingUserDetail, setLoadingUserDetail] = useState(false);
-  const [detailTab, setDetailTab] = useState<'profile' | 'seller' | 'orders' | 'reviews'>('profile');
+  const [detailTab, setDetailTab] = useState<'profile' | 'seller' | 'orders' | 'reviews' | 'rfps'>('profile');
 
   const handleOpenUserDetail = async (userId: number) => {
     setSelectedUserId(userId);
@@ -598,7 +598,7 @@ export function AdminDashboard() {
                                 </button>
 
                                 {/* Direct Public Storefront Link if Seller */}
-                                {(u.active_role === 'seller' || u.profile_name) && (
+                                {Boolean(u.has_seller_account || u.active_role === 'seller') && (
                                   <a
                                     href={`/seller/${u.id}`}
                                     target="_blank"
@@ -1033,7 +1033,7 @@ export function AdminDashboard() {
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
-                {userDetail && (userDetail.active_role === 'seller' || userDetail.profile) && (
+                {userDetail && Boolean(userDetail.has_seller_account) && (
                   <a
                     href={`/seller/${userDetail.id}`}
                     target="_blank"
@@ -1066,39 +1066,69 @@ export function AdminDashboard() {
               >
                 Account Overview
               </button>
-              <button
-                onClick={() => setDetailTab('seller')}
-                className={`pb-2.5 px-3 font-semibold border-b-2 transition-colors whitespace-nowrap flex items-center gap-1.5 ${
-                  detailTab === 'seller'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <Store className="w-3.5 h-3.5" />
-                Seller Storefront {userDetail?.listings?.length ? `(${userDetail.listings.length})` : ''}
-              </button>
-              <button
-                onClick={() => setDetailTab('orders')}
-                className={`pb-2.5 px-3 font-semibold border-b-2 transition-colors whitespace-nowrap flex items-center gap-1.5 ${
-                  detailTab === 'orders'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <ShoppingBag className="w-3.5 h-3.5" />
-                Orders & Transactions {userDetail ? `(${((userDetail.orders_as_seller?.length || 0) + (userDetail.orders_as_buyer?.length || 0))})` : ''}
-              </button>
-              <button
-                onClick={() => setDetailTab('reviews')}
-                className={`pb-2.5 px-3 font-semibold border-b-2 transition-colors whitespace-nowrap flex items-center gap-1.5 ${
-                  detailTab === 'reviews'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <Star className="w-3.5 h-3.5" />
-                Reviews {userDetail?.reviews_received?.length ? `(${userDetail.reviews_received.length})` : ''}
-              </button>
+
+              {userDetail?.has_seller_account ? (
+                <>
+                  <button
+                    onClick={() => setDetailTab('seller')}
+                    className={`pb-2.5 px-3 font-semibold border-b-2 transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+                      detailTab === 'seller'
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <Store className="w-3.5 h-3.5" />
+                    Seller Storefront {userDetail?.listings?.length ? `(${userDetail.listings.length})` : ''}
+                  </button>
+                  <button
+                    onClick={() => setDetailTab('orders')}
+                    className={`pb-2.5 px-3 font-semibold border-b-2 transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+                      detailTab === 'orders'
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <ShoppingBag className="w-3.5 h-3.5" />
+                    Orders & Transactions {userDetail ? `(${((userDetail.orders_as_seller?.length || 0) + (userDetail.orders_as_buyer?.length || 0))})` : ''}
+                  </button>
+                  <button
+                    onClick={() => setDetailTab('reviews')}
+                    className={`pb-2.5 px-3 font-semibold border-b-2 transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+                      detailTab === 'reviews'
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <Star className="w-3.5 h-3.5" />
+                    Reviews {userDetail?.reviews_received?.length ? `(${userDetail.reviews_received.length})` : ''}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setDetailTab('orders')}
+                    className={`pb-2.5 px-3 font-semibold border-b-2 transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+                      detailTab === 'orders'
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <ShoppingBag className="w-3.5 h-3.5" />
+                    Orders Placed {userDetail ? `(${userDetail.orders_as_buyer?.length || 0})` : ''}
+                  </button>
+                  <button
+                    onClick={() => setDetailTab('rfps')}
+                    className={`pb-2.5 px-3 font-semibold border-b-2 transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+                      detailTab === 'rfps'
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    Reverse Auction RFPs {userDetail ? `(${userDetail.bid_requests?.length || userDetail.bid_requests_count || 0})` : ''}
+                  </button>
+                </>
+              )}
             </div>
 
             {/* Modal Body */}
@@ -1118,20 +1148,39 @@ export function AdminDashboard() {
                           <span className="text-[11px] text-muted-foreground block font-medium">Orders Placed (Buyer)</span>
                           <span className="text-xl font-bold text-foreground">{userDetail.orders_as_buyer?.length || 0}</span>
                         </div>
-                        <div className="p-3 rounded-xl bg-muted/30 border border-border">
-                          <span className="text-[11px] text-muted-foreground block font-medium">Orders Sold (Seller)</span>
-                          <span className="text-xl font-bold text-foreground">{userDetail.orders_as_seller?.length || 0}</span>
-                        </div>
-                        <div className="p-3 rounded-xl bg-muted/30 border border-border">
-                          <span className="text-[11px] text-muted-foreground block font-medium">Active Services / Listings</span>
-                          <span className="text-xl font-bold text-foreground">{userDetail.listings?.length || 0}</span>
-                        </div>
-                        <div className="p-3 rounded-xl bg-muted/30 border border-border">
-                          <span className="text-[11px] text-muted-foreground block font-medium">Avg Review Rating</span>
-                          <span className="text-xl font-bold text-amber-500 flex items-center gap-1">
-                            ★ {userDetail.avg_rating || 'N/A'}
-                          </span>
-                        </div>
+                        {userDetail.has_seller_account ? (
+                          <>
+                            <div className="p-3 rounded-xl bg-muted/30 border border-border">
+                              <span className="text-[11px] text-muted-foreground block font-medium">Orders Sold (Seller)</span>
+                              <span className="text-xl font-bold text-foreground">{userDetail.orders_as_seller?.length || 0}</span>
+                            </div>
+                            <div className="p-3 rounded-xl bg-muted/30 border border-border">
+                              <span className="text-[11px] text-muted-foreground block font-medium">Active Services / Listings</span>
+                              <span className="text-xl font-bold text-foreground">{userDetail.listings?.length || 0}</span>
+                            </div>
+                            <div className="p-3 rounded-xl bg-muted/30 border border-border">
+                              <span className="text-[11px] text-muted-foreground block font-medium">Avg Review Rating</span>
+                              <span className="text-xl font-bold text-amber-500 flex items-center gap-1">
+                                ★ {userDetail.avg_rating || 'N/A'}
+                              </span>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="p-3 rounded-xl bg-muted/30 border border-border">
+                              <span className="text-[11px] text-muted-foreground block font-medium">Reverse Auction RFPs</span>
+                              <span className="text-xl font-bold text-foreground">{userDetail.bid_requests?.length || userDetail.bid_requests_count || 0}</span>
+                            </div>
+                            <div className="p-3 rounded-xl bg-muted/30 border border-border">
+                              <span className="text-[11px] text-muted-foreground block font-medium">Account Role</span>
+                              <span className="text-xl font-bold text-blue-600">Buyer</span>
+                            </div>
+                            <div className="p-3 rounded-xl bg-muted/30 border border-border">
+                              <span className="text-[11px] text-muted-foreground block font-medium">Location District</span>
+                              <span className="text-base font-bold text-foreground truncate block">{userDetail.location || 'Sri Lanka'}</span>
+                            </div>
+                          </>
+                        )}
                       </div>
 
                       {/* Detail Fields */}
@@ -1414,6 +1463,49 @@ export function AdminDashboard() {
                                   {new Date(r.timestamp).toLocaleDateString()}
                                 </div>
                               )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* TAB 5: BUYER REVERSE AUCTION RFPS */}
+                  {detailTab === 'rfps' && (
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-xl bg-muted/30 border border-border flex items-center justify-between">
+                        <div>
+                          <span className="text-xs text-muted-foreground block font-medium">Buyer Requests for Proposals (RFPs)</span>
+                          <span className="text-sm font-semibold text-foreground">
+                            {userDetail.bid_requests?.length || userDetail.bid_requests_count || 0} posted project requests
+                          </span>
+                        </div>
+                      </div>
+
+                      {(!userDetail.bid_requests || userDetail.bid_requests.length === 0) ? (
+                        <div className="p-8 text-center bg-muted/20 rounded-xl border border-border text-xs text-muted-foreground">
+                          No RFPs or auction requests posted by this buyer yet.
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {userDetail.bid_requests.map(br => (
+                            <div key={br.id} className="p-3.5 rounded-xl bg-card border border-border space-y-2 text-xs">
+                              <div className="flex items-center justify-between">
+                                <span className="font-semibold text-foreground flex items-center gap-2">
+                                  <span>RFP #{br.id}</span>
+                                  {br.location && <span className="text-[11px] text-muted-foreground">• {br.location}</span>}
+                                </span>
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary/10 text-primary uppercase">
+                                  {br.status}
+                                </span>
+                              </div>
+                              <p className="text-muted-foreground text-xs leading-relaxed bg-muted/20 p-2.5 rounded-lg border border-border">
+                                {br.description}
+                              </p>
+                              <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1">
+                                <span>{br.bid_count} competitive bids received</span>
+                                <span>{br.created_at ? new Date(br.created_at).toLocaleDateString() : 'N/A'}</span>
+                              </div>
                             </div>
                           ))}
                         </div>
