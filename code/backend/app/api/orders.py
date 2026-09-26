@@ -87,7 +87,12 @@ def create_order(order_data: OrderCreate, db: Session = Depends(get_db), current
 
 
 @router.patch("/{order_id}/status", response_model=OrderResponse)
-def update_order_status(order_id: int, status: OrderStatus, db: Session = Depends(get_db)):
+async def update_order_status(
+    order_id: int,
+    status: OrderStatus,
+    fastapi_req: Request,
+    db: Session = Depends(get_db)
+):
     order = db.query(Order).filter(Order.id == order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
@@ -95,6 +100,38 @@ def update_order_status(order_id: int, status: OrderStatus, db: Session = Depend
     order.status = status
     db.commit()
     db.refresh(order)
+
+    # Friendly status labels
+    status_label = "In Progress" if status == OrderStatus.IN_PROGRESS else "Completed" if status == OrderStatus.COMPLETED else "Cancelled" if status == OrderStatus.CANCELLED else status.value.capitalize()
+
+    # Create notification for buyer
+    notif = Notification(
+        user_id=order.buyer_id,
+        title=f"Order #{order.id} is {status_label}",
+        message=f"Your order for '{order.service_name}' has been marked as {status_label}.",
+        type=f"order_{status.value.replace('-', '_')}",
+        reference_id=order.id
+    )
+    db.add(notif)
+    db.commit()
+    db.refresh(notif)
+
+    # Emit socket notification so buyer dashboard reloads in real time
+    try:
+        sio = getattr(fastapi_req.app.state, 'sio', None)
+        if sio:
+            await sio.emit("new_notification", {
+                "id": notif.id,
+                "title": notif.title,
+                "text": notif.message,
+                "time": "Just now",
+                "unread": True,
+                "type": notif.type,
+                "reference_id": notif.reference_id
+            }, room=f"user_{order.buyer_id}")
+    except Exception as e:
+        print(f"Failed to emit status update socket notification: {e}")
+
     return _enrich_orders([order], db)[0]
 
 

@@ -16,6 +16,7 @@ import {
   Check,
   X,
   Send,
+  Play,
 } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
@@ -35,10 +36,31 @@ export function OrderDetail() {
   const [cancelling, setCancelling] = useState(false);
   const [responding, setResponding] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const handleUpdateStatus = async (newStatus: string) => {
+    if (!order) return;
+    setUpdatingStatus(true);
+    try {
+      const updated = await ordersApi.updateStatus(order.id, newStatus);
+      setOrder(updated);
+      toast.success(
+        newStatus === 'in-progress'
+          ? 'Order marked as In Progress! The buyer has been notified.'
+          : newStatus === 'completed'
+          ? 'Order marked as Completed!'
+          : `Order status updated to ${newStatus}.`
+      );
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update order status.');
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
 
   const fetchOrder = useCallback(async () => {
     if (!id) return;
@@ -219,12 +241,36 @@ export function OrderDetail() {
                 </p>
               </div>
             </div>
-            <Badge variant={
-              order.status === 'completed' ? 'success' :
-                order.status === 'in-progress' ? 'info' : 'warning'
-            }>
-              {order.status.replace('-', ' ')}
-            </Badge>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <Badge variant={
+                order.status === 'completed' ? 'success' :
+                  order.status === 'in-progress' ? 'info' : 'warning'
+              } className="text-sm px-3 py-1">
+                {order.status.replace('-', ' ')}
+              </Badge>
+              {isOrderSeller && order.status === 'pending' && (
+                <Button
+                  size="sm"
+                  onClick={() => handleUpdateStatus('in-progress')}
+                  disabled={updatingStatus}
+                  className="bg-[#0089BA] hover:bg-[#00739c] text-white gap-1.5 shadow-sm text-xs font-semibold h-8"
+                >
+                  {updatingStatus ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+                  Mark as In Progress
+                </Button>
+              )}
+              {isOrderSeller && order.status === 'in-progress' && (
+                <Button
+                  size="sm"
+                  onClick={() => handleUpdateStatus('completed')}
+                  disabled={updatingStatus}
+                  className="bg-[#00D084] hover:bg-[#00b572] text-white gap-1.5 shadow-sm text-xs font-semibold h-8"
+                >
+                  {updatingStatus ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
+                  Mark as Completed
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* ── Review prompt (buyer only, completed order, not yet reviewed) ── */}
@@ -357,8 +403,37 @@ export function OrderDetail() {
                               <div className={`w-0.5 h-12 ${item.completed ? 'bg-primary' : 'bg-muted'}`} />
                             )}
                           </div>
-                          <div className="flex-1 pb-6">
-                            <h4 className="font-semibold mb-1">{item.label}</h4>
+                          <div className="flex-1 pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div>
+                              <h4 className="font-semibold mb-0.5">{item.label}</h4>
+                              <p className="text-xs text-muted-foreground">
+                                {item.completed
+                                  ? (item.label === 'Completed' ? 'Service delivered & completed' : item.label === 'In Progress' ? 'Work is currently in progress' : 'Order successfully placed')
+                                  : (item.label === 'In Progress' ? 'Awaiting seller to start work' : 'Pending completion')}
+                              </p>
+                            </div>
+                            {!item.completed && isOrderSeller && order.status === 'pending' && item.label === 'In Progress' && (
+                              <Button
+                                size="sm"
+                                onClick={() => handleUpdateStatus('in-progress')}
+                                disabled={updatingStatus}
+                                className="bg-[#0089BA] hover:bg-[#00739c] text-white gap-1.5 text-xs h-8 font-semibold shadow-sm self-start sm:self-auto"
+                              >
+                                {updatingStatus ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+                                Start Order
+                              </Button>
+                            )}
+                            {!item.completed && isOrderSeller && order.status === 'in-progress' && item.label === 'Completed' && (
+                              <Button
+                                size="sm"
+                                onClick={() => handleUpdateStatus('completed')}
+                                disabled={updatingStatus}
+                                className="bg-[#00D084] hover:bg-[#00b572] text-white gap-1.5 text-xs h-8 font-semibold shadow-sm self-start sm:self-auto"
+                              >
+                                {updatingStatus ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
+                                Complete Order
+                              </Button>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -539,6 +614,55 @@ export function OrderDetail() {
                   </CardContent>
                 </Card>
               </motion.div>
+
+              {/* Order Actions for Seller */}
+              {isOrderSeller && (
+                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.35 }}>
+                  <Card className="border-primary/30 bg-primary/5">
+                    <CardHeader className="pb-3">
+                      <h3 className="text-base font-semibold">Order Management</h3>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {order.status === 'pending' && (
+                        <>
+                          <p className="text-xs text-muted-foreground">
+                            Ready to start? Mark this order as In Progress to update the buyer dashboard and show it as an active order.
+                          </p>
+                          <Button
+                            onClick={() => handleUpdateStatus('in-progress')}
+                            disabled={updatingStatus}
+                            className="w-full gap-2 bg-[#0089BA] hover:bg-[#00739c] text-white font-medium"
+                          >
+                            {updatingStatus ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
+                            Mark as In Progress
+                          </Button>
+                        </>
+                      )}
+                      {order.status === 'in-progress' && (
+                        <>
+                          <p className="text-xs text-muted-foreground">
+                            Work is underway. When you have finished the work, click below to mark it completed.
+                          </p>
+                          <Button
+                            onClick={() => handleUpdateStatus('completed')}
+                            disabled={updatingStatus}
+                            className="w-full gap-2 bg-[#00D084] hover:bg-[#00b572] text-white font-medium"
+                          >
+                            {updatingStatus ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                            Mark as Completed
+                          </Button>
+                        </>
+                      )}
+                      {order.status === 'completed' && (
+                        <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+                          <CheckCircle className="w-4 h-4" />
+                          This order has been completed.
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
 
               <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }}>
                 <Card>

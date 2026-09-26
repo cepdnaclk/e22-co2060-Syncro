@@ -14,7 +14,9 @@ import {
   Bot,
   Eye,
   Search,
-  Filter
+  Filter,
+  Play,
+  Loader2,
 } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
@@ -546,6 +548,26 @@ function SellerDashboard({ revenueData, orderData, businessName, isOrdersReceive
   const [loading, setLoading] = useState(true);
   const [orderFilter, setOrderFilter] = useState<'all' | 'pending' | 'in-progress' | 'completed'>('all');
   const [orderSearch, setOrderSearch] = useState('');
+  const [statusUpdatingId, setStatusUpdatingId] = useState<number | null>(null);
+
+  const handleUpdateOrderStatus = async (orderId: number, newStatus: string) => {
+    setStatusUpdatingId(orderId);
+    try {
+      const updated = await ordersApi.updateStatus(orderId, newStatus);
+      setOrders(prev => prev.map(o => o.id === orderId ? updated : o));
+      const { toast } = await import('sonner');
+      toast.success(
+        newStatus === 'in-progress'
+          ? `Order #${orderId} marked as In Progress! Buyer dashboard updated.`
+          : `Order #${orderId} marked as Completed!`
+      );
+    } catch (err: any) {
+      const { toast } = await import('sonner');
+      toast.error(err.message || 'Failed to update order status');
+    } finally {
+      setStatusUpdatingId(null);
+    }
+  };
 
   // ── Active status toggle ────────────────────────────────────
   const [isActive, setIsActive] = useState<boolean>(true);
@@ -838,7 +860,29 @@ function SellerDashboard({ revenueData, orderData, businessName, isOrdersReceive
                           )}
                         </td>
                         <td className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
+                          <div className="flex items-center justify-end gap-2 flex-wrap">
+                            {order.status === 'pending' && (
+                              <Button
+                                size="sm"
+                                className="h-8 px-2.5 text-xs gap-1 bg-[#0089BA] hover:bg-[#00739c] text-white font-medium"
+                                onClick={() => handleUpdateOrderStatus(order.id, 'in-progress')}
+                                disabled={statusUpdatingId === order.id}
+                              >
+                                {statusUpdatingId === order.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+                                In Progress
+                              </Button>
+                            )}
+                            {order.status === 'in-progress' && (
+                              <Button
+                                size="sm"
+                                className="h-8 px-2.5 text-xs gap-1 bg-[#00D084] hover:bg-[#00b572] text-white font-medium"
+                                onClick={() => handleUpdateOrderStatus(order.id, 'completed')}
+                                disabled={statusUpdatingId === order.id}
+                              >
+                                {statusUpdatingId === order.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
+                                Complete
+                              </Button>
+                            )}
                             <Link to={`/order/${order.id}`}>
                               <Button size="sm" variant="outline" className="h-8 px-2.5 text-xs gap-1">
                                 <Eye className="w-3.5 h-3.5" />
@@ -1034,12 +1078,36 @@ function SellerDashboard({ revenueData, orderData, businessName, isOrdersReceive
                         )}
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <Link to={`/order/${order.id}`}>
-                          <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs gap-1">
-                            <Eye className="w-3.5 h-3.5" />
-                            View
-                          </Button>
-                        </Link>
+                        <div className="flex items-center justify-end gap-2 flex-wrap">
+                          {order.status === 'pending' && (
+                            <Button
+                              size="sm"
+                              className="h-8 px-2.5 text-xs gap-1 bg-[#0089BA] hover:bg-[#00739c] text-white font-medium"
+                              onClick={() => handleUpdateOrderStatus(order.id, 'in-progress')}
+                              disabled={statusUpdatingId === order.id}
+                            >
+                              {statusUpdatingId === order.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+                              In Progress
+                            </Button>
+                          )}
+                          {order.status === 'in-progress' && (
+                            <Button
+                              size="sm"
+                              className="h-8 px-2.5 text-xs gap-1 bg-[#00D084] hover:bg-[#00b572] text-white font-medium"
+                              onClick={() => handleUpdateOrderStatus(order.id, 'completed')}
+                              disabled={statusUpdatingId === order.id}
+                            >
+                              {statusUpdatingId === order.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
+                              Complete
+                            </Button>
+                          )}
+                          <Link to={`/order/${order.id}`}>
+                            <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs gap-1">
+                              <Eye className="w-3.5 h-3.5" />
+                              View
+                            </Button>
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   ))}
