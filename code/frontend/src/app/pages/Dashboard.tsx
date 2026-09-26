@@ -99,6 +99,7 @@ import { MessageCircle } from 'lucide-react';
 // ────────────────────────── Buyer Dashboard ────────────────
 
 function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirstName }: BuyerDashboardProps) {
+  const { t } = useTranslation();
   const { authUser, socketOn, unreadMessageCount } = useApp();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
