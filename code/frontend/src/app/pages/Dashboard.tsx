@@ -99,14 +99,10 @@ import { MessageCircle } from 'lucide-react';
 // ────────────────────────── Buyer Dashboard ────────────────
 
 function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirstName }: BuyerDashboardProps) {
-  const { t } = useTranslation();
-  const stats = [
-    { label: t('dashboard.statActiveOrders'), value: '0', icon: ShoppingCart, iconColor: 'text-[#0057B8] dark:text-[#60A5FA]', bgColor: 'bg-[#EBF3FC] dark:bg-[#2563EB]/20' },
-    { label: t('dashboard.statCompleted'), value: '0', icon: CheckCircle, iconColor: 'text-[#00D084] dark:text-[#34D399]', bgColor: 'bg-[#E6FAF0] dark:bg-[#10B981]/20' },
-    { label: t('dashboard.statPendingPayment'), value: '0', icon: Clock, iconColor: 'text-[#F5A623] dark:text-[#FBBF24]', bgColor: 'bg-[#FEF6E9] dark:bg-[#D97706]/20' },
-    { label: t('dashboard.statMessages'), value: '0', icon: MessageSquare, iconColor: 'text-[#B620E0] dark:text-[#E879F9]', bgColor: 'bg-[#F8E9FB] dark:bg-[#C026D3]/20' },
-  ];
-
+  const { authUser, socketOn, unreadMessageCount } = useApp();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [orderFilter, setOrderFilter] = useState<'all' | 'pending' | 'in-progress' | 'completed'>('all');
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -114,10 +110,6 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
     if (hour < 18) return t('dashboard.greetingAfternoon');
     return t('dashboard.greetingEvening');
   };
-
-  const { authUser, socketOn } = useApp();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
 
   const loadOrders = useCallback(async () => {
     if (authUser?.userId) {
@@ -147,6 +139,67 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
     });
     return unsubscribe;
   }, [loadOrders, socketOn]);
+
+  const activeOrdersCount = orders.filter(o => {
+    const s = (o.status || '').trim().toLowerCase();
+    return s === 'in-progress' || s === 'in_progress';
+  }).length;
+
+  const completedOrdersCount = orders.filter(o => {
+    const s = (o.status || '').trim().toLowerCase();
+    return s === 'completed';
+  }).length;
+
+  const pendingPaymentOrdersCount = orders.filter(o => {
+    const s = (o.status || '').trim().toLowerCase();
+    return s === 'pending';
+  }).length;
+
+  const stats = [
+    {
+      id: 'active',
+      label: t('dashboard.statActiveOrders'),
+      value: loading ? '—' : activeOrdersCount.toString(),
+      icon: ShoppingCart,
+      iconColor: 'text-[#0057B8] dark:text-[#60A5FA]',
+      bgColor: 'bg-[#EBF3FC] dark:bg-[#2563EB]/20',
+      filterKey: 'in-progress' as const,
+    },
+    {
+      id: 'completed',
+      label: t('dashboard.statCompleted'),
+      value: loading ? '—' : completedOrdersCount.toString(),
+      icon: CheckCircle,
+      iconColor: 'text-[#00D084] dark:text-[#34D399]',
+      bgColor: 'bg-[#E6FAF0] dark:bg-[#10B981]/20',
+      filterKey: 'completed' as const,
+    },
+    {
+      id: 'pending',
+      label: t('dashboard.statPendingPayment'),
+      value: loading ? '—' : pendingPaymentOrdersCount.toString(),
+      icon: Clock,
+      iconColor: 'text-[#F5A623] dark:text-[#FBBF24]',
+      bgColor: 'bg-[#FEF6E9] dark:bg-[#D97706]/20',
+      filterKey: 'pending' as const,
+    },
+    {
+      id: 'messages',
+      label: t('dashboard.statMessages'),
+      value: (unreadMessageCount || 0).toString(),
+      icon: MessageSquare,
+      iconColor: 'text-[#B620E0] dark:text-[#E879F9]',
+      bgColor: 'bg-[#F8E9FB] dark:bg-[#C026D3]/20',
+      link: '/messages',
+    },
+  ];
+
+  const filteredOrders = orders.filter(o => {
+    const s = (o.status || '').trim().toLowerCase();
+    if (orderFilter === 'all') return true;
+    if (orderFilter === 'in-progress') return s === 'in-progress' || s === 'in_progress';
+    return s === orderFilter;
+  });
 
   return (
     <div className="space-y-8">
@@ -215,14 +268,27 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
-          <motion.div key={stat.label} {...fadeInUp} transition={{ delay: index * 0.1 }}>
-            <Card hover className="border border-border/60 shadow-sm rounded-xl overflow-hidden">
+        {stats.map((stat, index) => {
+          const isSelected = 'filterKey' in stat && orderFilter === stat.filterKey;
+          const cardInner = (
+            <Card
+              hover
+              onClick={() => {
+                if ('filterKey' in stat && stat.filterKey) {
+                  setOrderFilter(orderFilter === stat.filterKey ? 'all' : stat.filterKey);
+                }
+              }}
+              className={`border shadow-sm rounded-xl overflow-hidden cursor-pointer transition-all ${
+                isSelected
+                  ? 'border-primary ring-2 ring-primary/20 shadow-md'
+                  : 'border-border/60 hover:border-border'
+              }`}
+            >
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex flex-col h-full justify-between gap-4">
-                    <p className="text-[13px] text-gray-500">{stat.label}</p>
-                    <p className="text-[32px] font-bold text-gray-900 leading-none">{stat.value}</p>
+                    <p className="text-[13px] text-gray-500 dark:text-slate-400 font-medium">{stat.label}</p>
+                    <p className="text-[32px] font-bold text-gray-900 dark:text-white leading-none">{stat.value}</p>
                   </div>
                   <div className={`p-2.5 rounded-xl ${stat.bgColor} ${stat.iconColor} shrink-0`}>
                     <stat.icon className="w-[22px] h-[22px]" strokeWidth={2.5} />
@@ -230,8 +296,20 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
                 </div>
               </CardContent>
             </Card>
-          </motion.div>
-        ))}
+          );
+
+          return (
+            <motion.div key={stat.label} {...fadeInUp} transition={{ delay: index * 0.1 }}>
+              {'link' in stat && stat.link ? (
+                <Link to={stat.link} className="block">
+                  {cardInner}
+                </Link>
+              ) : (
+                cardInner
+              )}
+            </motion.div>
+          );
+        })}
       </div>
 
 
@@ -268,11 +346,47 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
 <motion.div {...fadeInUp} transition={{ delay: 0.4 }}>
   <Card>
     <CardHeader>
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">{t('dashboard.recentOrders')}</h3>
-        <Link to="/orders">
-          <Button variant="ghost" size="sm">{t('common.viewAll')}</Button>
-        </Link>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <h3 className="text-lg font-semibold">{t('dashboard.recentOrders')}</h3>
+          <Badge variant="outline" className="text-xs font-semibold">
+            {filteredOrders.length} {filteredOrders.length === 1 ? 'Order' : 'Orders'}
+          </Badge>
+        </div>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Button
+            variant={orderFilter === 'all' ? 'default' : 'outline'}
+            size="sm"
+            className="h-7 text-xs px-2.5"
+            onClick={() => setOrderFilter('all')}
+          >
+            All ({orders.length})
+          </Button>
+          <Button
+            variant={orderFilter === 'pending' ? 'default' : 'outline'}
+            size="sm"
+            className="h-7 text-xs px-2.5"
+            onClick={() => setOrderFilter('pending')}
+          >
+            Pending ({pendingPaymentOrdersCount})
+          </Button>
+          <Button
+            variant={orderFilter === 'in-progress' ? 'default' : 'outline'}
+            size="sm"
+            className="h-7 text-xs px-2.5"
+            onClick={() => setOrderFilter('in-progress')}
+          >
+            In Progress ({activeOrdersCount})
+          </Button>
+          <Button
+            variant={orderFilter === 'completed' ? 'default' : 'outline'}
+            size="sm"
+            className="h-7 text-xs px-2.5"
+            onClick={() => setOrderFilter('completed')}
+          >
+            Completed ({completedOrdersCount})
+          </Button>
+        </div>
       </div>
     </CardHeader>
     <CardContent>
@@ -295,13 +409,15 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
                   {t('dashboard.loadingOrders')}
                 </td>
               </tr>
-            ) : orders.length === 0 ? (
+            ) : filteredOrders.length === 0 ? (
               <tr>
                 <td colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
-                  {t('dashboard.noOrders')}
+                  {orderFilter !== 'all'
+                    ? `No ${orderFilter} orders found.`
+                    : t('dashboard.noOrders')}
                 </td>
               </tr>
-            ) : orders.map((order) => (
+            ) : filteredOrders.map((order) => (
               <tr key={order.id} className="border-b border-border last:border-0 hover:bg-muted/50">
                 <td className="py-3 px-4 text-sm font-medium">#{order.id}</td>
                 <td className="py-3 px-4 text-sm">{order.service_name}</td>
