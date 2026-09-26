@@ -17,6 +17,10 @@ import {
   X,
   Send,
   Play,
+  CreditCard,
+  ShieldCheck,
+  ExternalLink,
+  AlertTriangle,
 } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
@@ -248,6 +252,23 @@ export function OrderDetail() {
               } className="text-sm px-3 py-1">
                 {order.status.replace('-', ' ')}
               </Badge>
+              {/* Buyer Payment Action Button in Header */}
+              {isOrderBuyer && order.status !== 'cancelled' && !order.payment_verified && (
+                <Link to={`/payment?orderId=${order.id}`}>
+                  <Button
+                    size="sm"
+                    className="bg-[#00D084] hover:bg-[#00b572] text-white gap-1.5 shadow-sm text-xs font-semibold h-8"
+                  >
+                    <CreditCard className="w-3.5 h-3.5" />
+                    {order.payment_slip_url ? 'Update Payment Slip' : `Pay for Order #${order.id}`}
+                  </Button>
+                </Link>
+              )}
+              {order.payment_verified && (
+                <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                  <ShieldCheck className="w-3.5 h-3.5" /> Payment Verified
+                </span>
+              )}
               {isOrderSeller && order.status === 'pending' && (
                 <Button
                   size="sm"
@@ -313,6 +334,123 @@ export function OrderDetail() {
           <div className="grid lg:grid-cols-3 gap-6">
             {/* ── Main column ── */}
             <div className="lg:col-span-2 space-y-6">
+
+              {/* ── Buyer: Payment & Slip Status Card ── */}
+              {isOrderBuyer && order.status !== 'cancelled' && (
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+                  {order.payment_verified ? (
+                    <Card className="border-emerald-500/30 bg-emerald-500/5 shadow-xs">
+                      <CardContent className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-start gap-3.5">
+                          <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+                            <ShieldCheck className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-bold text-base text-foreground">Escrow Payment Secured</h3>
+                              <Badge variant="success" className="text-xs">Verified</Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Your payment of <strong className="text-foreground">LKR {order.amount.toLocaleString()}</strong> has been verified by administrators and safely locked in Syncro Escrow.
+                            </p>
+                          </div>
+                        </div>
+                        {order.payment_slip_url && (
+                          <a
+                            href={order.payment_slip_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1 shrink-0"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" /> View Slip
+                          </a>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ) : order.payment_slip_url ? (
+                    <Card className="border-amber-500/40 bg-amber-500/5 shadow-xs">
+                      <CardContent className="p-5 space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                          <div className="flex items-start gap-3.5">
+                            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                              <Clock className="w-6 h-6" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-bold text-base text-foreground">
+                                  Payment Slip Submitted — Awaiting Admin Verification
+                                </h3>
+                                <Badge variant="warning" className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30 text-xs">
+                                  Pending Review
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                                Your payment receipt slip for Order #{order.id} is queued in the Admin Portal. An administrator will verify your transaction reference <strong className="font-mono text-primary font-bold">#{order.id}</strong> shortly and update the order to In Progress.
+                              </p>
+                            </div>
+                          </div>
+                          <Link to={`/payment?orderId=${order.id}`} className="shrink-0">
+                            <Button size="sm" variant="outline" className="text-xs font-semibold h-8 border-amber-500/40 text-amber-800 dark:text-amber-300 hover:bg-amber-500/10">
+                              Update Slip
+                            </Button>
+                          </Link>
+                        </div>
+
+                        <div className="flex items-center justify-between p-3 bg-card border border-border rounded-xl text-xs">
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={order.payment_slip_url}
+                              alt="Payment slip preview"
+                              className="w-10 h-10 rounded-lg object-cover border border-border"
+                            />
+                            <div>
+                              <span className="font-medium text-foreground block">Uploaded Transfer Receipt</span>
+                              <span className="text-[11px] text-muted-foreground">Payment Reference: #{order.id}</span>
+                            </div>
+                          </div>
+                          <a
+                            href={order.payment_slip_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" /> Open Receipt
+                          </a>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <Card className="border-primary/40 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent shadow-sm">
+                      <CardContent className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-start gap-3.5">
+                          <div className="w-10 h-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center shrink-0 mt-0.5">
+                            <CreditCard className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-bold text-base text-foreground">
+                                Payment Required for Order #{order.id}
+                              </h3>
+                              <Badge variant="warning" className="text-xs">Unpaid</Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                              Please pay <strong className="text-primary font-bold">LKR {order.amount.toLocaleString()}</strong> via Bank of Ceylon direct transfer or LankaQR to activate this order. The seller will start working once verified.
+                            </p>
+                            <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-1 font-semibold">
+                              ⚠️ Note: You must enter #{order.id} as the payment reference in your bank app.
+                            </p>
+                          </div>
+                        </div>
+                        <Link to={`/payment?orderId=${order.id}`} className="shrink-0">
+                          <Button className="bg-[#00D084] hover:bg-[#00b572] text-white gap-2 font-semibold shadow-sm">
+                            <CreditCard className="w-4 h-4" /> Pay for Order #{order.id}
+                          </Button>
+                        </Link>
+                      </CardContent>
+                    </Card>
+                  )}
+                </motion.div>
+              )}
 
               {/* ── Buyer: Price Proposal Review Card ── */}
               {isOrderBuyer && order.proposal_status === 'pending' && order.proposed_price && (
@@ -610,7 +748,41 @@ export function OrderDetail() {
                           {order.status}
                         </Badge>
                       </div>
+                      <div className="flex justify-between text-sm pt-1 border-t border-border/50">
+                        <span className="text-muted-foreground">Payment</span>
+                        {order.payment_verified ? (
+                          <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
+                            <ShieldCheck className="w-3.5 h-3.5" /> Verified in Escrow
+                          </span>
+                        ) : order.payment_slip_url ? (
+                          <span className="text-xs font-semibold text-amber-600 flex items-center gap-1">
+                            <Clock className="w-3.5 h-3.5" /> Slip Pending Review
+                          </span>
+                        ) : (
+                          <span className="text-xs font-semibold text-destructive flex items-center gap-1">
+                            <AlertCircle className="w-3.5 h-3.5" /> Unpaid
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Payment Method</span>
+                        <span className="text-xs capitalize font-medium text-foreground">
+                          {order.payment_method?.replace('_', ' ') || 'Bank Transfer'}
+                        </span>
+                      </div>
                     </div>
+
+                    {/* Quick Pay / Update Slip Button in Sidebar */}
+                    {isOrderBuyer && order.status !== 'cancelled' && !order.payment_verified && (
+                      <div className="pt-2 border-t border-border">
+                        <Link to={`/payment?orderId=${order.id}`} className="block w-full">
+                          <Button className="w-full bg-[#00D084] hover:bg-[#00b572] text-white text-xs font-semibold gap-1.5 h-9 shadow-sm">
+                            <CreditCard className="w-4 h-4" />
+                            {order.payment_slip_url ? 'Update Payment Slip' : `Pay for Order #${order.id}`}
+                          </Button>
+                        </Link>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>

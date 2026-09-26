@@ -180,6 +180,10 @@ class OrderResponse(OrderBase):
     class Config:
         from_attributes = True
 
+class SubmitSlipRequest(BaseModel):
+    payment_slip_url: Optional[str] = None
+    payment_method: Optional[str] = "bank_transfer"
+
 class ProposePriceRequest(BaseModel):
     proposed_price: float = Field(..., gt=0)
     note: Optional[str] = None

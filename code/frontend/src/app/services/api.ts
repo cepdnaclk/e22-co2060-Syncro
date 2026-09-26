@@ -73,6 +73,11 @@ export interface Order {
     buyer_name?: string;
     seller_name?: string;
     listing_id?: number;
+    payment_method?: string;
+    payment_slip_url?: string | null;
+    payment_verified?: boolean;
+    payout_settled?: boolean;
+    rejection_reason?: string | null;
     proposed_price?: number | null;
     proposal_status?: 'pending' | 'accepted' | 'rejected' | null;
     proposal_note?: string | null;
@@ -234,6 +239,18 @@ export const ordersApi = {
         const res = await fetch(`${BASE_URL}/orders/${orderId}/cancel-proposal`, {
             method: 'POST',
             headers: headers(true),
+        });
+        return handleResponse<Order>(res);
+    },
+
+    async submitSlip(orderId: number, slipUrl: string, paymentMethod = 'bank_transfer'): Promise<Order> {
+        const res = await fetch(`${BASE_URL}/orders/${orderId}/submit-slip`, {
+            method: 'POST',
+            headers: headers(true),
+            body: JSON.stringify({
+                payment_slip_url: slipUrl,
+                payment_method: paymentMethod,
+            }),
         });
         return handleResponse<Order>(res);
     },

@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 from typing import List
 from ..database import get_db
 from ..models.models import Order, OrderStatus, User, Profile, Notification
-from ..schemas.schemas import OrderCreate, OrderResponse, ProposePriceRequest, RespondProposalRequest
-from ..api.auth import get_current_user_from_token
+from ..schemas.schemas import OrderCreate, OrderResponse, ProposePriceRequest, RespondProposalRequest, SubmitSlipRequest
+from ..api.auth import get_current_user_from_token, is_admin_email
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
 
@@ -267,4 +267,79 @@ def cancel_price_proposal(
     order.proposal_note = None
     db.commit()
     db.refresh(order)
+    return _enrich_orders([order], db)[0]
+
+
+@router.post("/{order_id}/submit-slip", response_model=OrderResponse)
+async def submit_order_payment_slip(
+    order_id: int,
+    data: SubmitSlipRequest,
+    fastapi_req: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_from_token)
+):
+    order = db.query(Order).filter(Order.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order.buyer_id != current_user.id and not is_admin_email(current_user.email):
+        raise HTTPException(status_code=403, detail="Only the buyer can submit a payment slip for this order")
+    if order.status == OrderStatus.CANCELLED:
+        raise HTTPException(status_code=400, detail="Cannot submit payment for a cancelled order")
+
+    order.payment_slip_url = data.payment_slip_url
+    order.payment_method = data.payment_method or "bank_transfer"
+    order.payment_verified = False
+    order.rejection_reason = None
+    db.commit()
+    db.refresh(order)
+
+    # Friendly service label
+    svc = order.service_name or f"Order #{order.id}"
+
+    # Notify buyer confirming receipt of slip
+    notif_buyer = Notification(
+        user_id=order.buyer_id,
+        title=f"Payment Slip Submitted for Order #{order.id}",
+        message=f"Your payment slip for Order #{order.id} ({svc}) has been submitted and is awaiting admin verification.",
+        type="payment_slip_submitted",
+        reference_id=order.id
+    )
+    db.add(notif_buyer)
+
+    # Notify seller that buyer paid / submitted slip
+    notif_seller = Notification(
+        user_id=order.seller_id,
+        title=f"Payment Submitted for Order #{order.id}",
+        message=f"Buyer submitted a payment slip for Order #{order.id} ({svc}). Awaiting admin verification.",
+        type="payment_slip_pending",
+        reference_id=order.id
+    )
+    db.add(notif_seller)
+    db.commit()
+
+    # Emit socket notifications
+    try:
+        sio = getattr(fastapi_req.app.state, 'sio', None)
+        if sio:
+            await sio.emit("new_notification", {
+                "id": notif_buyer.id,
+                "title": notif_buyer.title,
+                "text": notif_buyer.message,
+                "time": "Just now",
+                "unread": True,
+                "type": notif_buyer.type,
+                "reference_id": notif_buyer.reference_id
+            }, room=f"user_{order.buyer_id}")
+            await sio.emit("new_notification", {
+                "id": notif_seller.id,
+                "title": notif_seller.title,
+                "text": notif_seller.message,
+                "time": "Just now",
+                "unread": True,
+                "type": notif_seller.type,
+                "reference_id": notif_seller.reference_id
+            }, room=f"user_{order.seller_id}")
+    except Exception as e:
+        print(f"Failed to emit slip submission socket notification: {e}")
+
     return _enrich_orders([order], db)[0]

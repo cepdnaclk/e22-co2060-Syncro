@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
-import { CheckCircle, Download, MessageSquare, Home } from 'lucide-react';
+import { CheckCircle, Download, MessageSquare, Home, Package } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -114,22 +114,41 @@ export function PaymentSuccess() {
             </div>
 
             <div className="grid md:grid-cols-3 gap-3 pt-6 border-t border-border">
-              <Link to="/dashboard" className="md:col-span-1">
-                <Button variant="outline" className="w-full">
-                  <Home className="w-4 h-4 mr-2" />
-                  {t('payment_success.dashboard')}
-                </Button>
-              </Link>
+              {transaction.rawOrderId ? (
+                <Link to={`/order/${transaction.rawOrderId}`} className="md:col-span-1">
+                  <Button className="w-full bg-primary text-primary-foreground font-semibold">
+                    <Package className="w-4 h-4 mr-2" />
+                    View Order #{transaction.rawOrderId}
+                  </Button>
+                </Link>
+              ) : (
+                <Link to="/dashboard" className="md:col-span-1">
+                  <Button variant="outline" className="w-full">
+                    <Home className="w-4 h-4 mr-2" />
+                    {t('payment_success.dashboard')}
+                  </Button>
+                </Link>
+              )}
+              {transaction.rawOrderId && (
+                <Link to="/dashboard" className="md:col-span-1">
+                  <Button variant="outline" className="w-full">
+                    <Home className="w-4 h-4 mr-2" />
+                    {t('payment_success.dashboard')}
+                  </Button>
+                </Link>
+              )}
               <Link to="/messages" className="md:col-span-1">
                 <Button variant="outline" className="w-full">
                   <MessageSquare className="w-4 h-4 mr-2" />
                   {t('payment_success.contact_seller')}
                 </Button>
               </Link>
-              <Button className="w-full md:col-span-1">
-                <Download className="w-4 h-4 mr-2" />
-                {t('payment_success.download_receipt')}
-              </Button>
+              {!transaction.rawOrderId && (
+                <Button className="w-full md:col-span-1">
+                  <Download className="w-4 h-4 mr-2" />
+                  {t('payment_success.download_receipt')}
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
