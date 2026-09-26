@@ -267,19 +267,13 @@ export function Payment() {
                           <QrCode className="w-4 h-4 text-accent" />
                           {t('payment.lankaqr_title')}
                         </div>
-                        {/* Sample LankaQR graphic */}
-                        <div className="w-32 h-32 bg-white p-2 rounded-lg border border-border shadow-sm flex items-center justify-center mb-2 relative">
-                          <div className="w-full h-full bg-slate-900 rounded p-1.5 flex flex-col justify-between">
-                            <div className="flex justify-between">
-                              <div className="w-6 h-6 border-2 border-white rounded-sm"></div>
-                              <div className="w-6 h-6 border-2 border-white rounded-sm"></div>
-                            </div>
-                            <div className="text-[10px] font-bold text-center text-amber-400 tracking-wider">LANKAQR</div>
-                            <div className="flex justify-between">
-                              <div className="w-6 h-6 border-2 border-white rounded-sm"></div>
-                              <div className="w-3 h-3 bg-white rounded-xs"></div>
-                            </div>
-                          </div>
+                        {/* LankaQR graphic */}
+                        <div className="w-36 h-36 bg-white p-1.5 rounded-lg border border-border shadow-sm flex items-center justify-center mb-2">
+                          <img
+                            src="/images/lankaqr.jpg"
+                            alt="LankaQR Code"
+                            className="w-full h-full object-contain rounded"
+                          />
                         </div>
                         <p className="text-xs text-muted-foreground max-w-[200px]">
                           {t('payment.lankaqr_desc')}
