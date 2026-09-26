@@ -340,31 +340,49 @@ export function OrderDetail() {
                 <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
                   {order.payment_verified ? (
                     <Card className="border-emerald-500/30 bg-emerald-500/5 shadow-xs">
-                      <CardContent className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex items-start gap-3.5">
-                          <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
-                            <ShieldCheck className="w-6 h-6" />
+                      <CardContent className="p-5 space-y-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div className="flex items-start gap-3.5">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+                              <ShieldCheck className="w-6 h-6" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-bold text-base text-foreground">Escrow Payment Secured</h3>
+                                <Badge variant="success" className="text-xs">In Escrow</Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Your payment of <strong className="text-foreground">LKR {order.amount.toLocaleString()}</strong> has been verified by administrators and safely locked in Syncro Escrow.
+                              </p>
+                            </div>
+                          </div>
+                          {order.payment_slip_url && (
+                            <a
+                              href={order.payment_slip_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1 shrink-0"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" /> View Slip
+                            </a>
+                          )}
+                        </div>
+
+                        {/* Breakdown: Platform Fee and Send to Seller */}
+                        <div className="grid grid-cols-3 gap-3 p-3 bg-card border border-emerald-500/20 rounded-xl text-center text-xs">
+                          <div>
+                            <span className="text-muted-foreground block text-[11px]">Total Paid</span>
+                            <span className="font-bold text-foreground">LKR {order.amount.toLocaleString()}</span>
+                          </div>
+                          <div className="border-x border-border/60">
+                            <span className="text-primary font-medium block text-[11px]">Platform Fee (5%)</span>
+                            <span className="font-bold text-primary">LKR {Math.round(order.amount * 0.05).toLocaleString()}</span>
                           </div>
                           <div>
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-bold text-base text-foreground">Escrow Payment Secured</h3>
-                              <Badge variant="success" className="text-xs">Verified</Badge>
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Your payment of <strong className="text-foreground">LKR {order.amount.toLocaleString()}</strong> has been verified by administrators and safely locked in Syncro Escrow.
-                            </p>
+                            <span className="text-emerald-600 font-medium block text-[11px]">Send to Seller (95%)</span>
+                            <span className="font-bold text-emerald-600">LKR {(order.amount - Math.round(order.amount * 0.05)).toLocaleString()}</span>
                           </div>
                         </div>
-                        {order.payment_slip_url && (
-                          <a
-                            href={order.payment_slip_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1 shrink-0"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" /> View Slip
-                          </a>
-                        )}
                       </CardContent>
                     </Card>
                   ) : order.payment_slip_url ? (
@@ -449,6 +467,52 @@ export function OrderDetail() {
                       </CardContent>
                     </Card>
                   )}
+                </motion.div>
+              )}
+
+              {/* ── Seller: Escrow & Earnings Breakdown Card ── */}
+              {isOrderSeller && order.status !== 'cancelled' && (
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+                  <Card className={`border shadow-xs ${order.payment_verified ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-amber-500/30 bg-amber-500/5'}`}>
+                    <CardContent className="p-5 space-y-3">
+                      <div className="flex items-start gap-3.5">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${order.payment_verified ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : 'bg-amber-500/20 text-amber-600'}`}>
+                          {order.payment_verified ? <ShieldCheck className="w-6 h-6" /> : <Clock className="w-6 h-6" />}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-bold text-base text-foreground">
+                              {order.payment_verified ? 'Payment Verified & Secured in Escrow' : 'Buyer Payment Pending Verification'}
+                            </h3>
+                            <Badge variant={order.payment_verified ? 'success' : 'warning'} className="text-xs">
+                              {order.payment_verified ? 'In Escrow' : 'Pending Escrow'}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                            {order.payment_verified
+                              ? `Buyer payment of LKR ${order.amount.toLocaleString()} is verified and secured in Syncro Escrow. When you complete the order, LKR ${(order.amount - Math.round(order.amount * 0.05)).toLocaleString()} will be transferred to your account (after 5% platform fee of LKR ${Math.round(order.amount * 0.05).toLocaleString()}).`
+                              : `Buyer has not yet submitted an approved payment slip for this order. Once verified, funds will be locked in Escrow and you can begin work.`}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Financial breakdown */}
+                      <div className="grid grid-cols-3 gap-3 p-3 bg-card border border-border rounded-xl text-center text-xs">
+                        <div>
+                          <span className="text-muted-foreground block text-[11px]">Total Order</span>
+                          <span className="font-bold text-foreground">LKR {order.amount.toLocaleString()}</span>
+                        </div>
+                        <div className="border-x border-border/60">
+                          <span className="text-primary font-medium block text-[11px]">Platform Fee (5%)</span>
+                          <span className="font-bold text-primary">LKR {Math.round(order.amount * 0.05).toLocaleString()}</span>
+                        </div>
+                        <div>
+                          <span className="text-emerald-600 font-medium block text-[11px]">Your Net Payout (95%)</span>
+                          <span className="font-bold text-emerald-600">LKR {(order.amount - Math.round(order.amount * 0.05)).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </motion.div>
               )}
 
@@ -729,9 +793,9 @@ export function OrderDetail() {
                     </div>
                     <div className="border-t border-border pt-4 space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Amount</span>
+                        <span className="text-muted-foreground">Total Order Amount</span>
                         <div className="text-right">
-                          <span className="font-bold text-primary">LKR {order.amount.toLocaleString()}</span>
+                          <span className="font-bold text-foreground">LKR {order.amount.toLocaleString()}</span>
                           {order.proposal_status === 'pending' && order.proposed_price && (
                             <span className="block text-xs text-amber-600 dark:text-amber-400 font-medium">
                               (Prop: LKR {order.proposed_price.toLocaleString()})
@@ -739,7 +803,15 @@ export function OrderDetail() {
                           )}
                         </div>
                       </div>
-                      <div className="flex justify-between text-sm">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Platform Fee (5%)</span>
+                        <span className="font-semibold text-primary">LKR {Math.round(order.amount * 0.05).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-xs pb-1">
+                        <span className="text-muted-foreground">Net to Seller (95%)</span>
+                        <span className="font-bold text-emerald-600">LKR {(order.amount - Math.round(order.amount * 0.05)).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-sm pt-2 border-t border-border/50">
                         <span className="text-muted-foreground">Status</span>
                         <Badge variant={
                           order.status === 'completed' ? 'success' :

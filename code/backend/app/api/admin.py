@@ -378,7 +378,8 @@ def get_admin_orders(
         query = query.filter(Order.payment_verified == False, Order.status != OrderStatus.CANCELLED)
 
     if pending_payout_only:
-        query = query.filter(Order.status == OrderStatus.COMPLETED, Order.payout_settled == False)
+        # Include all orders where payment has been verified into Escrow (active in-progress, completed awaiting payout, and settled)
+        query = query.filter(Order.payment_verified == True, Order.status != OrderStatus.CANCELLED)
 
     orders = query.order_by(Order.created_at.desc()).all()
 
