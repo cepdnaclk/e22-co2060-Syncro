@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from ..models.models import Bid, Listing, Review, NotifiedSeller
-from .seller_filter import apply_hard_filters, _get_keywords
+from .seller_filter import apply_hard_filters, _get_keywords, get_districts_by_proximity
 
 def score_seller(seller_id: int, bid_request, db: Session) -> float:
     """
@@ -114,21 +114,96 @@ def select_notified_sellers(scored_pool: list[tuple[int, float]]) -> list[tuple[
     return selected
 
 
-def run_pipeline(buyer, bid_request, db: Session, exclude_seller_ids: set[int] | None = None) -> list[tuple[int, float, str]]:
-    """
-    Master pipeline executing Stages 1, 2, and 3.
-    Returns the list of 15 selected sellers to be notified.
-    """
-    # Stage 1: Hard Filters
-    matched_seller_ids = apply_hard_filters(buyer, bid_request, db, exclude_seller_ids)
+# Minimum number of Stage-1 candidates required before Stage 3 selection runs.
+# If fewer than this are found in the buyer's district the pipeline expands
+# outward to neighbouring districts ring-by-ring until this threshold is met.
+PIPELINE_MIN_SELLERS = 15
 
-    # Stage 2: Relevance Scoring
-    scored_pool = []
+
+def run_pipeline(
+    buyer,
+    bid_request,
+    db: Session,
+    exclude_seller_ids: set[int] | None = None,
+) -> list[tuple[int, float, str]]:
+    """
+    Master pipeline executing Stages 1, 2, and 3, with a proximity-fallback
+    expansion for Stage 1's location filter.
+
+    Stage 1 — Hard Filters (with expanding radius):
+        The pipeline first tries to find sellers in the exact district the
+        buyer requested.  If fewer than PIPELINE_MIN_SELLERS pass all three
+        hard filters, it expands the search to the immediately adjacent
+        districts (BFS hop 1), then their neighbours (hop 2), and so on,
+        until enough sellers are collected or all Sri Lanka districts have
+        been searched.
+
+        Sellers found in closer districts are always included; the expansion
+        only *adds* more districts — it never removes previously accepted
+        sellers.
+
+    Stage 2 — Relevance Scoring:
+        Every seller that survived Stage 1 (across all expanded districts) is
+        assigned a composite quality score.
+
+    Stage 3 — Notification Cap & Fairness Rotation:
+        Selects exactly 15 sellers: top 10 by score + 5 random fairness slots.
+
+    Returns
+    -------
+    list of (seller_id, score, slot_type) tuples, max length 15.
+    """
+    # ── Stage 1: Hard Filters with proximity-fallback expansion ─────────────────
+    #
+    # Get all districts ordered nearest-first from the buyer's requested location.
+    # Example for Kandy: ["kandy", "badulla", "kegalle", "kurunegala", "matale",
+    #                     "nuwara eliya", "anuradhapura", "colombo", ...]
+    ordered_districts = get_districts_by_proximity(bid_request.location)
+
+    # Build the allowed-districts set incrementally.  We add districts one
+    # BFS-ring at a time and re-run apply_hard_filters with the growing set.
+    # Because apply_hard_filters returns *all* sellers in the allowed set
+    # (not just the newly added ones) we simply replace matched_seller_ids
+    # each iteration — there is no risk of duplicates.
+    allowed_districts: set[str] = set()
+    matched_seller_ids: list[int] = []
+    ring_start = 0  # index into ordered_districts for the next ring to add
+
+    while ring_start < len(ordered_districts):
+        # Determine the BFS hop-level of the district at ring_start so we can
+        # add all districts at the same hop distance in a single iteration
+        # (avoids partial ring additions that would feel arbitrary).
+        current_hop_district = ordered_districts[ring_start]
+
+        # Collect all districts that belong to the same hop level by walking
+        # forward until we hit a district that is a neighbour of a district
+        # already in the set (i.e., belongs to the next hop level).
+        # Simpler approach: just add one district at a time and let BFS
+        # ordering guarantee correctness — each ordered_districts entry is
+        # already in ascending hop-distance order.
+        allowed_districts.add(current_hop_district)
+        ring_start += 1
+
+        # Re-run Stage 1 with the updated allowed set
+        matched_seller_ids = apply_hard_filters(
+            buyer,
+            bid_request,
+            db,
+            exclude_seller_ids,
+            allowed_districts=allowed_districts,
+        )
+
+        if len(matched_seller_ids) >= PIPELINE_MIN_SELLERS:
+            # Enough sellers found — stop expanding
+            break
+
+    # ── Stage 2: Relevance Scoring ───────────────────────────────────────────────
+    scored_pool: list[tuple[int, float]] = []
     for seller_id in matched_seller_ids:
         score = score_seller(seller_id, bid_request, db)
         scored_pool.append((seller_id, score))
 
-    # Stage 3: Selection
+    # ── Stage 3: Selection ───────────────────────────────────────────────────────
     selected_sellers = select_notified_sellers(scored_pool)
 
     return selected_sellers

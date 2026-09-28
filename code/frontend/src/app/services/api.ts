@@ -1,7 +1,7 @@
 // Central API service — all calls to the backend go through here.
 // In development: defaults to localhost:8000
 // In production: set VITE_API_URL to your Azure backend URL
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 // Helper: get stored JWT token
 function getToken(): string | null {

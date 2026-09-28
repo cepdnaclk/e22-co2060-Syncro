@@ -75,13 +75,13 @@ _sid_to_user: dict[str, int] = {}
 
 @sio.on("connect")
 async def connect(sid, environ):
-    print(f"✅ Socket connected: {sid}")
+    print(f"Socket connected: {sid}")
 
 
 @sio.on("disconnect")
 async def disconnect(sid):
     _sid_to_user.pop(sid, None)
-    print(f"❌ Socket disconnected: {sid}")
+    print(f"Socket disconnected: {sid}")
 
 
 @sio.on("identify")
@@ -91,7 +91,7 @@ async def on_identify(sid, data):
     if user_id:
         await sio.enter_room(sid, f"user_{user_id}")
         _sid_to_user[sid] = int(user_id)
-        print(f"🔔 User {user_id} joined room user_{user_id}")
+        print(f"User {user_id} joined room user_{user_id}")
 
 
 @sio.on("send_message")
@@ -149,10 +149,10 @@ async def on_send_message(sid, data):
         # Echo back to sender so all their open tabs update too
         await sio.emit("new_message", payload, room=f"user_{sender_id}")
 
-        print(f"💬 Message {msg.id}: user_{sender_id} → user_{receiver_id}")
+        print(f"Message {msg.id}: user_{sender_id} → user_{receiver_id}")
 
     except Exception as e:
-        print(f"❌ send_message error: {e}")
+        print(f"send_message error: {e}")
     finally:
         db.close()
 
