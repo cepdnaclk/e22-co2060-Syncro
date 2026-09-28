@@ -170,9 +170,13 @@ def get_matching_requests(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user_from_token)
 ):
-    if current_user.active_role != UserRole.SELLER:
-        raise HTTPException(status_code=403, detail="Only sellers can view matching requests")
-
+    # NOTE: We intentionally do NOT gate this on active_role == SELLER.
+    # A user can be notified as a seller but then view the page while their
+    # active_role toggle is still set to "client" (e.g. arriving from a
+    # notification click without having manually switched modes first).
+    # The NotifiedSeller join below already ensures the user only ever sees
+    # requests they were explicitly selected to receive — this is the real
+    # security boundary.
     from ..models.models import NotifiedSeller
 
     # Get requests where this seller was notified in the current active round
