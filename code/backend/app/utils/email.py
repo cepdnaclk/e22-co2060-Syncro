@@ -25,6 +25,7 @@ def send_otp_email(to_email: str, otp: str, purpose: str = "verification") -> No
             print("\n" + "=" * 80)
             print("[LOCAL DEV] GMAIL SMTP NOT CONFIGURED - OTP SIMULATION")
             print(f"To: {to_email}")
+            print(f"OTP: {otp}")  # Added so you can test locally!
             print("To send real emails, generate an App Password at myaccount.google.com")
             print("and set GMAIL_USER and GMAIL_APP_PASSWORD in backend/.env")
             print("=" * 80 + "\n")

@@ -8,12 +8,19 @@ eliminate clearly unqualified sellers *before* any notification is issued.
 Filter order (cheapest-to-most-expensive first):
   1. Active status  — profile.is_active must be True (or unset/NULL)
   2. Category/keyword match — seller must be relevant to the request category
-  3. Location match — seller district must match buyer's district (strict)
+  3. Location match — seller district must be within the allowed set of districts
+
+Location Proximity Fallback (new in Stage 1.3):
+  apply_hard_filters() accepts an `allowed_districts` set.  run_pipeline() in
+  ranking.py starts with only the buyer's own district in that set and expands
+  it ring-by-ring (using get_districts_by_proximity) until enough sellers are
+  found to satisfy the pipeline (≥15 candidates before Stage 3 selection).
 
 Only sellers who pass ALL three filters are returned.
 """
 
 import re
+from collections import deque
 from sqlalchemy.orm import Session
 
 
@@ -26,6 +33,97 @@ _SRI_LANKA_DISTRICTS = {
     "matara", "monaragala", "mullaitivu", "nuwara eliya", "polonnaruwa",
     "puttalam", "ratnapura", "trincomalee", "vavuniya",
 }
+
+
+# ── District Adjacency Map ────────────────────────────────────────────────────
+# Each key maps to the set of districts that directly share a border with it.
+# Used by get_districts_by_proximity() to perform a BFS expansion.
+_DISTRICT_NEIGHBOURS: dict[str, set[str]] = {
+    "ampara":       {"batticaloa", "polonnaruwa", "monaragala", "badulla"},
+    "anuradhapura": {"kurunegala", "puttalam", "mannar", "vavuniya",
+                     "polonnaruwa", "matale"},
+    "badulla":      {"kandy", "nuwara eliya", "monaragala", "ampara",
+                     "matale"},
+    "batticaloa":   {"ampara", "polonnaruwa", "trincomalee"},
+    "colombo":      {"gampaha", "kalutara", "kegalle"},
+    "galle":        {"matara", "kalutara", "ratnapura"},
+    "gampaha":      {"colombo", "kurunegala", "kegalle", "puttalam"},
+    "hambantota":   {"matara", "monaragala"},
+    "jaffna":       {"kilinochchi"},
+    "kalutara":     {"colombo", "galle", "ratnapura"},
+    "kandy":        {"matale", "nuwara eliya", "kegalle", "kurunegala",
+                     "badulla"},
+    "kegalle":      {"colombo", "gampaha", "kandy", "kurunegala", "ratnapura"},
+    "kilinochchi":  {"jaffna", "mannar", "mullaitivu", "vavuniya"},
+    "kurunegala":   {"anuradhapura", "gampaha", "kandy", "kegalle",
+                     "matale", "puttalam"},
+    "mannar":       {"anuradhapura", "kilinochchi", "vavuniya"},
+    "matale":       {"anuradhapura", "kandy", "kurunegala", "badulla",
+                     "polonnaruwa", "trincomalee"},
+    "matara":       {"galle", "hambantota", "ratnapura"},
+    "monaragala":   {"ampara", "badulla", "hambantota", "polonnaruwa"},
+    "mullaitivu":   {"kilinochchi", "trincomalee", "vavuniya"},
+    "nuwara eliya": {"kandy", "badulla", "ratnapura", "matale"},
+    "polonnaruwa":  {"ampara", "anuradhapura", "batticaloa", "matale",
+                     "monaragala", "trincomalee"},
+    "puttalam":     {"anuradhapura", "gampaha", "kurunegala"},
+    "ratnapura":    {"galle", "kalutara", "kegalle", "matara",
+                     "monaragala", "nuwara eliya"},
+    "trincomalee":  {"batticaloa", "matale", "mullaitivu", "polonnaruwa"},
+    "vavuniya":     {"anuradhapura", "kilinochchi", "mannar", "mullaitivu"},
+}
+
+
+def get_districts_by_proximity(origin_district: str | None) -> list[str]:
+    """
+    Return all Sri Lanka districts ordered from nearest to furthest relative
+    to `origin_district`, using a Breadth-First Search (BFS) over the
+    _DISTRICT_NEIGHBOURS adjacency graph.
+
+    The origin district itself is first in the returned list (hop distance 0).
+    Districts that share a border come next (hop distance 1), then their
+    neighbours that haven't been visited yet (hop distance 2), and so on.
+
+    If `origin_district` is None, unrecognised, or not in the district list,
+    the function returns all districts in arbitrary order so the pipeline can
+    still function without location data.
+
+    Parameters
+    ----------
+    origin_district : str | None
+        The district the buyer requested, as stored in BidRequest.location.
+        Will be normalised (lower-case, stripped) internally.
+
+    Returns
+    -------
+    list[str]
+        All 25 canonical district names ordered nearest-first from the origin.
+    """
+    normalised = _normalise_location(origin_district)
+
+    if not normalised or normalised not in _DISTRICT_NEIGHBOURS:
+        # Unknown / missing location — return all districts in arbitrary order
+        return list(_SRI_LANKA_DISTRICTS)
+
+    ordered: list[str] = []
+    visited: set[str] = set()
+    queue: deque[str] = deque([normalised])
+    visited.add(normalised)
+
+    while queue:
+        current = queue.popleft()
+        ordered.append(current)
+        for neighbour in sorted(_DISTRICT_NEIGHBOURS.get(current, set())):
+            if neighbour not in visited:
+                visited.add(neighbour)
+                queue.append(neighbour)
+
+    # Append any districts not reachable via the graph (safety net)
+    for district in _SRI_LANKA_DISTRICTS:
+        if district not in visited:
+            ordered.append(district)
+
+    return ordered
 
 
 def _normalise_location(location: str | None) -> str | None:
@@ -110,7 +208,7 @@ def category_or_keyword_match(
 
 def location_match(request_location: str | None, seller_location: str | None) -> bool:
     """
-    Hard Filter 3 — Sri Lanka district matching (strict mode).
+    Hard Filter 3 — Sri Lanka district matching (strict mode, single district).
 
     Compares the location the buyer specified through the AI assistant
     (stored in BidRequest.location) against the seller's static stored location
@@ -130,9 +228,41 @@ def location_match(request_location: str | None, seller_location: str | None) ->
     return request == seller
 
 
+def location_match_any(
+    seller_location: str | None,
+    allowed_districts: set[str],
+) -> bool:
+    """
+    Hard Filter 3 (multi-district variant) — used by the proximity-fallback path.
+
+    Returns True when the seller's normalised district is present in the
+    `allowed_districts` set.  The set is built iteratively by run_pipeline()
+    and grows ring-by-ring (BFS hop distance) until enough sellers are found.
+
+    Parameters
+    ----------
+    seller_location   : raw location string stored on the seller's User record
+    allowed_districts : set of normalised district names currently in scope
+
+    Returns
+    -------
+    bool — True if the seller is in any of the currently allowed districts.
+    """
+    seller = _normalise_location(seller_location)
+    if not seller or not allowed_districts:
+        return False
+    return seller in allowed_districts
+
+
 # ── Master Pipeline Function ──────────────────────────────────────────────────
 
-def apply_hard_filters(buyer, bid_request, db: Session, exclude_seller_ids: set[int] | None = None) -> list[int]:
+def apply_hard_filters(
+    buyer,
+    bid_request,
+    db: Session,
+    exclude_seller_ids: set[int] | None = None,
+    allowed_districts: set[str] | None = None,
+) -> list[int]:
     """
     Run all Stage 1 hard filters and return the list of seller_ids to notify.
 
@@ -142,6 +272,12 @@ def apply_hard_filters(buyer, bid_request, db: Session, exclude_seller_ids: set[
     bid_request        : BidRequest ORM object (newly created)
     db                 : SQLAlchemy database session
     exclude_seller_ids : set of seller IDs to exclude (used for resend rounds)
+    allowed_districts  : set of normalised district names that are currently in
+                         scope for the location filter.  When None (default) the
+                         function falls back to a single strict match against
+                         bid_request.location, preserving backward-compatibility.
+                         Pass a growing set from run_pipeline() to enable the
+                         proximity-fallback expansion.
 
     Returns
     -------
@@ -191,15 +327,20 @@ def apply_hard_filters(buyer, bid_request, db: Session, exclude_seller_ids: set[
         ):
             continue
 
-        # ── Filter 3: Location (strict district match) ───────────────────────
-        # Compare the AI-collected request location (bid_request.location)
-        # against the seller's static registered location (User.location).
+        # ── Filter 3: Location ────────────────────────────────────────────────
+        # When allowed_districts is provided (proximity-fallback mode) check
+        # membership in the expanding set; otherwise use the original strict
+        # single-district comparison for backward-compatibility.
         from ..models.models import User
         seller_user = db.query(User).filter(User.id == profile.user_id).first()
         seller_location = seller_user.location if seller_user else None
 
-        if not location_match(bid_request.location, seller_location):
-            continue
+        if allowed_districts is not None:
+            if not location_match_any(seller_location, allowed_districts):
+                continue
+        else:
+            if not location_match(bid_request.location, seller_location):
+                continue
 
         # Passed all filters
         matched_seller_ids.append(profile.user_id)
