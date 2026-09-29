@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { Search, Bell, Moon, Sun, LogOut, Settings, ChevronDown } from 'lucide-react';
+import { Search, Bell, Moon, Sun, LogOut, Settings, ChevronDown, Shield } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 export function TopNav() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { role, theme, setTheme, businessProfile, userProfile, authUser, logout, toggleRole, hasSellerAccount, notifications, markNotificationRead, markAllNotificationsRead } = useApp();
+  const { role, theme, setTheme, businessProfile, userProfile, authUser, isAdmin, logout, toggleRole, hasSellerAccount, notifications, markNotificationRead, markAllNotificationsRead } = useApp();
   const [roleToggling, setRoleToggling] = React.useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -35,6 +35,23 @@ export function TopNav() {
     if (newRole === role || roleToggling) return;
     setRoleToggling(true);
     try { await toggleRole(); } catch (e) { console.error('Role toggle failed', e); } finally { setRoleToggling(false); }
+  };
+
+  const handleNotificationClick = (notif: any) => {
+    if (!notif.is_read) {
+      markNotificationRead(notif.id);
+    }
+    setShowNotifications(false);
+    if (!notif.reference_id) return;
+
+    const notifType = notif.type || '';
+    if (notifType.startsWith('order_') || notifType.includes('order')) {
+      navigate(`/order/${notif.reference_id}`);
+    } else if (notifType === 'new_bid' || notifType === 'bid_accepted' || notifType === 'bid_rejected') {
+      navigate(`/bids/${notif.reference_id}`);
+    } else {
+      navigate('/bids');
+    }
   };
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
@@ -94,7 +111,7 @@ export function TopNav() {
                       <div className="p-4 text-center text-sm text-muted-foreground">{t('nav.noNotifications')}</div>
                     ) : (
                       notifications.map((notif) => (
-                        <div key={notif.id} onClick={() => { if (!notif.is_read) markNotificationRead(notif.id); if (notif.reference_id) navigate('/bids'); }} className={`p-4 border-b border-border hover:bg-accent/50 cursor-pointer ${!notif.is_read ? 'bg-primary/5' : ''}`}>
+                        <div key={notif.id} onClick={() => handleNotificationClick(notif)} className={`p-4 border-b border-border hover:bg-accent/50 cursor-pointer ${!notif.is_read ? 'bg-primary/5' : ''}`}>
                           <p className="text-sm">{notif.message}</p>
                           <p className="text-xs text-muted-foreground mt-1">{new Date(notif.created_at).toLocaleDateString()}</p>
                         </div>
@@ -106,6 +123,17 @@ export function TopNav() {
             </AnimatePresence>
           </div>
 
+
+          {isAdmin && (
+            <Link
+              to="/admin"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary border border-primary/25 hover:bg-primary/20 rounded-lg text-xs font-semibold tracking-wide transition-all shadow-sm"
+              title="Super Administrator Dashboard"
+            >
+              <Shield className="w-3.5 h-3.5" />
+              <span>Admin Portal</span>
+            </Link>
+          )}
 
           <button onClick={toggleTheme} className="p-2 hover:bg-accent rounded-lg transition-colors">
             {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
@@ -125,6 +153,11 @@ export function TopNav() {
             <AnimatePresence>
               {showProfileMenu && (
                 <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-xl shadow-lg overflow-hidden">
+                  {isAdmin && (
+                    <Link to="/admin" onClick={() => setShowProfileMenu(false)} className="flex items-center gap-3 px-4 py-3 hover:bg-accent text-primary font-semibold transition-colors border-b border-border">
+                      <Shield className="w-4 h-4" /><span className="text-sm">Admin Portal</span>
+                    </Link>
+                  )}
                   <Link to="/settings" onClick={() => setShowProfileMenu(false)} className="flex items-center gap-3 px-4 py-3 hover:bg-accent transition-colors">
                     <Settings className="w-4 h-4" /><span className="text-sm">{t('nav.settings')}</span>
                   </Link>

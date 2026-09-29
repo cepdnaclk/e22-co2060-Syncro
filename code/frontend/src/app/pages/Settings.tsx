@@ -77,12 +77,14 @@ export function Settings() {
       });
 
       // Update profile table fields (phone only) via PUT /profiles/me
+      // Update profile table fields (phone + logo) via PUT /profiles/me
       // NOTE: We intentionally do NOT write bio to profile.description here.
       // profile.description is reserved for seller onboarding (business description).
       // Writing buyer bio there falsely triggers the seller-account detection on login.
       await profilesApi.update({
         name:  `${firstName.trim()} ${lastName.trim()}`.trim(),
         phone: phone.trim() || undefined,
+        logo:  userProfile.avatar || undefined,
       });
 
       // Sync global context + localStorage
@@ -110,6 +112,7 @@ export function Settings() {
     setAvatarUploading(true);
     try {
       const { url } = await profilesApi.uploadImage(file);
+      await profilesApi.update({ logo: url });
       setUserProfile({ ...userProfile, avatar: url });
     } catch (err: any) {
       alert('Photo upload failed: ' + (err.message || 'Unknown error'));
@@ -117,6 +120,18 @@ export function Settings() {
       setAvatarUploading(false);
       // Reset input so the same file can be re-selected
       if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    setAvatarUploading(true);
+    try {
+      await profilesApi.update({ logo: '' });
+      setUserProfile({ ...userProfile, avatar: undefined });
+    } catch (err: any) {
+      alert('Failed to remove photo: ' + (err.message || 'Unknown error'));
+    } finally {
+      setAvatarUploading(false);
     }
   };
 
@@ -227,14 +242,27 @@ export function Settings() {
                         className="hidden"
                         onChange={handleAvatarChange}
                       />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => avatarInputRef.current?.click()}
-                        disabled={avatarUploading}
-                      >
-                        {avatarUploading ? 'Uploading...' : 'Change Photo'}
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => avatarInputRef.current?.click()}
+                          disabled={avatarUploading}
+                        >
+                          {avatarUploading ? 'Uploading...' : 'Change Photo'}
+                        </Button>
+                        {userProfile.avatar && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={handleRemoveAvatar}
+                            disabled={avatarUploading}
+                          >
+                            Remove
+                          </Button>
+                        )}
+                      </div>
                       <p className="text-xs text-muted-foreground mt-1">JPG, GIF or PNG. Max size 2MB.</p>
                     </div>
                   </div>

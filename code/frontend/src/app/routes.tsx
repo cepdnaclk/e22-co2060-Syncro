@@ -20,6 +20,8 @@ import { NotFound } from './pages/NotFound';
 import { PublicSellerProfile } from './pages/PublicSellerProfile';
 import { Bids } from './pages/Bids';
 import { BidDetail } from './pages/BidDetail';
+import { AdminDashboard } from './pages/AdminDashboard';
+import { AdminRoute } from './components/AdminRoute';
 
 import { TermsOfService } from './pages/TermsOfService';
 import { PrivacyPolicy } from './pages/PrivacyPolicy';
@@ -119,6 +121,14 @@ export const router = createBrowserRouter([
           { path: 'earnings', element: <Dashboard /> },
           { path: 'seller/:id', element: <PublicSellerProfile /> },
           { path: 'seller/preview', element: <PublicSellerProfile /> },
+          {
+            path: 'admin',
+            element: (
+              <AdminRoute>
+                <AdminDashboard />
+              </AdminRoute>
+            ),
+          },
         ],
       },
       {

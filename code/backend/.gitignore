@@ -4,3 +4,5 @@ __pycache__/
 *.zip
 syncro-logs*/
 .env
+.coverage
+htmlcov/

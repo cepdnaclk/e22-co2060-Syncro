@@ -29,6 +29,7 @@ class Token(BaseModel):
     user_id: int
     role: str
     first_name: str
+    is_admin: Optional[bool] = False
 
 class TokenData(BaseModel):
     email: Optional[str] = None
@@ -166,11 +167,29 @@ class OrderResponse(OrderBase):
     status: str
     payment_method: Optional[str] = None
     payment_slip_url: Optional[str] = None
+    payment_verified: Optional[bool] = False
+    payout_settled: Optional[bool] = False
+    payout_settled_at: Optional[datetime] = None
+    rejection_reason: Optional[str] = None
+    proposed_price: Optional[float] = None
+    proposal_status: Optional[str] = None
+    proposal_note: Optional[str] = None
     has_review: bool
     created_at: datetime
 
     class Config:
         from_attributes = True
+
+class SubmitSlipRequest(BaseModel):
+    payment_slip_url: Optional[str] = None
+    payment_method: Optional[str] = "bank_transfer"
+
+class ProposePriceRequest(BaseModel):
+    proposed_price: float = Field(..., gt=0)
+    note: Optional[str] = None
+
+class RespondProposalRequest(BaseModel):
+    action: str = Field(..., pattern="^(accept|reject)$")
 
 # --- Reviews ---
 class ReviewBase(BaseModel):

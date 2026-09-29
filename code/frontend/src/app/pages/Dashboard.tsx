@@ -11,19 +11,24 @@ import {
   MessageSquare,
   ArrowRight,
   Sparkles,
-  Bot
+  Bot,
+  Eye,
+  Search,
+  Filter,
+  Play,
+  Loader2,
 } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { useApp } from '../context/AppContext';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { SellerOnboarding } from '../components/SellerOnboarding';
 import { buyerActivities, revenueData, orderData } from '../services/mockData';
 import type { Activity } from '../services/mockData';
-import { ordersApi, profilesApi, Order } from '../services/api';
-import { useEffect, useState } from 'react';
+import { ordersApi, profilesApi, listingsApi, Order } from '../services/api';
+import { useEffect, useState, useCallback } from 'react';
 
 // ────────────────────────── Types ──────────────────────────
 
@@ -38,6 +43,7 @@ interface SellerDashboardProps {
   revenueData: { month: string; revenue: number }[];
   orderData: { month: string; orders: number }[];
   businessName: string;
+  isOrdersReceivedOnly?: boolean;
 }
 
 // ────────────────────────── Animation helpers ──────────────
@@ -59,8 +65,11 @@ function statusVariant(status: Order['status']): 'success' | 'info' | 'warning' 
 
 export function Dashboard() {
   const { role, businessProfile, hasSellerProfile, hasSellerAccount, showOnboarding, setShowOnboarding, userProfile } = useApp();
+  const location = useLocation();
 
-  if (role === 'buyer') {
+  const isOrdersReceived = location.pathname === '/orders-received';
+
+  if (role === 'buyer' && !isOrdersReceived) {
     return (
       <>
         <BuyerDashboard
@@ -81,6 +90,7 @@ export function Dashboard() {
       revenueData={revenueData}
       orderData={orderData}
       businessName={businessProfile?.name || 'Your Business'}
+      isOrdersReceivedOnly={isOrdersReceived}
     />
   );
 }
@@ -92,13 +102,10 @@ import { MessageCircle } from 'lucide-react';
 
 function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirstName }: BuyerDashboardProps) {
   const { t } = useTranslation();
-  const stats = [
-    { label: t('dashboard.statActiveOrders'), value: '0', icon: ShoppingCart, iconColor: 'text-[#0057B8] dark:text-[#60A5FA]', bgColor: 'bg-[#EBF3FC] dark:bg-[#2563EB]/20' },
-    { label: t('dashboard.statCompleted'), value: '0', icon: CheckCircle, iconColor: 'text-[#00D084] dark:text-[#34D399]', bgColor: 'bg-[#E6FAF0] dark:bg-[#10B981]/20' },
-    { label: t('dashboard.statPendingPayment'), value: '0', icon: Clock, iconColor: 'text-[#F5A623] dark:text-[#FBBF24]', bgColor: 'bg-[#FEF6E9] dark:bg-[#D97706]/20' },
-    { label: t('dashboard.statMessages'), value: '0', icon: MessageSquare, iconColor: 'text-[#B620E0] dark:text-[#E879F9]', bgColor: 'bg-[#F8E9FB] dark:bg-[#C026D3]/20' },
-  ];
-
+  const { authUser, socketOn, unreadMessageCount } = useApp();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [orderFilter, setOrderFilter] = useState<'all' | 'pending' | 'in-progress' | 'completed'>('all');
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -107,25 +114,95 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
     return t('dashboard.greetingEvening');
   };
 
-  const { authUser } = useApp();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function loadOrders() {
-      if (authUser?.userId) {
-        try {
-          const data = await ordersApi.getForUser(authUser.userId);
-          // Only show orders where user is buyer
-          setOrders(data.filter(o => o.buyer_id === authUser.userId));
-        } catch (error) {
-          console.error("Failed to load orders:", error);
-        }
+  const loadOrders = useCallback(async () => {
+    if (authUser?.userId) {
+      try {
+        const data = await ordersApi.getForUser(authUser.userId);
+        // Only show orders where user is buyer
+        setOrders(data.filter(o => Number(o.buyer_id) === Number(authUser.userId)));
+      } catch (error) {
+        console.error("Failed to load orders:", error);
+      } finally {
+        setLoading(false);
       }
+    } else {
       setLoading(false);
     }
-    loadOrders();
   }, [authUser?.userId]);
+
+  useEffect(() => {
+    loadOrders();
+  }, [loadOrders]);
+
+  useEffect(() => {
+    const unsubscribe = socketOn('new_notification', (data: any) => {
+      if (data && (data.type?.startsWith('order_') || data.type?.includes('price') || data.type?.includes('order'))) {
+        loadOrders();
+      }
+    });
+    return unsubscribe;
+  }, [loadOrders, socketOn]);
+
+  const activeOrdersCount = orders.filter(o => {
+    const s = (o.status || '').trim().toLowerCase();
+    return s === 'in-progress' || s === 'in_progress';
+  }).length;
+
+  const completedOrdersCount = orders.filter(o => {
+    const s = (o.status || '').trim().toLowerCase();
+    return s === 'completed';
+  }).length;
+
+  const pendingPaymentOrdersCount = orders.filter(o => {
+    const s = (o.status || '').trim().toLowerCase();
+    return s === 'pending';
+  }).length;
+
+  const stats = [
+    {
+      id: 'active',
+      label: t('dashboard.statActiveOrders'),
+      value: loading ? '—' : activeOrdersCount.toString(),
+      icon: ShoppingCart,
+      iconColor: 'text-[#0057B8] dark:text-[#60A5FA]',
+      bgColor: 'bg-[#EBF3FC] dark:bg-[#2563EB]/20',
+      filterKey: 'in-progress' as const,
+    },
+    {
+      id: 'completed',
+      label: t('dashboard.statCompleted'),
+      value: loading ? '—' : completedOrdersCount.toString(),
+      icon: CheckCircle,
+      iconColor: 'text-[#00D084] dark:text-[#34D399]',
+      bgColor: 'bg-[#E6FAF0] dark:bg-[#10B981]/20',
+      filterKey: 'completed' as const,
+    },
+    {
+      id: 'pending',
+      label: t('dashboard.statPendingPayment'),
+      value: loading ? '—' : pendingPaymentOrdersCount.toString(),
+      icon: Clock,
+      iconColor: 'text-[#F5A623] dark:text-[#FBBF24]',
+      bgColor: 'bg-[#FEF6E9] dark:bg-[#D97706]/20',
+      filterKey: 'pending' as const,
+    },
+    {
+      id: 'messages',
+      label: t('dashboard.statMessages'),
+      value: (unreadMessageCount || 0).toString(),
+      icon: MessageSquare,
+      iconColor: 'text-[#B620E0] dark:text-[#E879F9]',
+      bgColor: 'bg-[#F8E9FB] dark:bg-[#C026D3]/20',
+      link: '/messages',
+    },
+  ];
+
+  const filteredOrders = orders.filter(o => {
+    const s = (o.status || '').trim().toLowerCase();
+    if (orderFilter === 'all') return true;
+    if (orderFilter === 'in-progress') return s === 'in-progress' || s === 'in_progress';
+    return s === orderFilter;
+  });
 
   return (
     <div className="space-y-8">
@@ -194,14 +271,27 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
-          <motion.div key={stat.label} {...fadeInUp} transition={{ delay: index * 0.1 }}>
-            <Card hover className="border border-border/60 shadow-sm rounded-xl overflow-hidden">
+        {stats.map((stat, index) => {
+          const isSelected = 'filterKey' in stat && orderFilter === stat.filterKey;
+          const cardInner = (
+            <Card
+              hover
+              onClick={() => {
+                if ('filterKey' in stat && stat.filterKey) {
+                  setOrderFilter(orderFilter === stat.filterKey ? 'all' : stat.filterKey);
+                }
+              }}
+              className={`border shadow-sm rounded-xl overflow-hidden cursor-pointer transition-all ${
+                isSelected
+                  ? 'border-primary ring-2 ring-primary/20 shadow-md'
+                  : 'border-border/60 hover:border-border'
+              }`}
+            >
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex flex-col h-full justify-between gap-4">
-                    <p className="text-[13px] text-gray-500">{stat.label}</p>
-                    <p className="text-[32px] font-bold text-gray-900 leading-none">{stat.value}</p>
+                    <p className="text-[13px] text-gray-500 dark:text-slate-400 font-medium">{stat.label}</p>
+                    <p className="text-[32px] font-bold text-gray-900 dark:text-white leading-none">{stat.value}</p>
                   </div>
                   <div className={`p-2.5 rounded-xl ${stat.bgColor} ${stat.iconColor} shrink-0`}>
                     <stat.icon className="w-[22px] h-[22px]" strokeWidth={2.5} />
@@ -209,20 +299,97 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
                 </div>
               </CardContent>
             </Card>
-          </motion.div>
-        ))}
+          );
+
+          return (
+            <motion.div key={stat.label} {...fadeInUp} transition={{ delay: index * 0.1 }}>
+              {'link' in stat && stat.link ? (
+                <Link to={stat.link} className="block">
+                  {cardInner}
+                </Link>
+              ) : (
+                cardInner
+              )}
+            </motion.div>
+          );
+        })}
       </div>
 
+
+{/* Pending Price Proposals Alert Banner for Buyer */}
+{orders.some(o => o.proposal_status === 'pending' && o.proposed_price) && (
+  <motion.div {...fadeInUp}>
+    <Card className="border-amber-500/40 bg-amber-500/10 shadow-sm">
+      <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+            <DollarSign className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="font-semibold text-sm text-foreground">
+              Price Revision Proposed by Seller
+            </h4>
+            <p className="text-xs text-muted-foreground">
+              {orders.filter(o => o.proposal_status === 'pending' && o.proposed_price).length} order(s) have a price change waiting for your approval.
+            </p>
+          </div>
+        </div>
+        <Link to={`/order/${orders.find(o => o.proposal_status === 'pending' && o.proposed_price)?.id}`}>
+          <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white font-medium text-xs gap-1.5 whitespace-nowrap">
+            <DollarSign className="w-3.5 h-3.5" />
+            Review Proposal
+          </Button>
+        </Link>
+      </CardContent>
+    </Card>
+  </motion.div>
+)}
 
 {/* Recent Orders */}
 <motion.div {...fadeInUp} transition={{ delay: 0.4 }}>
   <Card>
     <CardHeader>
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">{t('dashboard.recentOrders')}</h3>
-        <Link to="/orders">
-          <Button variant="ghost" size="sm">{t('common.viewAll')}</Button>
-        </Link>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <h3 className="text-lg font-semibold">{t('dashboard.recentOrders')}</h3>
+          <Badge variant="outline" className="text-xs font-semibold">
+            {filteredOrders.length} {filteredOrders.length === 1 ? 'Order' : 'Orders'}
+          </Badge>
+        </div>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Button
+            variant={orderFilter === 'all' ? 'default' : 'outline'}
+            size="sm"
+            className="h-7 text-xs px-2.5"
+            onClick={() => setOrderFilter('all')}
+          >
+            All ({orders.length})
+          </Button>
+          <Button
+            variant={orderFilter === 'pending' ? 'default' : 'outline'}
+            size="sm"
+            className="h-7 text-xs px-2.5"
+            onClick={() => setOrderFilter('pending')}
+          >
+            Pending ({pendingPaymentOrdersCount})
+          </Button>
+          <Button
+            variant={orderFilter === 'in-progress' ? 'default' : 'outline'}
+            size="sm"
+            className="h-7 text-xs px-2.5"
+            onClick={() => setOrderFilter('in-progress')}
+          >
+            In Progress ({activeOrdersCount})
+          </Button>
+          <Button
+            variant={orderFilter === 'completed' ? 'default' : 'outline'}
+            size="sm"
+            className="h-7 text-xs px-2.5"
+            onClick={() => setOrderFilter('completed')}
+          >
+            Completed ({completedOrdersCount})
+          </Button>
+        </div>
       </div>
     </CardHeader>
     <CardContent>
@@ -235,22 +402,25 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
               <th className="text-left py-3 px-4 text-sm font-semibold">{t('dashboard.sellerCol')}</th>
               <th className="text-left py-3 px-4 text-sm font-semibold">{t('common.status')}</th>
               <th className="text-right py-3 px-4 text-sm font-semibold">{t('common.amount')}</th>
+              <th className="text-right py-3 px-4 text-sm font-semibold">{t('common.actions', 'Action')}</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                <td colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
                   {t('dashboard.loadingOrders')}
                 </td>
               </tr>
-            ) : orders.length === 0 ? (
+            ) : filteredOrders.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
-                  {t('dashboard.noOrders')}
+                <td colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
+                  {orderFilter !== 'all'
+                    ? `No ${orderFilter} orders found.`
+                    : t('dashboard.noOrders')}
                 </td>
               </tr>
-            ) : orders.map((order) => (
+            ) : filteredOrders.map((order) => (
               <tr key={order.id} className="border-b border-border last:border-0 hover:bg-muted/50">
                 <td className="py-3 px-4 text-sm font-medium">#{order.id}</td>
                 <td className="py-3 px-4 text-sm">{order.service_name}</td>
@@ -260,7 +430,31 @@ function BuyerDashboard({ orderData, hasSellerProfile, onStartSelling, userFirst
                     {order.status}
                   </Badge>
                 </td>
-                <td className="py-3 px-4 text-sm font-semibold text-right">LKR {order.amount}</td>
+                <td className="py-3 px-4 text-sm font-semibold text-right">
+                  <span>LKR {order.amount.toLocaleString()}</span>
+                  {order.proposal_status === 'pending' && order.proposed_price && (
+                    <span className="block text-xs font-medium text-amber-600 dark:text-amber-400">
+                      Prop: LKR {order.proposed_price.toLocaleString()}
+                    </span>
+                  )}
+                </td>
+                <td className="py-3 px-4 text-right">
+                  {order.proposal_status === 'pending' && order.proposed_price ? (
+                    <Link to={`/order/${order.id}`}>
+                      <Button size="sm" className="h-8 px-2.5 text-xs gap-1 bg-amber-500 hover:bg-amber-600 text-white font-semibold">
+                        <DollarSign className="w-3.5 h-3.5" />
+                        Review Price
+                      </Button>
+                    </Link>
+                  ) : (
+                    <Link to={`/order/${order.id}`}>
+                      <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs gap-1">
+                        <Eye className="w-3.5 h-3.5" />
+                        View
+                      </Button>
+                    </Link>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -346,12 +540,34 @@ function SyncroChatTriggerButton() {
 
 // ────────────────────────── Seller Dashboard ───────────────
 
-function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboardProps) {
+function SellerDashboard({ revenueData, orderData, businessName, isOrdersReceivedOnly }: SellerDashboardProps) {
   const { t } = useTranslation();
-  const { authUser } = useApp();
+  const { authUser, socketOn } = useApp();
   const [orders, setOrders] = useState<Order[]>([]);
   const [activeListingsCount, setActiveListingsCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const [orderFilter, setOrderFilter] = useState<'all' | 'pending' | 'in-progress' | 'completed'>('all');
+  const [orderSearch, setOrderSearch] = useState('');
+  const [statusUpdatingId, setStatusUpdatingId] = useState<number | null>(null);
+
+  const handleUpdateOrderStatus = async (orderId: number, newStatus: string) => {
+    setStatusUpdatingId(orderId);
+    try {
+      const updated = await ordersApi.updateStatus(orderId, newStatus);
+      setOrders(prev => prev.map(o => o.id === orderId ? updated : o));
+      const { toast } = await import('sonner');
+      toast.success(
+        newStatus === 'in-progress'
+          ? `Order #${orderId} marked as In Progress! Buyer dashboard updated.`
+          : `Order #${orderId} marked as Completed!`
+      );
+    } catch (err: any) {
+      const { toast } = await import('sonner');
+      toast.error(err.message || 'Failed to update order status');
+    } finally {
+      setStatusUpdatingId(null);
+    }
+  };
 
   // ── Active status toggle ────────────────────────────────────
   const [isActive, setIsActive] = useState<boolean>(true);
@@ -397,26 +613,39 @@ function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboa
   };
   // ───────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    async function loadSellerData() {
-      if (authUser?.userId) {
-        try {
-          const [userOrders, allListings] = await Promise.all([
-            ordersApi.getForUser(authUser.userId),
-            listingsApi.getAll().catch(() => [])
-          ]);
-          const sellerOrders = userOrders.filter(o => o.seller_id === authUser.userId);
-          setOrders(sellerOrders);
-          const myActiveListings = allListings.filter(l => l.seller_id === authUser.userId);
-          setActiveListingsCount(myActiveListings.length);
-        } catch (error) {
-          console.error("Failed to load seller dashboard data:", error);
-        }
+  const loadSellerData = useCallback(async () => {
+    if (authUser?.userId) {
+      try {
+        const [userOrders, allListings] = await Promise.all([
+          ordersApi.getForUser(authUser.userId),
+          listingsApi.getAll().catch(() => [])
+        ]);
+        const sellerOrders = userOrders.filter(o => Number(o.seller_id) === Number(authUser.userId));
+        setOrders(sellerOrders);
+        const myActiveListings = allListings.filter(l => Number(l.seller_id) === Number(authUser.userId));
+        setActiveListingsCount(myActiveListings.length);
+      } catch (error) {
+        console.error("Failed to load seller dashboard data:", error);
+      } finally {
+        setLoading(false);
       }
+    } else {
       setLoading(false);
     }
-    loadSellerData();
   }, [authUser?.userId]);
+
+  useEffect(() => {
+    loadSellerData();
+  }, [loadSellerData]);
+
+  useEffect(() => {
+    const unsubscribe = socketOn('new_notification', (data: any) => {
+      if (data && (data.type?.startsWith('order_') || data.type?.includes('price') || data.type?.includes('order'))) {
+        loadSellerData();
+      }
+    });
+    return unsubscribe;
+  }, [loadSellerData, socketOn]);
 
   const completedEarnings = orders
     .filter(o => o.status?.toLowerCase() === 'completed')
@@ -451,6 +680,235 @@ function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboa
       color: 'text-teal-500',
     },
   ];
+
+  const filteredOrders = orders.filter(o => {
+    const statusMatch = orderFilter === 'all' || (o.status?.toLowerCase() === orderFilter);
+    const searchMatch = !orderSearch ||
+      o.service_name.toLowerCase().includes(orderSearch.toLowerCase()) ||
+      (o.buyer_name || '').toLowerCase().includes(orderSearch.toLowerCase()) ||
+      String(o.id).includes(orderSearch);
+    return statusMatch && searchMatch;
+  });
+
+  if (isOrdersReceivedOnly) {
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-bold">{t('dashboard.ordersReceivedTitle', 'Orders Received')}</h1>
+              <Badge variant="outline" className="text-sm font-semibold px-2.5 py-0.5">
+                {orders.length} {orders.length === 1 ? 'Order' : 'Orders'}
+              </Badge>
+            </div>
+            <p className="text-muted-foreground mt-1">
+              {t('dashboard.ordersReceivedSubtitle', 'Manage incoming customer orders, review deliverables, and update progress.')}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Link to="/dashboard">
+              <Button variant="outline" size="sm">
+                <ArrowRight className="w-4 h-4 mr-1.5 rotate-180" />
+                {t('dashboard.backToDashboard', 'Dashboard Overview')}
+              </Button>
+            </Link>
+          </div>
+        </div>
+
+        {/* Quick Order Stats Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Total Received</p>
+                <p className="text-2xl font-bold">{orders.length}</p>
+              </div>
+              <div className="p-2.5 rounded-lg bg-purple-500/10 text-purple-600">
+                <ShoppingCart className="w-5 h-5" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Pending Action</p>
+                <p className="text-2xl font-bold text-amber-600">
+                  {orders.filter(o => o.status?.toLowerCase() === 'pending').length}
+                </p>
+              </div>
+              <div className="p-2.5 rounded-lg bg-amber-500/10 text-amber-600">
+                <Clock className="w-5 h-5" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">In Progress</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {orders.filter(o => o.status?.toLowerCase() === 'in-progress').length}
+                </p>
+              </div>
+              <div className="p-2.5 rounded-lg bg-blue-500/10 text-blue-600">
+                <Package className="w-5 h-5" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Completed</p>
+                <p className="text-2xl font-bold text-emerald-600">
+                  {orders.filter(o => o.status?.toLowerCase() === 'completed').length}
+                </p>
+              </div>
+              <div className="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-600">
+                <CheckCircle className="w-5 h-5" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Filters & Orders Table */}
+        <Card>
+          <CardHeader className="pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              {/* Search */}
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search service, buyer, or #ID..."
+                  value={orderSearch}
+                  onChange={e => setOrderSearch(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              {/* Status Tabs */}
+              <div className="flex items-center gap-1.5 p-1 bg-muted rounded-lg text-xs font-medium self-start sm:self-auto">
+                {(['all', 'pending', 'in-progress', 'completed'] as const).map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setOrderFilter(tab)}
+                    className={`px-3 py-1.5 rounded-md transition-all capitalize ${
+                      orderFilter === tab
+                        ? 'bg-background text-foreground shadow-sm font-semibold'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {tab === 'all' ? 'All Orders' : tab.replace('-', ' ')}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-3 px-4 text-sm font-semibold">{t('dashboard.orderId', 'Order ID')}</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold">{t('dashboard.service', 'Service')}</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold">{t('dashboard.buyerCol', 'Buyer')}</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold">Date</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold">{t('common.status', 'Status')}</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold">{t('common.amount', 'Amount')}</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
+                        Loading orders...
+                      </td>
+                    </tr>
+                  ) : filteredOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center">
+                        <ShoppingCart className="w-10 h-10 text-muted-foreground mx-auto mb-2 opacity-40" />
+                        <p className="text-sm font-medium text-muted-foreground">
+                          {orders.length === 0 ? t('dashboard.noOrdersReceived', 'No orders received yet.') : 'No orders match your filter.'}
+                        </p>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredOrders.map(order => (
+                      <tr key={order.id} className="border-b border-border last:border-0 hover:bg-muted/50 transition-colors">
+                        <td className="py-3 px-4 text-sm font-semibold">#{order.id}</td>
+                        <td className="py-3 px-4 text-sm font-medium max-w-xs truncate">{order.service_name}</td>
+                        <td className="py-3 px-4 text-sm text-muted-foreground">
+                          {order.buyer_name || `Buyer #${order.buyer_id}`}
+                        </td>
+                        <td className="py-3 px-4 text-sm text-muted-foreground">
+                          {order.created_at ? new Date(order.created_at).toLocaleDateString() : '—'}
+                        </td>
+                        <td className="py-3 px-4">
+                          <Badge variant={statusVariant(order.status as any)}>
+                            {order.status}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4 text-sm font-semibold text-right">
+                          <span>LKR {order.amount.toLocaleString()}</span>
+                          {order.proposal_status === 'pending' && order.proposed_price && (
+                            <span className="block text-xs font-medium text-amber-600 dark:text-amber-400">
+                              Prop: LKR {order.proposed_price.toLocaleString()}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <div className="flex items-center justify-end gap-2 flex-wrap">
+                            {order.status === 'pending' && (
+                              <Button
+                                size="sm"
+                                className="h-8 px-2.5 text-xs gap-1 bg-[#0089BA] hover:bg-[#00739c] text-white font-medium"
+                                onClick={() => handleUpdateOrderStatus(order.id, 'in-progress')}
+                                disabled={statusUpdatingId === order.id}
+                              >
+                                {statusUpdatingId === order.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+                                In Progress
+                              </Button>
+                            )}
+                            {order.status === 'in-progress' && (
+                              <Button
+                                size="sm"
+                                className="h-8 px-2.5 text-xs gap-1 bg-[#00D084] hover:bg-[#00b572] text-white font-medium"
+                                onClick={() => handleUpdateOrderStatus(order.id, 'completed')}
+                                disabled={statusUpdatingId === order.id}
+                              >
+                                {statusUpdatingId === order.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
+                                Complete
+                              </Button>
+                            )}
+                            <Link to={`/order/${order.id}`}>
+                              <Button size="sm" variant="outline" className="h-8 px-2.5 text-xs gap-1">
+                                <Eye className="w-3.5 h-3.5" />
+                                View Order
+                              </Button>
+                            </Link>
+                            {order.buyer_id && (
+                              <Link to={`/messages?userId=${order.buyer_id}&name=${encodeURIComponent(order.buyer_name || `Buyer ${order.buyer_id}`)}`}>
+                                <Button size="sm" variant="ghost" className="h-8 px-2 text-xs" title="Message Buyer">
+                                  <MessageSquare className="w-3.5 h-3.5" />
+                                </Button>
+                              </Link>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -585,18 +1043,19 @@ function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboa
                     <th className="text-left py-3 px-4 text-sm font-semibold">{t('dashboard.buyerCol')}</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold">{t('common.status')}</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold">{t('common.amount')}</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold">{t('common.actions', 'Action')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                      <td colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
                         Loading orders...
                       </td>
                     </tr>
                   ) : orders.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                      <td colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
                         {t('dashboard.noOrdersReceived')}
                       </td>
                     </tr>
@@ -610,7 +1069,46 @@ function SellerDashboard({ revenueData, orderData, businessName }: SellerDashboa
                           {order.status}
                         </Badge>
                       </td>
-                      <td className="py-3 px-4 text-sm font-semibold text-right">LKR {order.amount}</td>
+                      <td className="py-3 px-4 text-sm font-semibold text-right">
+                        <span>LKR {order.amount.toLocaleString()}</span>
+                        {order.proposal_status === 'pending' && order.proposed_price && (
+                          <span className="block text-xs font-medium text-amber-600 dark:text-amber-400">
+                            Prop: LKR {order.proposed_price.toLocaleString()}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex items-center justify-end gap-2 flex-wrap">
+                          {order.status === 'pending' && (
+                            <Button
+                              size="sm"
+                              className="h-8 px-2.5 text-xs gap-1 bg-[#0089BA] hover:bg-[#00739c] text-white font-medium"
+                              onClick={() => handleUpdateOrderStatus(order.id, 'in-progress')}
+                              disabled={statusUpdatingId === order.id}
+                            >
+                              {statusUpdatingId === order.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+                              In Progress
+                            </Button>
+                          )}
+                          {order.status === 'in-progress' && (
+                            <Button
+                              size="sm"
+                              className="h-8 px-2.5 text-xs gap-1 bg-[#00D084] hover:bg-[#00b572] text-white font-medium"
+                              onClick={() => handleUpdateOrderStatus(order.id, 'completed')}
+                              disabled={statusUpdatingId === order.id}
+                            >
+                              {statusUpdatingId === order.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
+                              Complete
+                            </Button>
+                          )}
+                          <Link to={`/order/${order.id}`}>
+                            <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs gap-1">
+                              <Eye className="w-3.5 h-3.5" />
+                              View
+                            </Button>
+                          </Link>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

@@ -8,13 +8,24 @@ import { messagesApi, profilesApi, ConversationSummary, Message, SellerSummary }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
+function parseUtcDate(iso: string): Date {
+  if (!iso) return new Date();
+  if (iso.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(iso)) {
+    return new Date(iso);
+  }
+  return new Date(iso + 'Z');
+}
+
 function formatTime(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (!iso) return '';
+  const d = parseUtcDate(iso);
+  return isNaN(d.getTime()) ? '' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 function formatDateLabel(iso: string): string {
-  const d = new Date(iso);
+  if (!iso) return '';
+  const d = parseUtcDate(iso);
+  if (isNaN(d.getTime())) return '';
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
@@ -432,15 +443,13 @@ export function Messages() {
 
     try {
       const sent = await messagesApi.send(selectedUserId, text);
-      const isInstantlyRead = (Date.now() - lastReadRef.current) < 5000;
 
-      // Optimistically insert — the socket echo from server will be deduplicated
+      // Optimistically insert with is_read: false — becomes true when recipient reads
       setMessages(prev => {
         if (prev.some(m => m.id === sent.id)) {
-          // Socket echo already appended it. Make sure read state is correct.
-          return prev.map(m => m.id === sent.id && isInstantlyRead ? { ...m, is_read: true } : m);
+          return prev;
         }
-        return [...prev, { ...sent, is_read: sent.is_read || isInstantlyRead }];
+        return [...prev, { ...sent, is_read: false }];
       });
       // Bump sidebar last_message
       setConversations(prev => {

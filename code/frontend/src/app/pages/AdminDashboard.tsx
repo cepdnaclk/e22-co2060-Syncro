@@ -1,0 +1,1795 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Users,
+  Shield,
+  DollarSign,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  Search,
+  RefreshCw,
+  Eye,
+  Trash2,
+  Ban,
+  CreditCard,
+  ArrowUpRight,
+  FileText,
+  Clock,
+  ExternalLink,
+  ChevronRight,
+  TrendingUp,
+  AlertCircle,
+  X,
+  Mail,
+  Phone,
+  MapPin,
+  Store,
+  Star,
+  ShoppingBag,
+  Package,
+  MessageSquare,
+  ShieldCheck,
+  Lock,
+  Check,
+} from 'lucide-react';
+import { adminApi, AdminMetrics, AdminUser, AdminUserDetail, AdminOrder } from '../services/api';
+import { toast } from 'sonner';
+import { useApp } from '../context/AppContext';
+
+export function AdminDashboard() {
+  const { authUser } = useApp();
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'payments' | 'payouts'>('overview');
+
+  // Metrics state
+  const [metrics, setMetrics] = useState<AdminMetrics | null>(null);
+  const [loadingMetrics, setLoadingMetrics] = useState(false);
+
+  // Users state
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [userTotal, setUserTotal] = useState(0);
+  const [userSearch, setUserSearch] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState('');
+  const [userBanFilter, setUserBanFilter] = useState<string>('');
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
+  // Orders / Payments state
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [unverifiedOnly, setUnverifiedOnly] = useState(true);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+
+  // Payouts state
+  const [payoutOrders, setPayoutOrders] = useState<AdminOrder[]>([]);
+  const [loadingPayouts, setLoadingPayouts] = useState(false);
+  const [payoutFilter, setPayoutFilter] = useState<'all' | 'ready' | 'in_progress' | 'settled'>('all');
+
+  // Modal states
+  const [selectedSlipOrder, setSelectedSlipOrder] = useState<AdminOrder | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [showRejectInput, setShowRejectInput] = useState(false);
+  const [actionProcessing, setActionProcessing] = useState(false);
+
+  const [deleteTargetUser, setDeleteTargetUser] = useState<AdminUser | null>(null);
+  const [settleTargetOrder, setSettleTargetOrder] = useState<AdminOrder | null>(null);
+  const [payoutReference, setPayoutReference] = useState('');
+
+  // User Details Modal state
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [userDetail, setUserDetail] = useState<AdminUserDetail | null>(null);
+  const [loadingUserDetail, setLoadingUserDetail] = useState(false);
+  const [detailTab, setDetailTab] = useState<'profile' | 'seller' | 'orders' | 'reviews' | 'rfps'>('profile');
+
+  const handleOpenUserDetail = async (userId: number) => {
+    setSelectedUserId(userId);
+    setDetailTab('profile');
+    setLoadingUserDetail(true);
+    try {
+      const data = await adminApi.getUserDetails(userId);
+      setUserDetail(data);
+    } catch (err: any) {
+      toast.error('Failed to load user details: ' + (err.message || 'Unknown error'));
+      setSelectedUserId(null);
+    } finally {
+      setLoadingUserDetail(false);
+    }
+  };
+
+  // Initial load
+  useEffect(() => {
+    fetchMetrics();
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'users') fetchUsers();
+    if (activeTab === 'payments') fetchOrders();
+    if (activeTab === 'payouts') fetchPayouts();
+  }, [activeTab]);
+
+  const fetchMetrics = async () => {
+    setLoadingMetrics(true);
+    try {
+      const data = await adminApi.getMetrics();
+      setMetrics(data);
+    } catch (err: any) {
+      toast.error('Failed to load admin metrics: ' + err.message);
+    } finally {
+      setLoadingMetrics(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const isBanned = userBanFilter === '' ? undefined : userBanFilter === 'true';
+      const role = userRoleFilter || undefined;
+      const data = await adminApi.getUsers(userSearch || undefined, role, isBanned);
+      setUsers(data.users);
+      setUserTotal(data.total);
+    } catch (err: any) {
+      toast.error('Failed to load users: ' + err.message);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const fetchOrders = async () => {
+    setLoadingOrders(true);
+    try {
+      const data = await adminApi.getOrders(unverifiedOnly);
+      setOrders(data);
+    } catch (err: any) {
+      toast.error('Failed to load payment orders: ' + err.message);
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+  const fetchPayouts = async () => {
+    setLoadingPayouts(true);
+    try {
+      const data = await adminApi.getOrders(false, true);
+      setPayoutOrders(data);
+    } catch (err: any) {
+      toast.error('Failed to load payout queue: ' + err.message);
+    } finally {
+      setLoadingPayouts(false);
+    }
+  };
+
+  // User Actions
+  const handleToggleBan = async (user: AdminUser) => {
+    if (user.email === 'syncromarketplace@gmail.com') {
+      toast.error('Cannot ban platform administrator!');
+      return;
+    }
+    try {
+      const res = await adminApi.toggleBan(user.id);
+      toast.success(res.message);
+      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, is_banned: res.is_banned } : u));
+      fetchMetrics();
+    } catch (err: any) {
+      toast.error('Failed to update ban status: ' + err.message);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteTargetUser) return;
+    if (deleteTargetUser.email === 'syncromarketplace@gmail.com') {
+      toast.error('Cannot delete platform administrator!');
+      return;
+    }
+    setActionProcessing(true);
+    try {
+      const res = await adminApi.deleteUser(deleteTargetUser.id);
+      toast.success(res.message);
+      setUsers(prev => prev.filter(u => u.id !== deleteTargetUser.id));
+      setDeleteTargetUser(null);
+      fetchMetrics();
+    } catch (err: any) {
+      toast.error('Failed to delete user: ' + err.message);
+    } finally {
+      setActionProcessing(false);
+    }
+  };
+
+  // Slip / Payment verification
+  const handleVerifyPayment = async (orderId: number, action: 'approve' | 'reject') => {
+    setActionProcessing(true);
+    try {
+      const res = await adminApi.verifyPayment(orderId, action, action === 'reject' ? rejectReason : undefined);
+      toast.success(res.message);
+      setSelectedSlipOrder(null);
+      setShowRejectInput(false);
+      setRejectReason('');
+      fetchOrders();
+      fetchMetrics();
+    } catch (err: any) {
+      toast.error('Payment verification failed: ' + err.message);
+    } finally {
+      setActionProcessing(false);
+    }
+  };
+
+  // Settle Payout
+  const handleSettlePayout = async () => {
+    if (!settleTargetOrder) return;
+    setActionProcessing(true);
+    try {
+      const res = await adminApi.settlePayout(settleTargetOrder.id, payoutReference || undefined);
+      toast.success(res.message);
+      setSettleTargetOrder(null);
+      setPayoutReference('');
+      fetchPayouts();
+      fetchMetrics();
+    } catch (err: any) {
+      toast.error('Failed to settle payout: ' + err.message);
+    } finally {
+      setActionProcessing(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background pb-16">
+      {/* Header */}
+      <div className="border-b border-border bg-card">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+                  <Shield className="w-3.5 h-3.5" /> Super Admin Portal
+                </span>
+                <span className="text-xs text-muted-foreground">Signed in as {authUser?.email}</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground mt-2">
+                Platform Operations & Moderation
+              </h1>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  fetchMetrics();
+                  if (activeTab === 'users') fetchUsers();
+                  if (activeTab === 'payments') fetchOrders();
+                  if (activeTab === 'payouts') fetchPayouts();
+                  toast.success('Admin data refreshed');
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-border bg-background hover:bg-muted transition-colors"
+              >
+                <RefreshCw className="w-4 h-4" /> Refresh Data
+              </button>
+            </div>
+          </div>
+
+          {/* Navigation Tabs */}
+          <div className="flex border-b border-border mt-6 overflow-x-auto gap-2">
+            {[
+              { id: 'overview', label: 'Overview Metrics', icon: TrendingUp },
+              { id: 'users', label: 'User Moderation', icon: Users, badge: metrics?.banned_users ? `${metrics.banned_users} banned` : undefined },
+              { id: 'payments', label: 'Bank Slip & QR Verification', icon: CreditCard, badge: metrics?.pending_verification_orders ? `${metrics.pending_verification_orders} pending` : undefined },
+              { id: 'payouts', label: 'Seller Escrow Payouts', icon: DollarSign },
+            ].map(tab => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex items-center gap-2 py-3 px-4 border-b-2 font-medium text-sm transition-all whitespace-nowrap ${
+                    isActive
+                      ? 'border-primary text-primary font-semibold'
+                      : 'border-transparent text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {tab.label}
+                  {tab.badge && (
+                    <span className="ml-1.5 px-2 py-0.5 text-xs rounded-full bg-destructive/10 text-destructive font-bold">
+                      {tab.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+        {/* =================== TAB 1: OVERVIEW METRICS =================== */}
+        {activeTab === 'overview' && (
+          <div className="space-y-8">
+            {/* Top Metric Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-muted-foreground">Total Users</span>
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
+                    <Users className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-3xl font-extrabold text-foreground">
+                    {metrics?.total_users ?? (metrics as any)?.users?.total ?? 0}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                    <span>{metrics?.total_buyers ?? (metrics as any)?.users?.buyers ?? 0} buyers</span>
+                    <span>•</span>
+                    <span>{metrics?.total_sellers ?? (metrics as any)?.users?.sellers ?? 0} sellers</span>
+                    <span>•</span>
+                    <span className="text-destructive font-medium">
+                      {metrics?.banned_users ?? (metrics as any)?.users?.banned ?? 0} banned
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-muted-foreground">Pending Slip Checks</span>
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                    <Clock className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-3xl font-extrabold text-amber-500">
+                    {metrics?.pending_verification_orders ?? (metrics as any)?.orders?.pending_slips ?? 0}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Bank transfers/QR slips waiting for manual review
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-muted-foreground">Escrow Holding</span>
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                    <Shield className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-3xl font-extrabold text-foreground">
+                    LKR {((metrics?.escrow_holding_amount ?? (metrics as any)?.financials?.escrow_holding) ?? 0).toLocaleString()}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Funds currently locked safe in escrow
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-muted-foreground">Platform Revenue (5%)</span>
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                    <DollarSign className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-3xl font-extrabold text-primary">
+                    LKR {((metrics?.platform_revenue_collected ?? (metrics as any)?.financials?.platform_revenue) ?? 0).toLocaleString()}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Total commissions earned on completed orders
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Order Flow Summary */}
+            <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+              <h2 className="text-lg font-bold text-foreground mb-4">Platform Order Status Breakdown</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="p-4 rounded-xl bg-muted/40 border border-border">
+                  <span className="text-xs text-muted-foreground font-medium">All Time Orders</span>
+                  <div className="text-2xl font-bold mt-1">
+                    {metrics?.total_orders ?? (metrics as any)?.orders?.total ?? 0}
+                  </div>
+                </div>
+                <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/20">
+                  <span className="text-xs text-blue-500 font-medium">Active (In Escrow)</span>
+                  <div className="text-2xl font-bold text-blue-500 mt-1">
+                    {metrics?.active_orders ?? (metrics as any)?.orders?.in_progress ?? 0}
+                  </div>
+                </div>
+                <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
+                  <span className="text-xs text-emerald-500 font-medium">Completed & Released</span>
+                  <div className="text-2xl font-bold text-emerald-500 mt-1">
+                    {metrics?.completed_orders ?? (metrics as any)?.orders?.completed ?? 0}
+                  </div>
+                </div>
+                <div className="p-4 rounded-xl bg-destructive/5 border border-destructive/20">
+                  <span className="text-xs text-destructive font-medium">Cancelled / Rejected</span>
+                  <div className="text-2xl font-bold text-destructive mt-1">
+                    {metrics?.cancelled_orders ?? 0}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Action shortcuts */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div
+                onClick={() => setActiveTab('payments')}
+                className="bg-card border border-border rounded-2xl p-6 hover:border-primary/50 transition-all cursor-pointer shadow-sm group"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                      <CreditCard className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                        Review Bank Slips & QR Payments
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {metrics?.pending_verification_orders ?? 0} payment slips waiting for approval
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+
+              <div
+                onClick={() => setActiveTab('users')}
+                className="bg-card border border-border rounded-2xl p-6 hover:border-primary/50 transition-all cursor-pointer shadow-sm group"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                      <Users className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                        Manage & Moderate Platform Users
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Search buyers & sellers, ban malicious accounts, or delete users
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* =================== TAB 2: USER MODERATION =================== */}
+        {activeTab === 'users' && (
+          <div className="space-y-6">
+            {/* Search and Filters */}
+            <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+              <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
+                <div className="relative w-full sm:w-96">
+                  <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Search by name or email..."
+                    value={userSearch}
+                    onChange={e => setUserSearch(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && fetchUsers()}
+                    className="w-full pl-9 pr-4 py-2 text-sm bg-muted/30 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <select
+                    value={userRoleFilter}
+                    onChange={e => { setUserRoleFilter(e.target.value); }}
+                    className="px-3 py-2 text-sm bg-muted/30 border border-border rounded-xl focus:outline-none"
+                  >
+                    <option value="">All Roles</option>
+                    <option value="client">Buyers (Client)</option>
+                    <option value="seller">Sellers</option>
+                  </select>
+
+                  <select
+                    value={userBanFilter}
+                    onChange={e => { setUserBanFilter(e.target.value); }}
+                    className="px-3 py-2 text-sm bg-muted/30 border border-border rounded-xl focus:outline-none"
+                  >
+                    <option value="">All Statuses</option>
+                    <option value="false">Active Only</option>
+                    <option value="true">Banned Only</option>
+                  </select>
+
+                  <button
+                    onClick={fetchUsers}
+                    className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-xl hover:opacity-90 transition-opacity"
+                  >
+                    Filter
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Users Table */}
+            <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
+              <div className="p-4 border-b border-border flex items-center justify-between">
+                <span className="text-sm font-semibold text-muted-foreground">
+                  Showing {users.length} of {userTotal} registered users
+                </span>
+              </div>
+
+              {loadingUsers ? (
+                <div className="p-12 text-center text-muted-foreground">Loading users list...</div>
+              ) : users.length === 0 ? (
+                <div className="p-12 text-center text-muted-foreground">No users found matching query.</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-muted/40 text-muted-foreground text-xs uppercase font-medium border-b border-border">
+                      <tr>
+                        <th className="py-3 px-4">User</th>
+                        <th className="py-3 px-4">Role</th>
+                        <th className="py-3 px-4">Location</th>
+                        <th className="py-3 px-4">Verification</th>
+                        <th className="py-3 px-4">Status</th>
+                        <th className="py-3 px-4">Joined</th>
+                        <th className="py-3 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {users.map(u => {
+                        const isSuperAdmin = u.email === 'syncromarketplace@gmail.com';
+                        return (
+                          <tr
+                            key={u.id}
+                            onClick={() => handleOpenUserDetail(u.id)}
+                            className="hover:bg-muted/40 transition-colors cursor-pointer group"
+                          >
+                            <td className="py-3 px-4">
+                              <div className="font-semibold text-foreground flex items-center gap-1.5 group-hover:text-primary transition-colors">
+                                <span className="hover:underline">{u.first_name} {u.last_name}</span>
+                                {isSuperAdmin && (
+                                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/20 text-primary">
+                                    ADMIN
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-xs text-muted-foreground">{u.email}</div>
+                              {u.phone_number && <div className="text-[11px] text-muted-foreground">{u.phone_number}</div>}
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${
+                                u.active_role === 'seller' ? 'bg-purple-500/10 text-purple-600' : 'bg-blue-500/10 text-blue-600'
+                              }`}>
+                                {u.active_role === 'client' ? 'Buyer' : u.active_role}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-xs text-muted-foreground">
+                              {u.location || 'N/A'}
+                            </td>
+                            <td className="py-3 px-4">
+                              {u.email_verified ? (
+                                <span className="inline-flex items-center gap-1 text-xs text-emerald-600 font-medium">
+                                  <CheckCircle2 className="w-3.5 h-3.5" /> Verified
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-xs text-amber-600 font-medium">
+                                  <Clock className="w-3.5 h-3.5" /> Pending OTP
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4">
+                              {u.is_banned ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-destructive/15 text-destructive">
+                                  <Ban className="w-3 h-3" /> BANNED
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600">
+                                  Active
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-xs text-muted-foreground">
+                              {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'Active Member'}
+                            </td>
+                            <td className="py-3 px-4 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                {/* View Details Button */}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenUserDetail(u.id);
+                                  }}
+                                  title="View Full User & Seller Details"
+                                  className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </button>
+
+                                {/* Direct Public Storefront Link if Seller */}
+                                {Boolean(u.has_seller_account || u.active_role === 'seller') && (
+                                  <a
+                                    href={`/seller/${u.id}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    title="Open Public Seller Storefront in New Tab"
+                                    className="p-1.5 rounded-lg text-purple-600 hover:bg-purple-500/10 transition-colors"
+                                    onClick={e => e.stopPropagation()}
+                                  >
+                                    <Store className="w-4 h-4" />
+                                  </a>
+                                )}
+
+                                {isSuperAdmin ? (
+                                  <span className="text-xs text-muted-foreground italic ml-2">Protected</span>
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleToggleBan(u);
+                                      }}
+                                      title={u.is_banned ? 'Unban User' : 'Ban User'}
+                                      className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 ${
+                                        u.is_banned
+                                          ? 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20'
+                                          : 'bg-amber-500/10 text-amber-600 hover:bg-amber-500/20'
+                                      }`}
+                                    >
+                                      <Ban className="w-3 h-3" />
+                                      {u.is_banned ? 'Unban' : 'Ban'}
+                                    </button>
+
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setDeleteTargetUser(u);
+                                      }}
+                                      title="Delete User Account"
+                                      className="p-1.5 rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* =================== TAB 3: BANK SLIP & QR VERIFICATION =================== */}
+        {activeTab === 'payments' && (
+          <div className="space-y-6">
+            <div className="bg-card border border-border rounded-2xl p-5 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-foreground">Manual Payment Verification Queue</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Verify buyer uploads (direct bank transfer slips or QR scan receipts) to release order to seller.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => { setUnverifiedOnly(true); fetchOrders(); }}
+                  className={`px-3.5 py-1.5 text-xs font-semibold rounded-xl border transition-colors ${
+                    unverifiedOnly
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-muted/50 border-border text-muted-foreground'
+                  }`}
+                >
+                  Unverified Only
+                </button>
+                <button
+                  onClick={() => { setUnverifiedOnly(false); fetchOrders(); }}
+                  className={`px-3.5 py-1.5 text-xs font-semibold rounded-xl border transition-colors ${
+                    !unverifiedOnly
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-muted/50 border-border text-muted-foreground'
+                  }`}
+                >
+                  All Orders
+                </button>
+              </div>
+            </div>
+
+            {/* Orders Table */}
+            <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
+              {loadingOrders ? (
+                <div className="p-12 text-center text-muted-foreground">Loading orders...</div>
+              ) : orders.length === 0 ? (
+                <div className="p-12 text-center text-muted-foreground">
+                  No orders currently awaiting manual payment verification.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-muted/40 text-muted-foreground text-xs uppercase font-medium border-b border-border">
+                      <tr>
+                        <th className="py-3 px-4">Order #</th>
+                        <th className="py-3 px-4">Service</th>
+                        <th className="py-3 px-4">Buyer</th>
+                        <th className="py-3 px-4">Seller</th>
+                        <th className="py-3 px-4">Amount</th>
+                        <th className="py-3 px-4">Payment Method</th>
+                        <th className="py-3 px-4">Verification</th>
+                        <th className="py-3 px-4 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {orders.map(order => {
+                        const price = Number(order.total_price ?? order.amount ?? 0);
+                        const serviceName = order.service_title || order.service_name || 'Custom Service';
+                        const createdAt = order.created_at ? new Date(order.created_at).toLocaleDateString() : 'N/A';
+                        return (
+                          <tr key={order.id} className="hover:bg-muted/30 transition-colors">
+                            <td className="py-3 px-4 font-mono font-medium text-xs">
+                              #{order.id}
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="font-medium text-foreground line-clamp-1">{serviceName}</div>
+                              <div className="text-[11px] text-muted-foreground">
+                                {createdAt}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="font-medium text-foreground">{order.buyer?.name || 'Buyer'}</div>
+                              <div className="text-[11px] text-muted-foreground">{order.buyer?.email || ''}</div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="font-medium text-foreground">{order.seller?.name || 'Seller'}</div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="font-bold text-foreground">LKR {price.toLocaleString()}</div>
+                              <div className="text-[11px] text-muted-foreground mt-0.5 space-x-1 whitespace-nowrap">
+                                <span>Fee: <strong className="text-primary font-medium">LKR {Math.round(price * 0.05).toLocaleString()}</strong></span>
+                                <span>•</span>
+                                <span>Seller: <strong className="text-emerald-600 font-medium">LKR {(price - Math.round(price * 0.05)).toLocaleString()}</strong></span>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="capitalize text-xs font-medium px-2 py-0.5 bg-muted rounded-md border border-border">
+                                {order.payment_method}
+                              </span>
+                            </td>
+                          <td className="py-3 px-4">
+                            {order.payment_verified ? (
+                              <span className="inline-flex items-center gap-1 text-xs text-emerald-600 font-semibold bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                                <ShieldCheck className="w-3.5 h-3.5" /> In Escrow
+                              </span>
+                            ) : order.rejection_reason ? (
+                              <span className="inline-flex items-center gap-1 text-xs text-destructive font-semibold bg-destructive/10 px-2 py-0.5 rounded-full" title={order.rejection_reason}>
+                                <XCircle className="w-3.5 h-3.5" /> Rejected
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-xs text-amber-600 font-semibold bg-amber-500/10 px-2 py-0.5 rounded-full">
+                                <Clock className="w-3.5 h-3.5" /> Pending Check
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <button
+                              onClick={() => {
+                                setSelectedSlipOrder(order);
+                                setShowRejectInput(false);
+                                setRejectReason('');
+                              }}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                            >
+                              <Eye className="w-3.5 h-3.5" /> Review Slip
+                            </button>
+                          </td>
+                        </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* =================== TAB 4: SELLER ESCROW PAYOUTS =================== */}
+        {activeTab === 'payouts' && (
+          <div className="space-y-6">
+            <div className="bg-card border border-border rounded-2xl p-5 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-foreground">Seller Escrow & Payout Management</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Verified buyer payments held safely in Syncro Escrow. Platform retains 5% commission; remaining 95% is owed to the seller via direct bank transfer upon order completion.
+                </p>
+              </div>
+
+              {/* Filter pills */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => setPayoutFilter('all')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-colors ${
+                    payoutFilter === 'all'
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-muted/50 border-border text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  All Escrow ({payoutOrders.length})
+                </button>
+                <button
+                  onClick={() => setPayoutFilter('ready')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-colors ${
+                    payoutFilter === 'ready'
+                      ? 'bg-emerald-600 text-white border-emerald-600'
+                      : 'bg-muted/50 border-border text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Ready for Payout ({payoutOrders.filter(o => o.status === 'completed' && !o.payout_settled).length})
+                </button>
+                <button
+                  onClick={() => setPayoutFilter('in_progress')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-colors ${
+                    payoutFilter === 'in_progress'
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-muted/50 border-border text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  In Progress in Escrow ({payoutOrders.filter(o => o.status === 'in-progress' && !o.payout_settled).length})
+                </button>
+                <button
+                  onClick={() => setPayoutFilter('settled')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-colors ${
+                    payoutFilter === 'settled'
+                      ? 'bg-muted-foreground text-background border-muted-foreground'
+                      : 'bg-muted/50 border-border text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Settled ({payoutOrders.filter(o => Boolean(o.payout_settled)).length})
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
+              {loadingPayouts ? (
+                <div className="p-12 text-center text-muted-foreground">Loading escrow payouts queue...</div>
+              ) : payoutOrders.filter(o => {
+                  if (payoutFilter === 'ready') return o.status === 'completed' && !o.payout_settled;
+                  if (payoutFilter === 'in_progress') return o.status === 'in-progress' && !o.payout_settled;
+                  if (payoutFilter === 'settled') return Boolean(o.payout_settled);
+                  return true;
+                }).length === 0 ? (
+                <div className="p-12 text-center text-muted-foreground">
+                  No orders matching the selected escrow filter.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-muted/40 text-muted-foreground text-xs uppercase font-medium border-b border-border">
+                      <tr>
+                        <th className="py-3 px-4">Order #</th>
+                        <th className="py-3 px-4">Date</th>
+                        <th className="py-3 px-4">Buyer & Seller</th>
+                        <th className="py-3 px-4">Total Order</th>
+                        <th className="py-3 px-4">Platform Fee (5%)</th>
+                        <th className="py-3 px-4 font-bold text-emerald-600">Send to Seller (95%)</th>
+                        <th className="py-3 px-4">Escrow Status</th>
+                        <th className="py-3 px-4 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {payoutOrders
+                        .filter(o => {
+                          if (payoutFilter === 'ready') return o.status === 'completed' && !o.payout_settled;
+                          if (payoutFilter === 'in_progress') return o.status === 'in-progress' && !o.payout_settled;
+                          if (payoutFilter === 'settled') return Boolean(o.payout_settled);
+                          return true;
+                        })
+                        .map(order => {
+                          const price = Number(order.total_price ?? order.amount ?? 0);
+                          const fee = Math.round(price * 0.05);
+                          const netPayout = price - fee;
+                          const createdAt = order.created_at ? new Date(order.created_at).toLocaleDateString() : 'N/A';
+                          const isReady = order.status === 'completed' && !order.payout_settled;
+                          const isSettled = Boolean(order.payout_settled);
+                          return (
+                            <tr key={order.id} className="hover:bg-muted/30 transition-colors">
+                              <td className="py-3 px-4 font-mono font-medium text-xs">
+                                #{order.id}
+                              </td>
+                              <td className="py-3 px-4 text-xs text-muted-foreground">
+                                {createdAt}
+                              </td>
+                              <td className="py-3 px-4">
+                                <div className="font-semibold text-foreground">{order.seller?.name || 'Seller'}</div>
+                                <div className="text-[11px] text-muted-foreground">Buyer: {order.buyer?.name || 'Buyer'}</div>
+                              </td>
+                              <td className="py-3 px-4 font-bold text-foreground">
+                                LKR {price.toLocaleString()}
+                              </td>
+                              <td className="py-3 px-4 text-xs text-primary font-semibold">
+                                LKR {fee.toLocaleString()}
+                              </td>
+                              <td className="py-3 px-4 font-bold text-emerald-600 text-sm">
+                                LKR {netPayout.toLocaleString()}
+                              </td>
+                              <td className="py-3 px-4">
+                                {isSettled ? (
+                                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground font-semibold bg-muted px-2.5 py-0.5 rounded-full border border-border">
+                                    <Check className="w-3 h-3 text-emerald-600" /> Settled
+                                  </span>
+                                ) : isReady ? (
+                                  <span className="inline-flex items-center gap-1 text-xs text-emerald-600 font-semibold bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                                    <CheckCircle2 className="w-3.5 h-3.5" /> Ready for Payout
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-xs text-blue-600 font-semibold bg-blue-500/10 px-2.5 py-0.5 rounded-full border border-blue-500/20">
+                                    <ShieldCheck className="w-3.5 h-3.5" /> In Escrow (Active)
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-3 px-4 text-right">
+                                {isReady ? (
+                                  <button
+                                    onClick={() => {
+                                      setSettleTargetOrder(order);
+                                      setPayoutReference('');
+                                    }}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-sm"
+                                  >
+                                    <ArrowUpRight className="w-3.5 h-3.5" /> Pay Seller
+                                  </button>
+                                ) : isSettled ? (
+                                  <span className="text-xs text-muted-foreground font-medium">Completed</span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground italic">
+                                    <Lock className="w-3 h-3 text-blue-500" /> Awaiting Delivery
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* =================== MODAL: SLIP PREVIEW & APPROVE/REJECT =================== */}
+      {selectedSlipOrder && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-2xl max-w-2xl w-full p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
+            <div className="flex items-center justify-between pb-4 border-b border-border">
+              <div>
+                <h3 className="text-lg font-bold text-foreground">Review Bank Slip / QR Screenshot</h3>
+                <p className="text-xs text-muted-foreground">Order #{selectedSlipOrder.id} • LKR {Number(selectedSlipOrder.total_price ?? selectedSlipOrder.amount ?? 0).toLocaleString()}</p>
+              </div>
+              <button
+                onClick={() => setSelectedSlipOrder(null)}
+                className="text-muted-foreground hover:text-foreground text-sm font-semibold p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Slip image display */}
+            <div className="my-5 flex flex-col items-center">
+              {(selectedSlipOrder.bank_slip_url || selectedSlipOrder.payment_slip_url) ? (
+                <div className="space-y-2 w-full">
+                  <div className="max-h-96 overflow-hidden rounded-xl border border-border bg-black/5 flex items-center justify-center">
+                    <img
+                      src={selectedSlipOrder.bank_slip_url || selectedSlipOrder.payment_slip_url}
+                      alt="Bank Transfer Slip"
+                      className="max-h-96 object-contain rounded-lg"
+                      onError={(e) => {
+                        // In case of broken external link, show fallback
+                        (e.target as any).style.display = 'none';
+                      }}
+                    />
+                  </div>
+                  <div className="text-center">
+                    <a
+                      href={selectedSlipOrder.bank_slip_url || selectedSlipOrder.payment_slip_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" /> Open original image in new tab
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-8 text-center text-muted-foreground bg-muted/30 rounded-xl border border-dashed border-border w-full">
+                  <FileText className="w-10 h-10 mx-auto text-muted-foreground/60 mb-2" />
+                  <p className="text-sm font-medium">No direct image URL recorded</p>
+                  <p className="text-xs text-muted-foreground mt-1">Payment Method: {selectedSlipOrder.payment_method}</p>
+                </div>
+              )}
+
+              {/* Order summary info */}
+              <div className="grid grid-cols-2 gap-3 w-full mt-4 text-xs bg-muted/40 p-4 rounded-xl border border-border">
+                <div>
+                  <span className="text-muted-foreground">Buyer:</span>
+                  <div className="font-semibold text-foreground">{selectedSlipOrder.buyer?.name} ({selectedSlipOrder.buyer?.email})</div>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Seller:</span>
+                  <div className="font-semibold text-foreground">{selectedSlipOrder.seller?.name}</div>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Payment Expected:</span>
+                  <div className="font-bold text-foreground">LKR {Number(selectedSlipOrder.total_price ?? selectedSlipOrder.amount ?? 0).toLocaleString()}</div>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Current Status:</span>
+                  <div className="font-semibold capitalize text-foreground">{selectedSlipOrder.order_status || selectedSlipOrder.status}</div>
+                </div>
+              </div>
+
+              {/* Escrow & Commission Breakdown */}
+              <div className="w-full mt-4 p-4 rounded-xl bg-gradient-to-r from-primary/5 via-emerald-500/5 to-transparent border border-border space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-border/60">
+                  <span className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600" /> Escrow & Payout Allocation
+                  </span>
+                  {selectedSlipOrder.payment_verified ? (
+                    <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 flex items-center gap-1">
+                      <Lock className="w-3 h-3" /> Locked in Escrow
+                    </span>
+                  ) : (
+                    <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20 flex items-center gap-1">
+                      <Clock className="w-3 h-3" /> Awaiting Escrow Approval
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div className="p-2.5 rounded-lg bg-background border border-border">
+                    <span className="text-[11px] text-muted-foreground block font-medium">Total Order</span>
+                    <span className="font-bold text-sm text-foreground">
+                      LKR {Number(selectedSlipOrder.total_price ?? selectedSlipOrder.amount ?? 0).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-primary/5 border border-primary/20">
+                    <span className="text-[11px] text-primary font-medium block">Platform Fee (5%)</span>
+                    <span className="font-bold text-sm text-primary">
+                      LKR {Math.round(Number(selectedSlipOrder.total_price ?? selectedSlipOrder.amount ?? 0) * 0.05).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+                    <span className="text-[11px] text-emerald-600 font-medium block">Send to Seller (95%)</span>
+                    <span className="font-bold text-sm text-emerald-600">
+                      LKR {(Number(selectedSlipOrder.total_price ?? selectedSlipOrder.amount ?? 0) - Math.round(Number(selectedSlipOrder.total_price ?? selectedSlipOrder.amount ?? 0) * 0.05)).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-muted-foreground leading-relaxed pt-1">
+                  Upon approving this slip, funds are moved to <strong>Syncro Escrow</strong>. When work is completed, <strong>LKR {(Number(selectedSlipOrder.total_price ?? selectedSlipOrder.amount ?? 0) - Math.round(Number(selectedSlipOrder.total_price ?? selectedSlipOrder.amount ?? 0) * 0.05)).toLocaleString()}</strong> will be paid to the seller, and <strong>LKR {Math.round(Number(selectedSlipOrder.total_price ?? selectedSlipOrder.amount ?? 0) * 0.05).toLocaleString()}</strong> is retained as the platform fee.
+                </p>
+              </div>
+            </div>
+
+            {/* Reject reason input */}
+            {showRejectInput && (
+              <div className="mb-4 p-4 rounded-xl bg-destructive/5 border border-destructive/20">
+                <label className="block text-xs font-semibold text-destructive mb-1">
+                  Reason for Rejecting Slip (will be visible to buyer):
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Amount mismatch, blur screenshot, invalid bank ref..."
+                  value={rejectReason}
+                  onChange={e => setRejectReason(e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none"
+                />
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+              {!showRejectInput ? (
+                <>
+                  <button
+                    onClick={() => setShowRejectInput(true)}
+                    disabled={actionProcessing}
+                    className="px-4 py-2 text-sm font-semibold rounded-xl bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+                  >
+                    Reject Slip
+                  </button>
+                  <button
+                    onClick={() => handleVerifyPayment(selectedSlipOrder.id, 'approve')}
+                    disabled={actionProcessing}
+                    className="px-5 py-2 text-sm font-semibold rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-sm"
+                  >
+                    {actionProcessing ? 'Approving...' : '✓ Approve & Move to Escrow'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setShowRejectInput(false)}
+                    disabled={actionProcessing}
+                    className="px-4 py-2 text-sm rounded-xl border border-border hover:bg-muted"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => handleVerifyPayment(selectedSlipOrder.id, 'reject')}
+                    disabled={actionProcessing || !rejectReason.trim()}
+                    className="px-5 py-2 text-sm font-semibold rounded-xl bg-destructive text-destructive-foreground hover:opacity-90 disabled:opacity-50"
+                  >
+                    {actionProcessing ? 'Rejecting...' : 'Confirm Rejection'}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =================== MODAL: USER & SELLER ACCOUNT DETAILS =================== */}
+      {selectedUserId !== null && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+          <div className="bg-card border border-border rounded-2xl max-w-3xl w-full shadow-2xl overflow-hidden my-auto max-h-[90vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-border flex items-center justify-between bg-muted/20">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg overflow-hidden border border-border shrink-0">
+                  {userDetail?.profile?.logo ? (
+                    <img src={userDetail.profile.logo} alt="Logo" className="w-full h-full object-cover" />
+                  ) : (
+                    <span>{userDetail ? (userDetail.first_name?.[0] || userDetail.email[0]).toUpperCase() : 'U'}</span>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-lg font-bold text-foreground truncate">
+                      {userDetail ? userDetail.full_name : 'Loading User...'}
+                    </h3>
+                    {userDetail?.is_admin && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-primary/20 text-primary">ADMIN</span>
+                    )}
+                    {userDetail && (
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${
+                        userDetail.active_role === 'seller' ? 'bg-purple-500/10 text-purple-600' : 'bg-blue-500/10 text-blue-600'
+                      }`}>
+                        {userDetail.active_role === 'client' ? 'Buyer' : userDetail.active_role}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5 flex-wrap">
+                    <span>{userDetail?.email}</span>
+                    {userDetail?.phone_number && <span>• {userDetail.phone_number}</span>}
+                    {userDetail?.location && <span>• {userDetail.location}</span>}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {userDetail && Boolean(userDetail.has_seller_account) && (
+                  <a
+                    href={`/seller/${userDetail.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-purple-500/10 text-purple-600 hover:bg-purple-500/20 transition-colors"
+                  >
+                    <Store className="w-3.5 h-3.5" />
+                    Public Storefront
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+                <button
+                  onClick={() => { setSelectedUserId(null); setUserDetail(null); }}
+                  className="p-2 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Subnav Tabs */}
+            <div className="flex items-center gap-2 px-5 pt-3 border-b border-border bg-muted/10 text-sm overflow-x-auto">
+              <button
+                onClick={() => setDetailTab('profile')}
+                className={`pb-2.5 px-3 font-semibold border-b-2 transition-colors whitespace-nowrap ${
+                  detailTab === 'profile'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Account Overview
+              </button>
+
+              {userDetail?.has_seller_account ? (
+                <>
+                  <button
+                    onClick={() => setDetailTab('seller')}
+                    className={`pb-2.5 px-3 font-semibold border-b-2 transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+                      detailTab === 'seller'
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <Store className="w-3.5 h-3.5" />
+                    Seller Storefront {userDetail?.listings?.length ? `(${userDetail.listings.length})` : ''}
+                  </button>
+                  <button
+                    onClick={() => setDetailTab('orders')}
+                    className={`pb-2.5 px-3 font-semibold border-b-2 transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+                      detailTab === 'orders'
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <ShoppingBag className="w-3.5 h-3.5" />
+                    Orders & Transactions {userDetail ? `(${((userDetail.orders_as_seller?.length || 0) + (userDetail.orders_as_buyer?.length || 0))})` : ''}
+                  </button>
+                  <button
+                    onClick={() => setDetailTab('reviews')}
+                    className={`pb-2.5 px-3 font-semibold border-b-2 transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+                      detailTab === 'reviews'
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <Star className="w-3.5 h-3.5" />
+                    Reviews {userDetail?.reviews_received?.length ? `(${userDetail.reviews_received.length})` : ''}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setDetailTab('orders')}
+                    className={`pb-2.5 px-3 font-semibold border-b-2 transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+                      detailTab === 'orders'
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <ShoppingBag className="w-3.5 h-3.5" />
+                    Orders Placed {userDetail ? `(${userDetail.orders_as_buyer?.length || 0})` : ''}
+                  </button>
+                  <button
+                    onClick={() => setDetailTab('rfps')}
+                    className={`pb-2.5 px-3 font-semibold border-b-2 transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+                      detailTab === 'rfps'
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    Reverse Auction RFPs {userDetail ? `(${userDetail.bid_requests?.length || userDetail.bid_requests_count || 0})` : ''}
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1">
+              {loadingUserDetail ? (
+                <div className="p-12 text-center text-muted-foreground">Loading full account details...</div>
+              ) : !userDetail ? (
+                <div className="p-12 text-center text-destructive">User details could not be found.</div>
+              ) : (
+                <>
+                  {/* TAB 1: ACCOUNT OVERVIEW */}
+                  {detailTab === 'profile' && (
+                    <div className="space-y-6">
+                      {/* Stat Counters */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div className="p-3 rounded-xl bg-muted/30 border border-border">
+                          <span className="text-[11px] text-muted-foreground block font-medium">Orders Placed (Buyer)</span>
+                          <span className="text-xl font-bold text-foreground">{userDetail.orders_as_buyer?.length || 0}</span>
+                        </div>
+                        {userDetail.has_seller_account ? (
+                          <>
+                            <div className="p-3 rounded-xl bg-muted/30 border border-border">
+                              <span className="text-[11px] text-muted-foreground block font-medium">Orders Sold (Seller)</span>
+                              <span className="text-xl font-bold text-foreground">{userDetail.orders_as_seller?.length || 0}</span>
+                            </div>
+                            <div className="p-3 rounded-xl bg-muted/30 border border-border">
+                              <span className="text-[11px] text-muted-foreground block font-medium">Active Services / Listings</span>
+                              <span className="text-xl font-bold text-foreground">{userDetail.listings?.length || 0}</span>
+                            </div>
+                            <div className="p-3 rounded-xl bg-muted/30 border border-border">
+                              <span className="text-[11px] text-muted-foreground block font-medium">Avg Review Rating</span>
+                              <span className="text-xl font-bold text-amber-500 flex items-center gap-1">
+                                ★ {userDetail.avg_rating || 'N/A'}
+                              </span>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="p-3 rounded-xl bg-muted/30 border border-border">
+                              <span className="text-[11px] text-muted-foreground block font-medium">Reverse Auction RFPs</span>
+                              <span className="text-xl font-bold text-foreground">{userDetail.bid_requests?.length || userDetail.bid_requests_count || 0}</span>
+                            </div>
+                            <div className="p-3 rounded-xl bg-muted/30 border border-border">
+                              <span className="text-[11px] text-muted-foreground block font-medium">Account Role</span>
+                              <span className="text-xl font-bold text-blue-600">Buyer</span>
+                            </div>
+                            <div className="p-3 rounded-xl bg-muted/30 border border-border">
+                              <span className="text-[11px] text-muted-foreground block font-medium">Location District</span>
+                              <span className="text-base font-bold text-foreground truncate block">{userDetail.location || 'Sri Lanka'}</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Detail Fields */}
+                      <div className="bg-card border border-border rounded-xl p-4 space-y-3 text-sm">
+                        <h4 className="font-bold text-foreground text-xs uppercase tracking-wide text-muted-foreground">Personal & Account Information</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                          <div>
+                            <span className="text-xs text-muted-foreground block">User ID</span>
+                            <span className="font-semibold text-foreground font-mono text-xs">#{userDetail.id}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground block">Primary Email</span>
+                            <span className="font-semibold text-foreground">{userDetail.email}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground block">First Name</span>
+                            <span className="font-semibold text-foreground">{userDetail.first_name || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground block">Last Name</span>
+                            <span className="font-semibold text-foreground">{userDetail.last_name || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground block">Contact Phone</span>
+                            <span className="font-semibold text-foreground">{userDetail.phone_number || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground block">Sri Lanka District / Location</span>
+                            <span className="font-semibold text-foreground">{userDetail.location || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground block">Email Verification</span>
+                            <span className={`inline-flex items-center gap-1 text-xs font-semibold ${userDetail.email_verified ? 'text-emerald-600' : 'text-amber-600'}`}>
+                              {userDetail.email_verified ? <><CheckCircle2 className="w-3.5 h-3.5" /> Verified</> : <><Clock className="w-3.5 h-3.5" /> Pending Verification</>}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground block">Account Security Status</span>
+                            <span className={`inline-flex items-center gap-1 text-xs font-semibold ${userDetail.is_banned ? 'text-destructive' : 'text-emerald-600'}`}>
+                              {userDetail.is_banned ? <><Ban className="w-3.5 h-3.5" /> Banned Account</> : <><CheckCircle2 className="w-3.5 h-3.5" /> Active & Standing Good</>}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground block">Reverse Auction RFPs Created</span>
+                            <span className="font-semibold text-foreground">{userDetail.bid_requests_count || 0} RFPs</span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground block">Competitive Bids Submitted</span>
+                            <span className="font-semibold text-foreground">{userDetail.bids_count || 0} Bids</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TAB 2: SELLER STOREFRONT & SERVICES */}
+                  {detailTab === 'seller' && (
+                    <div className="space-y-6">
+                      {userDetail.profile ? (
+                        <div className="space-y-4">
+                          {/* Storefront Header Card */}
+                          <div className="bg-card border border-border rounded-xl p-4 space-y-4">
+                            {userDetail.profile.cover_image && (
+                              <div className="h-32 w-full rounded-lg overflow-hidden border border-border">
+                                <img src={userDetail.profile.cover_image} alt="Cover" className="w-full h-full object-cover" />
+                              </div>
+                            )}
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                              <div>
+                                <h4 className="text-base font-bold text-foreground">{userDetail.profile.name || 'Storefront'}</h4>
+                                <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
+                                  userDetail.profile.is_active ? 'bg-emerald-500/10 text-emerald-600' : 'bg-muted text-muted-foreground'
+                                }`}>
+                                  {userDetail.profile.is_active ? 'Store Active & Public' : 'Store Inactive'}
+                                </span>
+                              </div>
+                              <a
+                                href={`/seller/${userDetail.id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+                              >
+                                View Live Storefront <ExternalLink className="w-3.5 h-3.5" />
+                              </a>
+                            </div>
+
+                            {userDetail.profile.description && (
+                              <p className="text-xs text-muted-foreground leading-relaxed bg-muted/20 p-3 rounded-lg border border-border">
+                                {userDetail.profile.description}
+                              </p>
+                            )}
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-1">
+                              {userDetail.profile.phone && (
+                                <div className="flex items-center gap-1.5 text-muted-foreground">
+                                  <Phone className="w-3.5 h-3.5 text-primary" /> {userDetail.profile.phone}
+                                </div>
+                              )}
+                              {userDetail.profile.address && (
+                                <div className="flex items-center gap-1.5 text-muted-foreground">
+                                  <MapPin className="w-3.5 h-3.5 text-primary" /> {userDetail.profile.address}
+                                </div>
+                              )}
+                              {userDetail.profile.website && (
+                                <div className="flex items-center gap-1.5 text-muted-foreground">
+                                  <ExternalLink className="w-3.5 h-3.5 text-primary" />
+                                  <a href={userDetail.profile.website.startsWith('http') ? userDetail.profile.website : `https://${userDetail.profile.website}`} target="_blank" rel="noreferrer" className="hover:underline truncate">
+                                    {userDetail.profile.website}
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Published Listings / Services */}
+                          <div>
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
+                              Services & Listings ({userDetail.listings?.length || 0})
+                            </h4>
+                            {userDetail.listings?.length === 0 ? (
+                              <div className="p-8 text-center bg-muted/20 rounded-xl border border-border text-xs text-muted-foreground">
+                                No services or product listings posted yet.
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {userDetail.listings.map(l => (
+                                  <div key={l.id} className="p-3 rounded-xl bg-card border border-border flex gap-3 items-start">
+                                    {l.image_url ? (
+                                      <img src={l.image_url} alt={l.title} className="w-16 h-16 rounded-lg object-cover border border-border shrink-0" />
+                                    ) : (
+                                      <div className="w-16 h-16 rounded-lg bg-muted/40 border border-border flex items-center justify-center text-muted-foreground shrink-0">
+                                        <Package className="w-6 h-6" />
+                                      </div>
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                      <h5 className="font-semibold text-xs text-foreground truncate">{l.title}</h5>
+                                      <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">{l.description}</p>
+                                      <div className="flex items-center justify-between mt-2 pt-1 border-t border-border/50 text-[11px]">
+                                        <span className="font-bold text-primary">LKR {Number(l.price).toLocaleString()}</span>
+                                        {l.delivery_time && <span className="text-muted-foreground">{l.delivery_time}</span>}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-12 text-center bg-muted/20 rounded-xl border border-border space-y-2">
+                          <Store className="w-10 h-10 text-muted-foreground mx-auto opacity-50" />
+                          <h4 className="text-sm font-semibold text-foreground">No Seller Profile Configured</h4>
+                          <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                            This user is currently registered as a {userDetail.active_role === 'client' ? 'Buyer' : userDetail.active_role} and has not yet set up a seller storefront profile.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* TAB 3: ORDERS & TRANSACTIONS */}
+                  {detailTab === 'orders' && (
+                    <div className="space-y-6">
+                      {/* Orders as Seller */}
+                      <div>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+                          <span>Orders Received as Seller</span>
+                          <span className="px-1.5 py-0.2 rounded bg-purple-500/10 text-purple-600 text-[10px]">
+                            {userDetail.orders_as_seller?.length || 0}
+                          </span>
+                        </h4>
+                        {userDetail.orders_as_seller?.length === 0 ? (
+                          <div className="p-4 text-center bg-muted/20 rounded-xl border border-border text-xs text-muted-foreground">
+                            No orders fulfilled as seller.
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {userDetail.orders_as_seller.map(o => (
+                              <div key={o.id} className="p-3 rounded-xl bg-card border border-border flex items-center justify-between gap-3 text-xs">
+                                <div>
+                                  <div className="font-semibold text-foreground flex items-center gap-2">
+                                    <span>#{o.id} - {o.service_name}</span>
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-muted uppercase">
+                                      {o.status}
+                                    </span>
+                                  </div>
+                                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                                    Buyer: {o.buyer_name} • {o.created_at ? new Date(o.created_at).toLocaleDateString() : 'N/A'}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="font-bold text-foreground">LKR {Number(o.amount).toLocaleString()}</div>
+                                  <div className="text-[10px] text-muted-foreground">
+                                    {o.payout_settled ? (
+                                      <span className="text-emerald-600 font-semibold">Payout Settled</span>
+                                    ) : o.payment_verified ? (
+                                      <span className="text-blue-600 font-semibold">Payment In Escrow</span>
+                                    ) : (
+                                      <span className="text-amber-600 font-semibold">Payment Pending</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Orders as Buyer */}
+                      <div>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+                          <span>Orders Placed as Buyer</span>
+                          <span className="px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-600 text-[10px]">
+                            {userDetail.orders_as_buyer?.length || 0}
+                          </span>
+                        </h4>
+                        {userDetail.orders_as_buyer?.length === 0 ? (
+                          <div className="p-4 text-center bg-muted/20 rounded-xl border border-border text-xs text-muted-foreground">
+                            No orders placed as buyer.
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {userDetail.orders_as_buyer.map(o => (
+                              <div key={o.id} className="p-3 rounded-xl bg-card border border-border flex items-center justify-between gap-3 text-xs">
+                                <div>
+                                  <div className="font-semibold text-foreground flex items-center gap-2">
+                                    <span>#{o.id} - {o.service_name}</span>
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-muted uppercase">
+                                      {o.status}
+                                    </span>
+                                  </div>
+                                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                                    Seller: {o.seller_name} • {o.created_at ? new Date(o.created_at).toLocaleDateString() : 'N/A'}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="font-bold text-foreground">LKR {Number(o.amount).toLocaleString()}</div>
+                                  <div className="text-[10px] text-muted-foreground capitalize">
+                                    {o.payment_method?.replace('_', ' ') || 'card'}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TAB 4: REVIEWS & RATINGS */}
+                  {detailTab === 'reviews' && (
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-xl bg-muted/30 border border-border flex items-center justify-between">
+                        <div>
+                          <span className="text-xs text-muted-foreground block font-medium">Customer Satisfaction</span>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-2xl font-bold text-foreground">★ {userDetail.avg_rating || '0.0'}</span>
+                            <span className="text-xs text-muted-foreground">({userDetail.reviews_received?.length || 0} customer reviews)</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {userDetail.reviews_received?.length === 0 ? (
+                        <div className="p-8 text-center bg-muted/20 rounded-xl border border-border text-xs text-muted-foreground">
+                          No reviews received yet.
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {userDetail.reviews_received.map(r => (
+                            <div key={r.id} className="p-3 rounded-xl bg-card border border-border space-y-1 text-xs">
+                              <div className="flex items-center justify-between">
+                                <span className="font-semibold text-foreground">{r.reviewer_name}</span>
+                                <span className="font-bold text-amber-500">★ {r.rating} / 5</span>
+                              </div>
+                              {r.comment && (
+                                <p className="text-muted-foreground text-xs leading-relaxed">{r.comment}</p>
+                              )}
+                              {r.timestamp && (
+                                <div className="text-[10px] text-muted-foreground pt-1">
+                                  {new Date(r.timestamp).toLocaleDateString()}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* TAB 5: BUYER REVERSE AUCTION RFPS */}
+                  {detailTab === 'rfps' && (
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-xl bg-muted/30 border border-border flex items-center justify-between">
+                        <div>
+                          <span className="text-xs text-muted-foreground block font-medium">Buyer Requests for Proposals (RFPs)</span>
+                          <span className="text-sm font-semibold text-foreground">
+                            {userDetail.bid_requests?.length || userDetail.bid_requests_count || 0} posted project requests
+                          </span>
+                        </div>
+                      </div>
+
+                      {(!userDetail.bid_requests || userDetail.bid_requests.length === 0) ? (
+                        <div className="p-8 text-center bg-muted/20 rounded-xl border border-border text-xs text-muted-foreground">
+                          No RFPs or auction requests posted by this buyer yet.
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {userDetail.bid_requests.map(br => (
+                            <div key={br.id} className="p-3.5 rounded-xl bg-card border border-border space-y-2 text-xs">
+                              <div className="flex items-center justify-between">
+                                <span className="font-semibold text-foreground flex items-center gap-2">
+                                  <span>RFP #{br.id}</span>
+                                  {br.location && <span className="text-[11px] text-muted-foreground">• {br.location}</span>}
+                                </span>
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary/10 text-primary uppercase">
+                                  {br.status}
+                                </span>
+                              </div>
+                              <p className="text-muted-foreground text-xs leading-relaxed bg-muted/20 p-2.5 rounded-lg border border-border">
+                                {br.description}
+                              </p>
+                              <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1">
+                                <span>{br.bid_count} competitive bids received</span>
+                                <span>{br.created_at ? new Date(br.created_at).toLocaleDateString() : 'N/A'}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            {userDetail && (
+              <div className="p-4 border-t border-border flex items-center justify-between bg-muted/20">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      handleToggleBan(userDetail);
+                      setUserDetail(prev => prev ? { ...prev, is_banned: !prev.is_banned } : prev);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                      userDetail.is_banned
+                        ? 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20'
+                        : 'bg-amber-500/10 text-amber-600 hover:bg-amber-500/20'
+                    }`}
+                  >
+                    <Ban className="w-3.5 h-3.5" />
+                    {userDetail.is_banned ? 'Unban Account' : 'Ban Account'}
+                  </button>
+
+                  {!userDetail.is_admin && (
+                    <button
+                      onClick={() => setDeleteTargetUser(userDetail)}
+                      className="px-3 py-1.5 rounded-xl text-xs font-semibold text-destructive hover:bg-destructive/10 transition-colors flex items-center gap-1.5"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Delete User
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => { setSelectedUserId(null); setUserDetail(null); }}
+                  className="px-4 py-2 text-xs font-semibold rounded-xl border border-border hover:bg-muted"
+                >
+                  Close
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* =================== MODAL: DELETE USER CONFIRMATION =================== */}
+      {deleteTargetUser && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div className="w-12 h-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mb-4">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-bold text-foreground">Permanently Delete User?</h3>
+            <p className="text-sm text-muted-foreground mt-2">
+              Are you sure you want to delete <strong className="text-foreground">{deleteTargetUser.first_name} {deleteTargetUser.last_name}</strong> ({deleteTargetUser.email})?
+              This will remove their profile and cannot be undone.
+            </p>
+
+            <div className="flex items-center justify-end gap-3 mt-6">
+              <button
+                onClick={() => setDeleteTargetUser(null)}
+                disabled={actionProcessing}
+                className="px-4 py-2 text-sm rounded-xl border border-border hover:bg-muted"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteUser}
+                disabled={actionProcessing}
+                className="px-4 py-2 text-sm font-semibold rounded-xl bg-destructive text-destructive-foreground hover:opacity-90 transition-opacity"
+              >
+                {actionProcessing ? 'Deleting...' : 'Delete User'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =================== MODAL: SETTLE PAYOUT =================== */}
+      {settleTargetOrder && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center mb-4">
+              <DollarSign className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-bold text-foreground">Confirm Seller Bank Payout</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Mark payout for Order #{settleTargetOrder.id} as settled.
+            </p>
+
+            <div className="my-4 p-4 rounded-xl bg-muted/40 border border-border space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Seller:</span>
+                <span className="font-semibold text-foreground">{settleTargetOrder.seller?.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Order Total:</span>
+                <span className="font-semibold text-foreground">LKR {Number(settleTargetOrder.total_price ?? settleTargetOrder.amount ?? 0).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Platform Fee (5%):</span>
+                <span className="font-semibold text-primary">LKR {Math.round(Number(settleTargetOrder.total_price ?? settleTargetOrder.amount ?? 0) * 0.05).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-sm font-bold border-t border-border pt-2">
+                <span>Net Transfer Amount:</span>
+                <span className="text-emerald-600">LKR {(Number(settleTargetOrder.total_price ?? settleTargetOrder.amount ?? 0) - Math.round(Number(settleTargetOrder.total_price ?? settleTargetOrder.amount ?? 0) * 0.05)).toLocaleString()}</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1">
+                Bank Transfer Reference / Notes (Optional):
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. CEFT REF #849202, Sampath Bank transfer"
+                value={payoutReference}
+                onChange={e => setPayoutReference(e.target.value)}
+                className="w-full px-3 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 mt-6">
+              <button
+                onClick={() => setSettleTargetOrder(null)}
+                disabled={actionProcessing}
+                className="px-4 py-2 text-sm rounded-xl border border-border hover:bg-muted"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSettlePayout}
+                disabled={actionProcessing}
+                className="px-4 py-2 text-sm font-semibold rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-sm"
+              >
+                {actionProcessing ? 'Saving...' : 'Confirm Paid'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
